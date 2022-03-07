@@ -15,6 +15,7 @@ sys.path.insert(1, './logics')
 sys.path.insert(1, './libs')
 import AuthLogics
 import DevicesLogics
+import ConnectorsLogics
 import DataUtils
 
 VERSION="0.0.1"
@@ -93,6 +94,24 @@ device_subparsers = device_parser.add_subparsers()
 # device list
 device_list_parser = device_subparsers.add_parser('list')
 device_list_parser.set_defaults(func=device_list)
+
+#####
+# Connector Parser
+# connector <list>
+#####
+
+def connector_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    ConnectorsLogics.connector_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# Device commands
+connector_parser = subparsers.add_parser('connector')
+connector_subparsers = connector_parser.add_subparsers()
+
+# device list
+connector_list_parser = connector_subparsers.add_parser('list')
+connector_list_parser.set_defaults(func=connector_list)
 
 if __name__ == '__main__':
     args = parser.parse_args()
