@@ -16,6 +16,8 @@ sys.path.insert(1, './libs')
 import AuthLogics
 import DevicesLogics
 import ConnectorsLogics
+import ResourcesLogics
+import UsersLogics
 import DataUtils
 
 VERSION="0.0.1"
@@ -112,6 +114,44 @@ connector_subparsers = connector_parser.add_subparsers()
 # device list
 connector_list_parser = connector_subparsers.add_parser('list')
 connector_list_parser.set_defaults(func=connector_list)
+
+
+#####
+# User Parser
+# user <list>
+#####
+
+def user_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    UsersLogics.user_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# user commands
+user_parser = subparsers.add_parser('user')
+user_subparsers = user_parser.add_subparsers()
+
+# user list
+user_list_parser = user_subparsers.add_parser('list')
+user_list_parser.set_defaults(func=user_list)
+
+
+#####
+# Resource Parser
+# resource <list>
+#####
+
+def resource_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    ResourcesLogics.resource_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# resource commands
+resource_parser = subparsers.add_parser('resource')
+resource_subparsers = resource_parser.add_subparsers()
+
+# resource list
+resource_list_parser = resource_subparsers.add_parser('list')
+resource_list_parser.set_defaults(func=resource_list)
 
 if __name__ == '__main__':
     args = parser.parse_args()

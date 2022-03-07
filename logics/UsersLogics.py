@@ -11,20 +11,24 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_connector_list_resources(sessionname,token,JsonData):
+def get_user_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
 
     Body = """
-        {
-          connectors(after: null, first:100) {
+            {
+          users(after: null, first:100) {
             edges {
               node {
                 id
-                name
+               	avatarUrl
                 state
-                lastHeartbeatAt
+                email
+                state
+                isAdmin
+                lastName
+                firstName
                 createdAt
                 updatedAt
               }
@@ -40,5 +44,5 @@ def get_connector_list_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body
 
 
-def connector_list(outputFormat,sessionname):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_list_resources,{},GenericTransformers.GetListAsCsv,"connectors")
+def user_list(outputFormat,sessionname):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_list_resources,{},GenericTransformers.GetListAsCsv,'users')

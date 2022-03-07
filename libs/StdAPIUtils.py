@@ -17,7 +17,7 @@ def get_api_call_headers(token):
     return DefaultHeaders
 
 # Generic API Handler with embedded processing of Output
-def generic_api_call_handler(outputFormat,sessionname,get_res_func,res_data,df_transform_func):
+def generic_api_call_handler(outputFormat,sessionname,get_res_func,res_data,df_transform_func,objectname):
         url = DataUtils.GetUrl(sessionname)
         TOKEN = DataUtils.GetAuthToken(sessionname)
 
@@ -34,11 +34,11 @@ def generic_api_call_handler(outputFormat,sessionname,get_res_func,res_data,df_t
             json_object = json.loads(response.text)
             if (outputFormat == "DF"):
                 #print(json_object)
-                aDF = df_transform_func(json_object)
+                aDF = df_transform_func(json_object,objectname)
                 print(aDF)
             elif (outputFormat == "CSV"):
                 #print(json_object)
-                aDF = df_transform_func(json_object)
+                aDF = df_transform_func(json_object,objectname)
                 print(aDF.to_csv(index=False))
             else:
                 #print(json_object)

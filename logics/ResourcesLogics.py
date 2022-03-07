@@ -11,20 +11,22 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_device_list_resources(sessionname,token,JsonData):
+def get_resource_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
 
-    Body = """{
-          devices(after: null, first:100) {
+    Body = """
+                    {
+          resources(after: null, first:100) {
             edges {
               node {
                 id
+               	address{value}
+                isActive
                 name
-                isTrusted
-                osName
-                deviceType
+                createdAt
+                updatedAt
               }
             }
             pageInfo {
@@ -32,10 +34,11 @@ def get_device_list_resources(sessionname,token,JsonData):
               hasNextPage
             }
           }
-        }"""
+        }
+    """
 
     return True,api_call_type,Headers,Body
 
 
-def device_list(outputFormat,sessionname):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
+def resource_list(outputFormat,sessionname):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_list_resources,{},GenericTransformers.GetListAsCsv,'resources')
