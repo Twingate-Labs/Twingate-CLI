@@ -5,7 +5,8 @@ A simple command line interface for Twingate
 ## How to use it
 
 1. Clone this repository
-2. Authenticate (you can pass a Session Name or let it generate one at random):
+2. Install pandas for python (pip install pandas)
+3. Authenticate (you can pass a Session Name or let it generate one at random):
 
 ```
 python ./tgcli.py auth login -r "https://xxxx.twingate.com/api/graphql/" -a "my twingate API token"
@@ -56,10 +57,11 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
 
   * device
     * list
+    * updateTrust
 
   * connector
     * list
-    
+
 ## Examples
 ```
 # Authenticate
@@ -81,5 +83,12 @@ python ./tgcli.py -s RedPeacock -f DF device list
 python ./tgcli.py -s RedPeacock -f CSV device list
 ```
 
+```
+# Update trust for a device (and set it to Trusted)
+python ./tgcli.py -s RedPeacock device updateTrust -i "XXXabcNlOjE5MzI2OQ==" -t True
+```
 
-## TO DO
+```
+# Update trust for a list of devices (and set them to Untrusted)
+python ./tgcli.py -s RedPeacock device updateTrust -l "XXXabcNlOjE5MzI2OQ==,YYYxyzFg4gT4SfC65K==" -t False
+```
