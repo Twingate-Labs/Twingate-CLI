@@ -37,7 +37,7 @@ def get_connector_list_resources(sessionname,token,JsonData):
         }
     """
 
-    return True,api_call_type,Headers,Body
+    return True,api_call_type,Headers,Body,None
 
 
 def connector_list(outputFormat,sessionname):

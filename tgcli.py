@@ -7,7 +7,7 @@
 #
 ##############################################################
 #!/usr/bin/env python3
-
+# install pandas
 import argparse
 import sys
 import logging
@@ -19,6 +19,7 @@ import ConnectorsLogics
 import ResourcesLogics
 import UsersLogics
 import DataUtils
+import re
 
 VERSION="0.0.1"
 
@@ -96,6 +97,42 @@ device_subparsers = device_parser.add_subparsers()
 # device list
 device_list_parser = device_subparsers.add_parser('list')
 device_list_parser.set_defaults(func=device_list)
+
+# device <updateTrust>
+
+def device_update(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.DEVICEID and not args.DEVICELIST:
+        parser.error('no device ID or device List passed')
+    if args.DEVICEID and args.DEVICELIST:
+        parser.error('either device ID or device List can be passed, not both')
+
+    isMatchToTrue = re.match('True', str(args.TRUST), re.IGNORECASE)
+    isMatchToFalse = re.match('False', str(args.TRUST), re.IGNORECASE)
+    if isMatchToTrue:
+        args.TRUST = True
+    if isMatchToFalse:
+        args.TRUST = False
+    if not isMatchToTrue and not isMatchToFalse:
+        parser.error('-trust value must be True or False')
+
+    if args.DEVICELIST:
+        AllDevices = args.DEVICELIST.split(",")
+
+    else:
+        AllDevices = [args.DEVICEID]
+
+    for device in AllDevices:
+        DevicesLogics.device_update(args.OUTPUTFORMAT,args.SESSIONNAME,device,args.TRUST)
+
+device_update_parser = device_subparsers.add_parser('updateTrust')
+device_update_parser.set_defaults(func=device_update)
+
+device_update_parser.add_argument('-i','--deviceid',type=str,default="", help='device id', dest="DEVICEID")
+device_update_parser.add_argument('-l','--devicelist',type=str,default="", help='device list ex: "id1,id2,id3"', dest="DEVICELIST")
+device_update_parser.add_argument('-t','--trust',type=str,default=True, help='True or False',dest="TRUST")
+
 
 #####
 # Connector Parser

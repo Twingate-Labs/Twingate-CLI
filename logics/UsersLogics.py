@@ -41,7 +41,7 @@ def get_user_list_resources(sessionname,token,JsonData):
         }
     """
 
-    return True,api_call_type,Headers,Body
+    return True,api_call_type,Headers,Body,None
 
 
 def user_list(outputFormat,sessionname):
