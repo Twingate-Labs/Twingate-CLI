@@ -1,6 +1,6 @@
-# Command Line Interface for Twingate
+# Python3 Command Line Interface for Twingate
 
-A simple command line interface for Twingate
+A simple command line interface for Twingate in Python
 
 ## How to use it
 
