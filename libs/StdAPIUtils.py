@@ -57,6 +57,7 @@ def generic_api_call_handler(outputFormat,sessionname,get_res_func,res_data,df_t
         if variables:
             response = requests.request(method=CallType, url=FULLURL, json={'query': Body, 'variables':variables}, headers=Headers)
         else:
+
             response = requests.request(method=CallType, url=FULLURL, json={'query': Body}, headers=Headers)
 
         isAPICallOK = StdResponses.processAPIResponse(response)

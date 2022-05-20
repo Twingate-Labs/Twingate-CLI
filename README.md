@@ -57,11 +57,21 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
 
   * device
     * list
+    * show
     * updateTrust
+
+  * resource
+    * list
+    * show
 
   * connector
     * list
 
+  * group
+    * list
+
+  * user
+    * list    
 ## Examples
 ```
 # Authenticate

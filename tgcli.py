@@ -18,6 +18,7 @@ import DevicesLogics
 import ConnectorsLogics
 import ResourcesLogics
 import UsersLogics
+import GroupsLogics
 import DataUtils
 import re
 
@@ -98,6 +99,21 @@ device_subparsers = device_parser.add_subparsers()
 device_list_parser = device_subparsers.add_parser('list')
 device_list_parser.set_defaults(func=device_list)
 
+# device <show>
+
+def device_show(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.DEVICEID:
+        parser.error('no device ID passed')
+
+    DevicesLogics.device_show(args.OUTPUTFORMAT,args.SESSIONNAME,args.DEVICEID)
+
+# device show
+device_show_parser = device_subparsers.add_parser('show')
+device_show_parser.set_defaults(func=device_show)
+device_show_parser.add_argument('-i','--deviceid',type=str,default="", help='device id', dest="DEVICEID")
+
 # device <updateTrust>
 
 def device_update(args):
@@ -173,6 +189,25 @@ user_list_parser.set_defaults(func=user_list)
 
 
 #####
+# Group Parser
+# group <list>
+#####
+
+def group_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    GroupsLogics.group_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# user commands
+group_parser = subparsers.add_parser('group')
+group_subparsers = group_parser.add_subparsers()
+
+# user list
+group_list_parser = group_subparsers.add_parser('list')
+group_list_parser.set_defaults(func=group_list)
+
+
+#####
 # Resource Parser
 # resource <list>
 #####
@@ -189,6 +224,22 @@ resource_subparsers = resource_parser.add_subparsers()
 # resource list
 resource_list_parser = resource_subparsers.add_parser('list')
 resource_list_parser.set_defaults(func=resource_list)
+
+# resource <show>
+
+def resource_show(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no resource ID passed')
+
+    ResourcesLogics.resource_show(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# device show
+resource_show_parser = resource_subparsers.add_parser('show')
+resource_show_parser.set_defaults(func=resource_show)
+resource_show_parser.add_argument('-i','--resid',type=str,default="", help='resource id', dest="ITEMID")
+
 
 if __name__ == '__main__':
     args = parser.parse_args()

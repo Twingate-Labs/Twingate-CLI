@@ -64,8 +64,32 @@ def get_device_list_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,None
 
 
+def get_device_show_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"deviceID":JsonData['deviceid']}
+    Body = """
+         query
+            getDevice($deviceID: ID!){
+          device(id:$deviceID) {
+            id
+            name
+            isTrusted
+            osName
+            deviceType
+              }
+          }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+
 def device_list(outputFormat,sessionname):
     StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
+
+def device_show(outputFormat,sessionname,deviceid):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'deviceid':deviceid},DevicesTransformers.GetShowAsCsv,"devices")
 
 
 def device_update(outputFormat,sessionname,deviceid,trust):
