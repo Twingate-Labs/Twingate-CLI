@@ -12,6 +12,44 @@ import ResourcesTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_resource_create_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"address":JsonData['address'] ,"name":JsonData['name'],"remoteNetworkId":JsonData['remoteNetworkId'],"groupIds":JsonData['groupIds']}
+    #print(variables)
+    Body = """
+        mutation
+            ObjCreate($address: String!,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!]){
+            resourceCreate(address: $address, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId) {
+              ok
+              error
+            entity{
+              id
+              name
+            }
+            }
+        }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+def get_resource_delete_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"id":JsonData['itemid']}
+    #print(variables)
+    Body = """
+        mutation
+            ObjDelete($id: ID!){
+            resourceDelete(id: $id) {
+              ok
+              error
+            }
+        }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_resource_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -108,9 +146,16 @@ def get_resource_show_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
+def item_delete(outputFormat,sessionname,itemid):
+    JsonData = {"itemid":itemid}
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_delete_resources,JsonData,GenericTransformers.GetDeleteAsCsv,'resourceDelete')
 
-def resource_list(outputFormat,sessionname):
+def item_create(outputFormat,sessionname,address,name,remoteNetworkId,groupIds):
+    JsonData = {"address":address,"name":name,"remoteNetworkId":remoteNetworkId,"groupIds":groupIds}
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_create_resources,JsonData,GenericTransformers.GetCreateAsCsv,'resourceCreate')
+
+def item_list(outputFormat,sessionname):
     StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_list_resources,{},GenericTransformers.GetListAsCsv,'resources')
 
-def resource_show(outputFormat,sessionname,itemid):
+def item_show(outputFormat,sessionname,itemid):
     StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_show_resources,{'itemid':itemid},ResourcesTransformers.GetShowAsCsv,"resources")

@@ -82,7 +82,6 @@ login_parser.set_defaults(func=logout)
 sesslist_parser = auth_subparsers.add_parser('list')
 sesslist_parser.set_defaults(func=listsessions)
 
-
 #####
 # Device Parser
 # device <list>
@@ -114,7 +113,7 @@ def device_show(args):
 # device show
 device_show_parser = device_subparsers.add_parser('show')
 device_show_parser.set_defaults(func=device_show)
-device_show_parser.add_argument('-i','--itemid',type=str,default="", help='device id', dest="ITEMID")
+device_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
 # device <updateTrust>
 
@@ -260,7 +259,7 @@ group_show_parser.add_argument('-i','--itemid',type=str,default="", help='item i
 def resource_list(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
-    ResourcesLogics.resource_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+    ResourcesLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME)
 
 # resource commands
 resource_parser = subparsers.add_parser('resource')
@@ -278,12 +277,53 @@ def resource_show(args):
     if not args.ITEMID:
         parser.error('no resource ID passed')
 
-    ResourcesLogics.resource_show(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+    ResourcesLogics.item_show(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
 
 # resource show
 resource_show_parser = resource_subparsers.add_parser('show')
 resource_show_parser.set_defaults(func=resource_show)
-resource_show_parser.add_argument('-i','--resid',type=str,default="", help='resource id', dest="ITEMID")
+resource_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+# resource <create>
+
+def resource_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ADDRESS:
+        parser.error('no address passed')
+    if not args.NAME:
+        parser.error('no name passed')
+    if not args.NETWORKID:
+        parser.error('no network ID passed')
+    if args.GROUPIDS != []:
+        AllIDs = args.GROUPIDS.split(",")
+        args.GROUPIDS = AllIDs
+
+    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS)
+
+resource_create_parser = resource_subparsers.add_parser('create')
+resource_create_parser.set_defaults(func=resource_create)
+
+resource_create_parser.add_argument('-a','--address',type=str,default="", help='resource address', dest="ADDRESS")
+resource_create_parser.add_argument('-n','--name',type=str,default="", help='resource name', dest="NAME")
+resource_create_parser.add_argument('-r','--networkID',type=str,default="", help='remote network ID', dest="NETWORKID")
+resource_create_parser.add_argument('-g','--groupIDs',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
+
+# resource <delete>
+
+def resource_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    ResourcesLogics.item_delete(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# resource show
+resource_delete_parser = resource_subparsers.add_parser('delete')
+resource_delete_parser.set_defaults(func=resource_delete)
+resource_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
 
 #####
 # Remote Network Parser
