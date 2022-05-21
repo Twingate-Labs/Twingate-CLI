@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-GroupColumns = ['GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
+NetworkColumns = ['GroupID', 'GroupName','CreatedAt','updatedAt','isActive','connectorIdList','ResourceIdList']
 
 def ProcessOneItem(item):
     ItemId = item['id']
@@ -9,14 +9,13 @@ def ProcessOneItem(item):
     createdAt = item['createdAt']
     updatedAt = item['updatedAt']
     isActive = item['isActive']
-    type = item['type']
 
-    users = item['users']['edges']
-    userIdList = []
-    for userInList in users:
-        user = userInList['node']
-        userId = user['id']
-        userIdList.append(userId)
+    connectors = item['connectors']['edges']
+    connectorIdList = []
+    for connectorInList in connectors:
+        connector = connectorInList['node']
+        connectorId = connector['id']
+        connectorIdList.append(connectorId)
 
     resourceIdList = []
     resources = item['resources']['edges']
@@ -25,17 +24,15 @@ def ProcessOneItem(item):
         resourceId = resource['id']
         resourceIdList.append(resourceId)
 
-    return [ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList]
-
+    return [ItemId,ItemName,createdAt,updatedAt,isActive,connectorIdList,resourceIdList]
 
 def GetShowAsCsv(jsonResults,objectname):
     data = []
     item = jsonResults['data'][objectname]
     data.append(ProcessOneItem(item))
 
-    df = pd.DataFrame(data, columns = GroupColumns)
+    df = pd.DataFrame(data, columns = NetworkColumns)
 
-    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
     return df
 
 def GetListAsCsv(jsonResults,objectname):
@@ -46,6 +43,6 @@ def GetListAsCsv(jsonResults,objectname):
         item = itemInList['node']
         data.append(ProcessOneItem(item))
 
-    df = pd.DataFrame(data, columns = GroupColumns)
+    df = pd.DataFrame(data, columns = NetworkColumns)
     #dfItem = pd.json_normalize(DeviceList)
     return df

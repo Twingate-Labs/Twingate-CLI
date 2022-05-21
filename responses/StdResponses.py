@@ -22,20 +22,20 @@ def isAnomalousHtmlResponse(text):
 def processAPIResponse(response):
     if(response.status_code >= 300):
         if(response.status_code == 500):
-            logging.debug("CR API Error: {} - Hint: {} - Message: {}".format(response.status_code, "Try logging back in.",response.text))
-            print("CR API Error: {} - Hint: {} - Message: {}".format(response.status_code, "Try logging back in.",response.text))
+            logging.debug("API Error: {} - Hint: {} - Message: {}".format(response.status_code, "Try logging back in.",response.text))
+            print("API Error: {} - Hint: {} - Message: {}".format(response.status_code, "Try logging back in.",response.text))
             #print("API Error Code: "+str(response.status_code))
             return False
         else:
-            logging.debug("CR API Error: {} - Message: {}".format(response.status_code,response.text))
-            print("CR API Error: {} - Message: {}".format(response.status_code,response.text))
+            logging.debug("API Error: {} - Message: {}".format(response.status_code,response.text))
+            print("API Error: {} - Message: {}".format(response.status_code,response.text))
             #print("API Error Code: "+str(response.status_code))
             return False
     else:
         RespContent = str(response.text)
         if(RespContent.startswith("<!doctype html>")):
-            logging.debug("CR API Error: {} - Message: {}".format(response.status_code,"Response received is in HTML Format"))
-            print("CR API Error: {} - Message: {}".format(response.status_code,"Response received is in HTML Format"))
+            logging.debug("API Error: {} - Message: {}".format(response.status_code,"Response received is in HTML Format"))
+            print("API Error: {} - Message: {}".format(response.status_code,"Response received is in HTML Format"))
             return False
         else:
             return True

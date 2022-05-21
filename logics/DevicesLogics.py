@@ -18,7 +18,7 @@ def get_device_update_resrouces(sessionname,token,JsonData):
     api_call_type = "POST"
     #print("Debug:"+JsonData['deviceid'])
 # Modify True to False if you wish to untrust a device as opposed to trust it
-    variables = {"deviceID":JsonData['deviceid'] ,"isTrusted":JsonData['trust']}
+    variables = {"deviceID":JsonData['itemid'] ,"isTrusted":JsonData['trust']}
 
     Body = """
     mutation
@@ -63,12 +63,11 @@ def get_device_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,None
 
-
 def get_device_show_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
-    variables = {"deviceID":JsonData['deviceid']}
+    variables = {"deviceID":JsonData['itemid']}
     Body = """
          query
             getDevice($deviceID: ID!){
@@ -85,12 +84,11 @@ def get_device_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 
-def device_list(outputFormat,sessionname):
+def item_list(outputFormat,sessionname):
     StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
 
-def device_show(outputFormat,sessionname,deviceid):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'deviceid':deviceid},DevicesTransformers.GetShowAsCsv,"devices")
+def item_show(outputFormat,sessionname,itemid):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv,"devices")
 
-
-def device_update(outputFormat,sessionname,deviceid,trust):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resrouces,{'deviceid':deviceid,'trust':trust},DevicesTransformers.GetUpdateAsCsv,"devices")
+def item_update(outputFormat,sessionname,itemid,trust):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resrouces,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv,"devices")

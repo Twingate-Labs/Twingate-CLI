@@ -66,12 +66,23 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
 
   * connector
     * list
+    * show
 
   * group
     * list
+    * show
 
   * user
-    * list    
+    * list
+    * show
+
+  * network
+    * list
+    * show
+
+  * account
+    * list
+    * show
 
 ## Examples
 ```

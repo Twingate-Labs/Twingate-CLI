@@ -39,6 +39,29 @@ def get_connector_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,None
 
+def get_connector_show_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
 
-def connector_list(outputFormat,sessionname):
+    api_call_type = "POST"
+    variables = {"itemID":JsonData['itemid']}
+    Body = """
+         query
+         getObj($itemID: ID!){
+            connector(id:$itemID) {
+                id
+                name
+                state
+                lastHeartbeatAt
+                createdAt
+                updatedAt
+      }
+  }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+def item_show(outputFormat,sessionname,itemid):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_show_resources,{'itemid':itemid},GenericTransformers.GetShowAsCsv,"connector")
+
+def item_list(outputFormat,sessionname):
     StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_list_resources,{},GenericTransformers.GetListAsCsv,"connectors")

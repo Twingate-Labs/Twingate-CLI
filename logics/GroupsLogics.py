@@ -64,6 +64,52 @@ def get_group_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,None
 
+def get_group_show_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
 
-def group_list(outputFormat,sessionname):
+    api_call_type = "POST"
+    variables = {"itemID":JsonData['itemid']}
+    Body = """
+         query
+         getObj($itemID: ID!){
+            group(id:$itemID) {
+                        id
+                        name
+                        createdAt
+                        updatedAt
+                        isActive
+                        type
+                        users {
+                            edges{
+                                node{
+                                    id
+                                    email
+                                    firstName
+                                    lastName
+                                }
+                            }
+                        }
+                        resources {
+                            edges{
+                                node{
+                                    id
+                                    name
+                                    address {
+                                        type
+                                        value
+                                    }
+                                    isActive
+                                }
+                            }
+                        }
+      }
+  }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+def item_show(outputFormat,sessionname,itemid):
+    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_show_resources,{'itemid':itemid},GroupsTransformers.GetShowAsCsv,"group")
+
+def item_list(outputFormat,sessionname):
     StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_list_resources,{},GroupsTransformers.GetListAsCsv,'groups')
