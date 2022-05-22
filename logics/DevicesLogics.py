@@ -124,7 +124,7 @@ def item_list(outputFormat,sessionname,idsfile,idsonly):
     else:
         if idsfile != "":
             itemsAdded,itemsRemoved = GenericTransformers.GetIdsAndCompareToFile(j,idsfile,"devices")
-            print({'itemsAdded':list(itemsAdded),'itemsRemoved':list(itemsRemoved)})
+            print({'itemsAddedCount':len(list(itemsAdded)),'itemsAdded':list(itemsAdded),'itemsRemovedCount':len(list(itemsRemoved)),'itemsRemoved':list(itemsRemoved)})
         else:
             print(r)
 
