@@ -115,13 +115,18 @@ def get_device_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 
-def item_list(outputFormat,sessionname,idsonly):
+def item_list(outputFormat,sessionname,idsfile,idsonly):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
     if idsonly:
         j = GenericTransformers.GetIds(j,"devices")
         print(j)
+        exit(0)
     else:
-        print(r)
+        if idsfile != "":
+            itemsAdded,itemsRemoved = GenericTransformers.GetIdsAndCompareToFile(j,idsfile,"devices")
+            print({'itemsAdded':list(itemsAdded),'itemsRemoved':list(itemsRemoved)})
+        else:
+            print(r)
 
 def item_show(outputFormat,sessionname,itemid):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv,"devices")

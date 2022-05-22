@@ -90,7 +90,9 @@ sesslist_parser.set_defaults(func=listsessions)
 def device_list(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
-    DevicesLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME,args.IDSONLY)
+    if args.IDPATH and args.IDSONLY:
+        parser.error('you cannot pass -f and -i together.')
+    DevicesLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME,args.IDPATH,args.IDSONLY)
 
 # Device commands
 device_parser = subparsers.add_parser('device')
@@ -99,7 +101,9 @@ device_subparsers = device_parser.add_subparsers()
 # device list
 device_list_parser = device_subparsers.add_parser('list')
 device_list_parser.set_defaults(func=device_list)
-device_list_parser.add_argument('-i','--itemid',type=bool,default=False, help='only return IDs', dest="IDSONLY")
+device_list_parser.add_argument('-f','--fileofids',type=str,default="", help='Compare IDs to existing list from file', dest="IDPATH")
+device_list_parser.add_argument('-i','--idsonly',type=bool,default=False, help='Print Only Ids', dest="IDSONLY")
+
 # device <show>
 
 def device_show(args):

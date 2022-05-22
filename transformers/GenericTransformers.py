@@ -1,4 +1,5 @@
 import json
+import os
 import pandas as pd
 
 def GetIds(jsonResults,ObjectName):
@@ -8,6 +9,18 @@ def GetIds(jsonResults,ObjectName):
         id = item['node']['id']
         IDs.append(id)
     return IDs
+
+def GetIdsAndCompareToFile(jsonResults,idsfile,ObjectName):
+    IDs = GetIds(jsonResults,ObjectName)
+    #print(IDs)
+    with open(idsfile) as f:
+        contents = f.read()
+        IdsFromFileAsList = contents.replace('[','').replace(']','').replace('\'','').replace('\n','').replace(' ','').split(",")
+
+    ItemsAdded = set(IDs) - set(IdsFromFileAsList)
+    ItemsRemoved = set(IdsFromFileAsList) - set(IDs)
+
+    return ItemsAdded,ItemsRemoved
 
 def GetListAsCsv(jsonResults,ObjectName):
 
