@@ -1,6 +1,14 @@
 import json
 import pandas as pd
 
+def GetIds(jsonResults,ObjectName):
+    IDs = []
+    GenList = jsonResults['data'][ObjectName]['edges']
+    for item in GenList:
+        id = item['node']['id']
+        IDs.append(id)
+    return IDs
+
 def GetListAsCsv(jsonResults,ObjectName):
 
     GenList = jsonResults['data'][ObjectName]['edges']

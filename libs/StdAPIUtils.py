@@ -69,12 +69,15 @@ def generic_api_call_handler(outputFormat,sessionname,get_res_func,res_data,df_t
             if (outputFormat == "DF"):
                 #print(json_object)
                 aDF = df_transform_func(json_object,objectname)
-                print(aDF)
+                return aDF,json_object
+                #print(aDF)
             elif (outputFormat == "CSV"):
                 #print(json_object)
                 aDF = df_transform_func(json_object,objectname)
-                print(aDF.to_csv(index=False))
+                #print(aDF.to_csv(index=False))
+                return aDF.to_csv(index=False),json_object
             else:
                 #print(json_object)
                 json_formatted_str = json.dumps(json_object, indent=2)
-                print(json_formatted_str)
+                #print(json_formatted_str)
+                return json_formatted_str,json_object

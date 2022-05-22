@@ -115,11 +115,17 @@ def get_device_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 
-def item_list(outputFormat,sessionname):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
+def item_list(outputFormat,sessionname,idsonly):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
+    if idsonly:
+        j = GenericTransformers.GetIds(j,"devices")
+        print(j)
+    else:
+        print(r)
 
 def item_show(outputFormat,sessionname,itemid):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv,"devices")
-
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv,"devices")
+    print(r)
 def item_update(outputFormat,sessionname,itemid,trust):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resrouces,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv,"devices")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resrouces,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv,"devices")
+    print(r)

@@ -61,7 +61,8 @@ def get_connector_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_show(outputFormat,sessionname,itemid):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_show_resources,{'itemid':itemid},GenericTransformers.GetShowAsCsv,"connector")
-
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_show_resources,{'itemid':itemid},GenericTransformers.GetShowAsCsv,"connector")
+    print(r)
 def item_list(outputFormat,sessionname):
-    StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_list_resources,{},GenericTransformers.GetListAsCsv,"connectors")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_list_resources,{},GenericTransformers.GetListAsCsv,"connectors")
+    print(r)

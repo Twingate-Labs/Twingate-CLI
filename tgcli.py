@@ -90,7 +90,7 @@ sesslist_parser.set_defaults(func=listsessions)
 def device_list(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
-    DevicesLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+    DevicesLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME,args.IDSONLY)
 
 # Device commands
 device_parser = subparsers.add_parser('device')
@@ -99,7 +99,7 @@ device_subparsers = device_parser.add_subparsers()
 # device list
 device_list_parser = device_subparsers.add_parser('list')
 device_list_parser.set_defaults(func=device_list)
-
+device_list_parser.add_argument('-i','--itemid',type=bool,default=False, help='only return IDs', dest="IDSONLY")
 # device <show>
 
 def device_show(args):
