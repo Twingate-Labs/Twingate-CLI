@@ -101,7 +101,7 @@ device_subparsers = device_parser.add_subparsers()
 # device list
 device_list_parser = device_subparsers.add_parser('list')
 device_list_parser.set_defaults(func=device_list)
-device_list_parser.add_argument('-f','--fileofids',type=str,default="", help='Compare IDs to existing list from file', dest="IDPATH")
+device_list_parser.add_argument('-l','--fileofids',type=str,default="", help='Compare IDs to existing list from file', dest="IDPATH")
 device_list_parser.add_argument('-i','--idsonly',type=bool,default=False, help='Print Only Ids', dest="IDSONLY")
 
 # device <show>
