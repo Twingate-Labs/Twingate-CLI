@@ -30,6 +30,7 @@ def get_device_update_resrouces(sessionname,token,JsonData):
                     id
                     name
                     isTrusted
+
                 }
             }
         }
@@ -52,6 +53,23 @@ def get_device_list_resources(sessionname,token,JsonData):
                 isTrusted
                 osName
                 deviceType
+                lastFailedLoginAt
+                lastSuccessfulLoginAt
+                osVersion
+                hardwareModel
+                hostname
+                username
+                serialNumber
+                user{
+                    firstName
+                    lastName
+                    email
+                }
+                lastConnectedAt
+                osName
+                deviceType
+                clientVersion
+                manufacturerName
               }
             }
             pageInfo {
@@ -77,6 +95,19 @@ def get_device_show_resources(sessionname,token,JsonData):
             isTrusted
             osName
             deviceType
+            lastFailedLoginAt
+            lastSuccessfulLoginAt
+            osVersion
+            hardwareModel
+            hostname
+            username
+            serialNumber
+            user
+            lastConnectedAt
+            osName
+            deviceType
+            clientVersion
+            manufacturerName
               }
           }
     """
