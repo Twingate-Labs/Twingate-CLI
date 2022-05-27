@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from pandas.io.json import json_normalize
 
 def GetUpdateAsCsv(jsonResults,objectname):
     # {"data":{"deviceUpdate":{"ok":true,"error":null,"entity":{"id":"RGV2aWNlOjE5MzI2OQ==","name":"DESKTOP-FFPADSA","isTrusted":true}}}}
@@ -15,5 +16,5 @@ def GetUpdateAsCsv(jsonResults,objectname):
 def GetShowAsCsv(jsonResults,objectname):
 
     item = jsonResults['data']
-    dfItem = pd.json_normalize(item)
+    dfItem = json_normalize(item)
     return dfItem

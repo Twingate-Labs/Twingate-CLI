@@ -1,6 +1,7 @@
 import json
 import os
 import pandas as pd
+from pandas.io.json import json_normalize
 
 def GetIds(jsonResults,ObjectName):
     IDs = []
@@ -25,13 +26,13 @@ def GetIdsAndCompareToFile(jsonResults,idsfile,ObjectName):
 def GetListAsCsv(jsonResults,ObjectName):
 
     GenList = jsonResults['data'][ObjectName]['edges']
-    dfItem = pd.json_normalize(GenList)
+    dfItem = json_normalize(GenList)
     return dfItem
 
 def GetShowAsCsv(jsonResults,ObjectName):
 
     GenList = jsonResults['data'][ObjectName]
-    dfItem = pd.json_normalize(GenList)
+    dfItem = json_normalize(GenList)
     return dfItem
 
 def GetCreateAsCsv(jsonResults,objectname):
