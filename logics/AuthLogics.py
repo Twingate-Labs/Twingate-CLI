@@ -12,12 +12,12 @@ import AuthResponses
 import logging
 import StdAPIUtils
 
-def login(apikey,url,sessionname):
+def login(apikey,tenant,sessionname):
 
-    FULLURL = url
+    FULLURL = tenant
 
-    DataUtils.StoreAuthToken(apikey,sessionname)
-    DataUtils.StoreUrl(url,sessionname)
+    DataUtils.StoreAuthToken(apikey,tenant,sessionname)
+    DataUtils.StoreTenant(tenant,sessionname)
     print("Token Stored in session: "+sessionname)
 
 def logout(sessionname):

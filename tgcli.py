@@ -47,11 +47,11 @@ subparsers = parser.add_subparsers()
 def login(args):
     if not args.APIKEY:
         parser.error('no api key passed')
-    if not args.URL:
-        parser.error('no url passed')
+    if not args.TENANT:
+        parser.error('no Network Tenant passed')
     if not args.SESSIONNAME:
         args.SESSIONNAME = DataUtils.RandomSessionNameGenerator()
-    AuthLogics.login(args.APIKEY,args.URL,args.SESSIONNAME)
+    AuthLogics.login(args.APIKEY,args.TENANT,args.SESSIONNAME)
 
 def logout(args):
     if not args.SESSIONNAME:
@@ -68,9 +68,7 @@ auth_subparsers = auth_parser.add_subparsers()
 login_parser = auth_subparsers.add_parser('login')
 login_parser.add_argument('-a','--api_key',type=str,default="", help='API Key', dest="APIKEY")
 login_parser.add_argument('-s','--session',type=str,default="", help='Session Name (Optional)',dest="SESSIONNAME")
-login_parser.add_argument('-r', '--url',type=str,default="", help='Twingate API URL',dest="URL")
-#login_parser.add_argument('-v', '--version',type=str,default=DEFAULT_CR_VERSION, help='CR Version',dest="CRVERSION")
-#login_parser.add_argument('-s', '--session',type=str,default="", help='Session Name',dest="SESSIONNAME")
+login_parser.add_argument('-t', '--tenant',type=str,default="", help='Twingate Network Tenant',dest="TENANT")
 login_parser.set_defaults(func=login)
 
 # auth logout

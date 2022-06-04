@@ -9,7 +9,7 @@ A simple command line interface for Twingate in Python
 3. Authenticate (you can pass a Session Name or let it generate one at random):
 
 ```
-python ./tgcli.py auth login -r "https://xxxx.twingate.com/api/graphql/" -a "my twingate API token"
+python ./tgcli.py auth login -t "my Twingate Tenant Name" -a "my Twingate API token"
 ```
 
 3. Check CLI Help to look at available Commands:
@@ -34,12 +34,12 @@ python ./tgcli.py auth login -h
 Before you can run any of the commands, you need to **authenticate** using *python ./tgcli.py auth login*:
 
 ```
-python ./tgcli.py auth login -r "https://xxxx.twingate.com/api/graphql/" -a "my twingate API token"
+python ./tgcli.py auth login -t "my Twingate Tenant Name" -a "my Twingate API Token"
 ```
 
-The **authentication token** along with the **URL** in the authentication call are **stored locally** and **do not need to be passed as parameters beyond the first authentication call**.
+The **authentication token** along with the **Tenant Name** in the authentication call are **stored locally** and **do not need to be passed as parameters beyond the first authentication call**.
 
-The **Session Name** needs to be passed in all calls (it serves to retrieve the URL and Authentication Token dynamically)
+The **Session Name** needs to be passed in all calls (it serves to retrieve the Tenant name and Authentication Token dynamically)
 
 Apart from the initial authentication call, each call should contain **at least 1 option**: **-s** (**-s** is used to specify the **Session Name**.)
 
@@ -76,7 +76,7 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
     * addUsers
     * removeUsers
     * create
-    * delete 
+    * delete
 
   * user
     * list
@@ -93,7 +93,7 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
 ## Examples
 ```
 # Authenticate
-python ./tgcli.py auth login -r "https://xxxx.twingate.com/api/graphql/" -a "my twingate API token"
+python ./tgcli.py auth login -t "my Twingate Tenant Name" -a "my Twingate API Token"
 ```
 
 ```
