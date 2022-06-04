@@ -255,6 +255,43 @@ group_show_parser = group_subparsers.add_parser('show')
 group_show_parser.set_defaults(func=group_show)
 group_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+# group <addUsers>
+
+def group_add_users(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if args.USERIDS != []:
+        AllIDs = args.USERIDS.split(",")
+        args.USERIDS = AllIDs
+    GroupsLogics.add_users_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.USERIDS)
+
+# group addUsers
+group_addusers_parser = group_subparsers.add_parser('addUsers')
+group_addusers_parser.set_defaults(func=group_add_users)
+group_addusers_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
+group_addusers_parser.add_argument('-u','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
+
+# group <removeUsers>
+
+def group_remove_users(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if args.USERIDS != []:
+        AllIDs = args.USERIDS.split(",")
+        args.USERIDS = AllIDs
+    GroupsLogics.remove_users_from_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.USERIDS)
+
+# group removeUsers
+group_addusers_parser = group_subparsers.add_parser('removeUsers')
+group_addusers_parser.set_defaults(func=group_remove_users)
+group_addusers_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
+group_addusers_parser.add_argument('-u','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
+
+
 #####
 # Resource Parser
 # resource <list>

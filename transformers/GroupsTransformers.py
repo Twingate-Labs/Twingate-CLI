@@ -27,6 +27,27 @@ def ProcessOneItem(item):
 
     return [ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList]
 
+def GetAddOrRemoveUsersAsCsv(jsonResults,objectname):
+    GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','UserIdList']
+    data = []
+    ApiResOK = jsonResults['data'][objectname]['ok']
+    ApiResErr = jsonResults['data'][objectname]['error']
+    item = jsonResults['data'][objectname]['entity']
+    ItemId = item['id']
+    ItemName = item['name']
+    users = item['users']['edges']
+    userIdList = []
+    for userInList in users:
+        user = userInList['node']
+        userId = user['id']
+        userIdList.append(userId)
+
+    data.append([ApiResOK,ApiResErr,ItemId,ItemName,userIdList])
+
+    df = pd.DataFrame(data, columns = GroupColumns)
+
+    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
+    return df
 
 def GetShowAsCsv(jsonResults,objectname):
     data = []
