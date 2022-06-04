@@ -49,6 +49,39 @@ def GetAddOrRemoveUsersAsCsv(jsonResults,objectname):
     #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
     return df
 
+def GetCreateAsCsv(jsonResults,objectname):
+    GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
+
+    data = []
+    ApiResOK = jsonResults['data'][objectname]['ok']
+    ApiResErr = jsonResults['data'][objectname]['error']
+    item = jsonResults['data'][objectname]['entity']
+    ItemId = item['id']
+    ItemName = item['name']
+    createdAt = item['createdAt']
+    updatedAt = item['updatedAt']
+    isActive = item['isActive']
+    type = item['type']
+
+    users = item['users']['edges']
+    userIdList = []
+    for userInList in users:
+        user = userInList['node']
+        userId = user['id']
+        userIdList.append(userId)
+
+    resourceIdList = []
+    resources = item['resources']['edges']
+    for resourceInList in resources:
+        resource = resourceInList['node']
+        resourceId = resource['id']
+        resourceIdList.append(resourceId)
+
+    data.append([ApiResOK,ApiResErr,ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
+    df = pd.DataFrame(data,columns = GroupColumns)
+
+    return df
+
 def GetShowAsCsv(jsonResults,objectname):
     data = []
     item = jsonResults['data'][objectname]

@@ -35,6 +35,15 @@ def GetShowAsCsv(jsonResults,ObjectName):
     dfItem = json_normalize(GenList)
     return dfItem
 
+def GetDeleteAsCsv(jsonResults,objectname):
+    #{'data': {'resourceCreate': {'ok': True, 'error': None, 'entity': {'id': 'UmVzb3VyY2U6MjE2OTgxNA==', 'name': 'MyDevice1'}}}}
+    item = jsonResults['data'][objectname]
+    IsOk = item['ok']
+    IsError = item['error']
+    data = [[IsOk,IsError]]
+    df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError'])
+    return df
+
 def GetCreateAsCsv(jsonResults,objectname):
     #{'data': {'resourceCreate': {'ok': True, 'error': None, 'entity': {'id': 'UmVzb3VyY2U6MjE2OTgxNA==', 'name': 'MyDevice1'}}}}
     item = jsonResults['data'][objectname]

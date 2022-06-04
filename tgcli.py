@@ -291,6 +291,41 @@ group_addusers_parser.set_defaults(func=group_remove_users)
 group_addusers_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
 group_addusers_parser.add_argument('-u','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
 
+# group <create>
+
+def group_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMNAME:
+        parser.error('no item name passed')
+    if args.USERIDS != []:
+        AllIDs = args.USERIDS.split(",")
+        args.USERIDS = AllIDs
+    if args.RESOURCEIDS != []:
+        AllIDs = args.RESOURCEIDS.split(",")
+        args.RESOURCEIDS = AllIDs
+    GroupsLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMNAME,args.USERIDS,args.RESOURCEIDS)
+
+# group removeUsers
+group_create_parser = group_subparsers.add_parser('create')
+group_create_parser.set_defaults(func=group_create)
+group_create_parser.add_argument('-g','--groupname',type=str,default="", help='group name', dest="ITEMNAME")
+group_create_parser.add_argument('-u','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
+group_create_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESOURCEIDS")
+
+# group <delete>
+
+def group_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item name passed')
+    GroupsLogics.item_delete(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# group removeUsers
+group_delete_parser = group_subparsers.add_parser('delete')
+group_delete_parser.set_defaults(func=group_delete)
+group_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
 #####
 # Resource Parser
