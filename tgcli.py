@@ -12,6 +12,7 @@ import argparse
 import sys
 import logging
 sys.path.insert(1, './logics')
+sys.path.insert(1, './validators')
 sys.path.insert(1, './libs')
 import AuthLogics
 import DevicesLogics
@@ -21,6 +22,7 @@ import ServiceAccountsLogics
 import ResourcesLogics
 import UsersLogics
 import GroupsLogics
+import ProtocolValidators
 import DataUtils
 import re
 
@@ -66,7 +68,7 @@ auth_subparsers = auth_parser.add_subparsers()
 
 # auth login
 login_parser = auth_subparsers.add_parser('login')
-login_parser.add_argument('-a','--api_key',type=str,default="", help='API Key', dest="APIKEY")
+login_parser.add_argument('-a','--apikey',type=str,default="", help='API Key', dest="APIKEY")
 login_parser.add_argument('-s','--session',type=str,default="", help='Session Name (Optional)',dest="SESSIONNAME")
 login_parser.add_argument('-t', '--tenant',type=str,default="", help='Twingate Network Tenant',dest="TENANT")
 login_parser.set_defaults(func=login)
@@ -372,16 +374,39 @@ def resource_create(args):
     if args.GROUPIDS != []:
         AllIDs = args.GROUPIDS.split(",")
         args.GROUPIDS = AllIDs
+    isSuccess,ret = ProtocolValidators.ValidateRange(args.TCPRANGE)
+    if not isSuccess:
+        parser.error(str(args.TCPRANGE)+" - "+ret)
+    else:
+        args.TCPRANGE=ret
 
-    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS)
+    isSuccess,ret = ProtocolValidators.ValidatePolicy(args.TCPPOLICY)
+    if not isSuccess:
+        parser.error(str(args.TCPRANGE)+" - "+ret)
+
+    isSuccess,ret = ProtocolValidators.ValidateRange(args.UDPRANGE)
+    if not isSuccess:
+        parser.error(str(args.TCPRANGE)+" - "+ret)
+    else:
+        args.UDPRANGE=ret
+
+    isSuccess,ret = ProtocolValidators.ValidatePolicy(args.UDPPOLICY)
+    if not isSuccess:
+        parser.error(str(args.TCPRANGE)+" - "+ret)
+    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE)
 
 resource_create_parser = resource_subparsers.add_parser('create')
 resource_create_parser.set_defaults(func=resource_create)
 
 resource_create_parser.add_argument('-a','--address',type=str,default="", help='resource address', dest="ADDRESS")
 resource_create_parser.add_argument('-n','--name',type=str,default="", help='resource name', dest="NAME")
-resource_create_parser.add_argument('-r','--networkID',type=str,default="", help='remote network ID', dest="NETWORKID")
-resource_create_parser.add_argument('-g','--groupIDs',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
+resource_create_parser.add_argument('-r','--networkid',type=str,default="", help='remote network ID', dest="NETWORKID")
+resource_create_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
+resource_create_parser.add_argument('-i','--icmp',type=bool,default=False, help='(Optional) Disallow ICMP Protocol', dest="DISALLOWICMP")
+resource_create_parser.add_argument('-t','--tcppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,DENY_ALL>, Default: ALLOW_ALL', dest="TCPPOLICY")
+resource_create_parser.add_argument('-c','--tcprange',type=str,default="[]", help='(Optional) <[[a,b],[c,d],..]>, Default: [], ex:[[22-50],[443,443],[654-987]]', dest="TCPRANGE")
+resource_create_parser.add_argument('-u','--udppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,DENY_ALL>, Default: ALLOW_ALL', dest="UDPPOLICY")
+resource_create_parser.add_argument('-d','--udprange',type=str,default="[]", help='(Optional) <[[a,b],[c,d],..]>, Default: [], ex:[[22-50],[443,443],[654-987]]', dest="UDPRANGE")
 
 # resource <delete>
 
