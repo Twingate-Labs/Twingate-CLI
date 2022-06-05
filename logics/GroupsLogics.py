@@ -12,6 +12,81 @@ import GroupsTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_group_remove_resources_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {
+        "groupID":JsonData['itemid'],
+        "resourceIDS":JsonData['resourceids']
+    }
+
+    Body = """
+        mutation removeResToGroup($groupID: ID!, $resourceIDS: [ID!]){
+        groupUpdate(id: $groupID, removedResourceIds: $resourceIDS) {
+          ok
+          error
+          entity{
+            id
+            name
+            isActive
+            createdAt
+            updatedAt
+            type
+            resources {
+                edges{
+                    node{
+                        id
+                        name
+                    }
+                }
+            }
+          }
+
+        }
+    }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+
+def get_group_add_resources_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {
+        "groupID":JsonData['itemid'],
+        "resourceIDS":JsonData['resourceids']
+    }
+
+    Body = """
+        mutation addResToGroup($groupID: ID!, $resourceIDS: [ID!]){
+        groupUpdate(id: $groupID, addedResourceIds: $resourceIDS) {
+          ok
+          error
+          entity{
+            id
+            name
+            isActive
+            createdAt
+            updatedAt
+            type
+            resources {
+                edges{
+                    node{
+                        id
+                        name
+                    }
+                }
+            }
+          }
+
+        }
+    }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_group_delete_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -258,6 +333,14 @@ def get_group_show_resources(sessionname,token,JsonData):
     """
 
     return True,api_call_type,Headers,Body,variables
+
+def add_resources_to_group(outputFormat,sessionname,itemid,resourceids):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv,'groupUpdate')
+    print(r)
+
+def remove_resources_from_group(outputFormat,sessionname,itemid,resourceids):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv,'groupUpdate')
+    print(r)
 
 def item_delete(outputFormat,sessionname,itemid):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_delete_resources,{'itemid':itemid},GenericTransformers.GetDeleteAsCsv,'groupDelete')

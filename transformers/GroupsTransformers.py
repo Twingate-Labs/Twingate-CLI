@@ -27,6 +27,28 @@ def ProcessOneItem(item):
 
     return [ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList]
 
+def GetAddOrRemoveResourcesAsCsv(jsonResults,objectname):
+    GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','ResourceIdList']
+    data = []
+    ApiResOK = jsonResults['data'][objectname]['ok']
+    ApiResErr = jsonResults['data'][objectname]['error']
+    item = jsonResults['data'][objectname]['entity']
+    ItemId = item['id']
+    ItemName = item['name']
+    resources = item['resources']['edges']
+    resIdList = []
+    for resInList in resources:
+        res = resInList['node']
+        resId = res['id']
+        resIdList.append(resId)
+
+    data.append([ApiResOK,ApiResErr,ItemId,ItemName,resIdList])
+
+    df = pd.DataFrame(data, columns = GroupColumns)
+
+    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
+    return df
+
 def GetAddOrRemoveUsersAsCsv(jsonResults,objectname):
     GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','UserIdList']
     data = []
