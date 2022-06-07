@@ -19,8 +19,8 @@ def get_resource_create_resources(sessionname,token,JsonData):
     #print(variables)
     Body = """
         mutation
-            ObjCreate($address: String!,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!],$protocols:ProtocolsInput){
-            resourceCreate(address: $address, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId,protocols:$protocols) {
+            ObjCreate($address: String!,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!],$protocols:ProtocolsInput!){
+            resourceCreate(protocols: $protocols, address: $address, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId) {
               ok
               error
             entity{

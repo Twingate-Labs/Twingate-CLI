@@ -410,6 +410,7 @@ def resource_create(args):
     if args.GROUPIDS != []:
         AllIDs = args.GROUPIDS.split(",")
         args.GROUPIDS = AllIDs
+
     isSuccess,ret = ProtocolValidators.ValidateRange(args.TCPRANGE)
     if not isSuccess:
         parser.error(str(args.TCPRANGE)+" - "+ret)
@@ -418,17 +419,27 @@ def resource_create(args):
 
     isSuccess,ret = ProtocolValidators.ValidatePolicy(args.TCPPOLICY)
     if not isSuccess:
-        parser.error(str(args.TCPRANGE)+" - "+ret)
+        parser.error(str(args.TCPPOLICY)+" - "+ret)
 
     isSuccess,ret = ProtocolValidators.ValidateRange(args.UDPRANGE)
     if not isSuccess:
-        parser.error(str(args.TCPRANGE)+" - "+ret)
+        parser.error(str(args.UDPRANGE)+" - "+ret)
     else:
         args.UDPRANGE=ret
 
-    isSuccess,ret = ProtocolValidators.ValidatePolicy(args.UDPPOLICY)
+    isSuccess,ret = ProtocolValidators.ValidatePolicy(args.TCPPOLICY,)
     if not isSuccess:
-        parser.error(str(args.TCPRANGE)+" - "+ret)
+        parser.error(str(args.UDPPOLICY)+" - "+ret)
+
+    isSuccess,ret = ProtocolValidators.ValidateRangeWithPolicy(str(args.TCPRANGE),args.TCPPOLICY)
+    if not isSuccess:
+        parser.error(ret)
+
+    isSuccess,ret = ProtocolValidators.ValidateRangeWithPolicy(str(args.UDPRANGE),args.UDPPOLICY)
+    if not isSuccess:
+        parser.error(ret)
+
+    #exit(1)
     ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE)
 
 resource_create_parser = resource_subparsers.add_parser('create')
@@ -529,7 +540,7 @@ account_show_parser.add_argument('-i','--itemid',type=str,default="", help='item
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    try:
-        args.func(args)
-    except:
-        print("general error, please check commands & parameters. Hint: Use -h")
+    #try:
+    args.func(args)
+    #except:
+    #    print("general error, please check commands & parameters. Hint: Use -h")

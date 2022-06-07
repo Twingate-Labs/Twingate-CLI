@@ -5,8 +5,7 @@ POLICYOPTIONS = ["ALLOW_ALL","RESTRICTED"]
 def ValidatePolicy(Policy):
     if Policy.upper() not in POLICYOPTIONS:
         return False,"Wrong Value, only the following options are valid: "+str(POLICYOPTIONS)
-    return True,None
-import json
+    return True,Policy.upper()
 
 def ValidateRange(Ranges):
     # "ports": [{"start":22,"end":22},{"start":443,"end":446},{"start":556,"end":778}]
@@ -20,7 +19,7 @@ def ValidateRange(Ranges):
         return False,"Not a valid list."
 
     for aRange in ProcessedRanges:
-        
+
         if len(aRange) != 2:
             return False,"Wrong Format, All Ranges should contain 2 port values."
         for port in aRange:
@@ -31,3 +30,9 @@ def ValidateRange(Ranges):
 
         FinalRanges.append({"start":int(aRange[0]),"end":int(aRange[1])})
     return True,FinalRanges
+
+def ValidateRangeWithPolicy(Range,Policy):
+    if Policy.upper() == POLICYOPTIONS[0] and str(Range) != "[]":
+        return False,POLICYOPTIONS[0]+" Policy Option is not compatible with a non-empty port range: "+str(Range)+". Please use "+POLICYOPTIONS[1]+" instead."
+    else:
+        return True,None
