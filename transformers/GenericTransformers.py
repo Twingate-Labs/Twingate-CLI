@@ -25,7 +25,14 @@ def GetIdsAndCompareToFile(jsonResults,idsfile,ObjectName):
 def GetListAsCsv(jsonResults,ObjectName):
 
     GenList = jsonResults['data'][ObjectName]['edges']
-    dfItem = pd.json_normalize(GenList)
+    dfItem = pd.json_normalize(GenList,max_level=2)
+    try:
+        dfItem = dfItem.drop(columns='node.createdAt')
+        dfItem = dfItem.drop(columns='node.updatedAt')
+        dfItem = dfItem.drop(columns='CreatedAt')
+        dfItem = dfItem.drop(columns='UpdatedAt')
+    except:
+        pass
     return dfItem
 
 def GetShowAsCsv(jsonResults,ObjectName):

@@ -1,13 +1,14 @@
 import json
 import pandas as pd
 
-GroupColumns = ['GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
+#GroupColumns = ['GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
+GroupColumns = ['GroupID', 'GroupName','isActive','Type','UserIdList','ResourceIdList']
 
 def ProcessOneItem(item):
     ItemId = item['id']
     ItemName = item['name']
-    createdAt = item['createdAt']
-    updatedAt = item['updatedAt']
+    #createdAt = item['createdAt']
+    #updatedAt = item['updatedAt']
     isActive = item['isActive']
     type = item['type']
 
@@ -25,7 +26,8 @@ def ProcessOneItem(item):
         resourceId = resource['id']
         resourceIdList.append(resourceId)
 
-    return [ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList]
+    #return [ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList]
+    return [ItemId,ItemName,isActive,type,userIdList,resourceIdList]
 
 def GetAddOrRemoveResourcesAsCsv(jsonResults,objectname):
     GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','ResourceIdList']
@@ -72,16 +74,16 @@ def GetAddOrRemoveUsersAsCsv(jsonResults,objectname):
     return df
 
 def GetCreateAsCsv(jsonResults,objectname):
+    #GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','isActive','Type','UserIdList','ResourceIdList']
     GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
-
     data = []
     ApiResOK = jsonResults['data'][objectname]['ok']
     ApiResErr = jsonResults['data'][objectname]['error']
     item = jsonResults['data'][objectname]['entity']
     ItemId = item['id']
     ItemName = item['name']
-    createdAt = item['createdAt']
-    updatedAt = item['updatedAt']
+    #createdAt = item['createdAt']
+    #updatedAt = item['updatedAt']
     isActive = item['isActive']
     type = item['type']
 
@@ -99,7 +101,8 @@ def GetCreateAsCsv(jsonResults,objectname):
         resourceId = resource['id']
         resourceIdList.append(resourceId)
 
-    data.append([ApiResOK,ApiResErr,ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
+    #data.append([ApiResOK,ApiResErr,ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
+    data.append([ApiResOK,ApiResErr,ItemId,ItemName,isActive,type,userIdList,resourceIdList])
     df = pd.DataFrame(data,columns = GroupColumns)
 
     return df
