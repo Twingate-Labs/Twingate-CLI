@@ -110,7 +110,8 @@ def GetCreateAsCsv(jsonResults,objectname):
 def GetShowAsCsv(jsonResults,objectname):
     data = []
     item = jsonResults['data'][objectname]
-    data.append(ProcessOneItem(item))
+    if item is not None:
+        data.append(ProcessOneItem(item))
 
     df = pd.DataFrame(data, columns = GroupColumns)
 
@@ -120,6 +121,7 @@ def GetShowAsCsv(jsonResults,objectname):
 def GetListAsCsv(jsonResults,objectname):
 
     data = []
+
     ItemList = jsonResults['data'][objectname]['edges']
     for itemInList in ItemList:
         item = itemInList['node']
