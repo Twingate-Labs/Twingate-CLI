@@ -1,16 +1,17 @@
 ##############################################################
 #
-# Author: Bren Sapience
+# Author: Bren Sapience - brendan@twingate.com
 # Date: Mar 2022
 # Scope: Wrapper CLI around Twingate Admin APIs
 #
-#
 ##############################################################
+
 #!/usr/bin/env python3
-# install pandas
+# don't forget to pip install pandas!
 import argparse
 import sys
 import logging
+import re
 sys.path.insert(1, './logics')
 sys.path.insert(1, './validators')
 sys.path.insert(1, './libs')
@@ -24,9 +25,9 @@ import UsersLogics
 import GroupsLogics
 import ProtocolValidators
 import DataUtils
-import re
 
-VERSION="0.0.1"
+
+VERSION="1.0.0"
 
 logging.basicConfig(level=logging.ERROR)
 

@@ -45,7 +45,7 @@ def get_device_list_resources(sessionname,token,JsonData):
     api_call_type = "POST"
 
     Body = """{
-          devices(after: null, first:1000) {
+          devices(after: null, first:10000) {
             edges {
               node {
                 id

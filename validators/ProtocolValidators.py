@@ -12,7 +12,7 @@ def ValidateRange(Ranges):
     FinalRanges = []
     ProcessedRanges = Ranges.replace(";",",").replace(":",",").replace("-",",").replace(",,",",")
     ProcessedRanges = json.loads(ProcessedRanges)
-    if ProcessedRanges == "[]":
+    if ProcessedRanges == "[]" or ProcessedRanges == "[[]]" :
         return True,[]
 
     if not str(ProcessedRanges).startswith("[") or not str(ProcessedRanges).endswith("]"):

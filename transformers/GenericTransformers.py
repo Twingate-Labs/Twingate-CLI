@@ -62,6 +62,7 @@ def GetCreateAsCsv(jsonResults,objectname):
     df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError','ItemID','ItemName'])
     return df
 
+# Duplicate function below?
 def GetDeleteAsCsv(jsonResults,objectname):
     #{'data': {'resourceCreate': {'ok': True, 'error': None, 'entity': {'id': 'UmVzb3VyY2U6MjE2OTgxNA==', 'name': 'MyDevice1'}}}}
     item = jsonResults['data'][objectname]
