@@ -96,5 +96,5 @@ def item_show(outputFormat,sessionname,itemid):
     print(r)
     
 def item_list(outputFormat,sessionname):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_list_resources,{},RemoteNetworksTransformers.GetListAsCsv,"remoteNetworks")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_list_resources,{},GenericTransformers.GetListAsCsv,"remoteNetworks")
     print(r)

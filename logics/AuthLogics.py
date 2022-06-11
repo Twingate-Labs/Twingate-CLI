@@ -18,7 +18,7 @@ def login(apikey,tenant,sessionname):
 
     DataUtils.StoreAuthToken(apikey,tenant,sessionname)
     DataUtils.StoreTenant(tenant,sessionname)
-    print("Token Stored in session: "+sessionname)
+    print("Session Created: "+sessionname)
 
 def logout(sessionname):
     DataUtils.DeleteSessionFiles(sessionname)
@@ -28,5 +28,6 @@ def listSessions():
     SessionList,IsError = DataUtils.listSessions()
     if(IsError):
         print("Error retrieving session list.")
+        exit(1)
     else:
         print(SessionList)

@@ -1,11 +1,6 @@
 import json
 import pandas as pd
-
-def GetListAsCsv(jsonResults):
-
-    DeviceList = jsonResults['data']['devices']['edges']
-    dfItem = pd.json_normalize(DeviceList)
-    return dfItem
+import logging
 
 def GetUpdateAsCsv(jsonResults,objectname):
     # {"data":{"deviceUpdate":{"ok":true,"error":null,"entity":{"id":"RGV2aWNlOjE5MzI2OQ==","name":"DESKTOP-FFPADSA","isTrusted":true}}}}

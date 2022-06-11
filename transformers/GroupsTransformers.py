@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import logging
 
 #GroupColumns = ['GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
 GroupColumns = ['GroupID', 'GroupName','isActive','Type','UserIdList','ResourceIdList']
@@ -116,17 +117,4 @@ def GetShowAsCsv(jsonResults,objectname):
     df = pd.DataFrame(data, columns = GroupColumns)
 
     #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
-    return df
-
-def GetListAsCsv(jsonResults,objectname):
-
-    data = []
-
-    ItemList = jsonResults['data'][objectname]['edges']
-    for itemInList in ItemList:
-        item = itemInList['node']
-        data.append(ProcessOneItem(item))
-
-    df = pd.DataFrame(data, columns = GroupColumns)
-    #dfItem = pd.json_normalize(DeviceList)
     return df

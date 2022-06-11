@@ -362,5 +362,5 @@ def item_show(outputFormat,sessionname,itemid):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_show_resources,{'itemid':itemid},GroupsTransformers.GetShowAsCsv,"group")
     print(r)
 def item_list(outputFormat,sessionname):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_list_resources,{},GroupsTransformers.GetListAsCsv,'groups')
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_list_resources,{},GenericTransformers.GetListAsCsv,'groups')
     print(r)

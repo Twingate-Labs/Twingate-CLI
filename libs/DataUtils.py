@@ -1,6 +1,7 @@
 import os
 import random
 import uuid
+import logging
 
 DATAFILEPATH = "./data/"
 TOKENFILE = os.path.join(DATAFILEPATH, ".token_")
@@ -11,16 +12,22 @@ Colors = ['Blue','Pink','Yellow','Green','Red','Orange','Purple','White','Black'
 
 def CheckAndCreateDataFolderIfNeeded():
     if not os.path.exists(DATAFILEPATH):
+        logging.debug("Creating Folder to Store Token and Tenant Name.")
         os.makedirs(DATAFILEPATH)
+        logging.debug("Created:"+str(DATAFILEPATH))
 
 def listSessions():
     CheckAndCreateDataFolderIfNeeded()
     sessionlist = []
     try:
+        logging.debug("Looking for Existing Sessions.")
         for root, dirs, files in os.walk(DATAFILEPATH):
             for file in files:
+                logging.debug("Scanning: "+str(file))
                 if("token" in file):
-                    sessionlist.append(file.split("_")[1])
+                    SessionName = file.split("_")[1]
+                    sessionlist.append(SessionName)
+                    logging.debug("Session Added for: "+str(SessionName))
         return sessionlist,False
     except Exception as e:
         return e,True
@@ -67,10 +74,13 @@ def StoreAuthToken(token,tenant,sessionname):
 
 def GetUrl(sessionname):
     SessionFileName = URLFILE+sessionname
+    logging.debug("Getting URL From Session File: "+str(SessionFileName))
     try:
         text_file = open(SessionFileName, "r")
         tenant = text_file.read()
+        logging.debug("Tenant Name: "+str(tenant))
         fullurl = "https://"+tenant+".twingate.com/api/graphql/"
+        logging.debug("Full Url: "+str(fullurl))
         text_file.close()
         return fullurl,tenant
     except:
@@ -79,10 +89,13 @@ def GetUrl(sessionname):
 
 def GetAuthToken(tenant,sessionname):
     SessionFileName = TOKENFILE+sessionname
+    logging.debug("Getting Token From Session File: "+str(SessionFileName))
     try:
         text_file = open(SessionFileName, "rb")
         token = text_file.read()
+        logging.debug("Encrypted Token: "+str(token))
         detoken = decode(token,tenant)
+        logging.debug("Decrypted Token: "+str(detoken))
         text_file.close()
         return detoken
     except:
@@ -90,7 +103,9 @@ def GetAuthToken(tenant,sessionname):
         exit(1)
 
 def RandomSessionNameGenerator():
-    return random.choice(Colors)+random.choice(Animals)
+    SessionName = random.choice(Colors)+random.choice(Animals)
+    logging.debug("Session Name Generated: "+str(SessionName))
+    return SessionName
 
 def encode(cleartext,key):
     StubStr = uuid.uuid4().hex
@@ -100,13 +115,10 @@ def encode(cleartext,key):
     key = (key * reps)[:len(StringToEnc)].encode('utf-8')
     cipher = bytes([i1^i2 for (i1,i2) in zip(a1,key)])
     return cipher
-    #return cleartext
 
 def decode(cipher,key):
     reps = (len(cipher)-1)//len(key) +1
     key = (key * reps)[:len(cipher)].encode('utf-8')
     clear = bytes([i1^i2 for (i1,i2) in zip(cipher,key)])
     clearStr = clear.decode('utf-8')[32:]
-    #print(clearStr)
     return clearStr
-    #return cipher

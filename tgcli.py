@@ -29,7 +29,7 @@ import DataUtils
 
 VERSION="1.0.0"
 
-logging.basicConfig(level=logging.ERROR)
+
 
 #####
 # General Parser
@@ -37,9 +37,14 @@ logging.basicConfig(level=logging.ERROR)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v','--version', action='version', version=VERSION)
+parser.add_argument('-l','--log',default="ERROR", help='DEBUG,INFO,WARNING,ERROR', dest="DEBUGLEVEL")
 parser.add_argument('-s','--session',type=str,default="", help='Session Name',dest="SESSIONNAME")
 parser.add_argument('-f','--format',type=str,default="JSON", help='Output Format <JSON,CSV,DF>',dest="OUTPUTFORMAT")
 subparsers = parser.add_subparsers()
+
+#logging.basicConfig(level=logging.ERROR)
+
+
 
 #####
 # AUTH Parser
@@ -154,7 +159,6 @@ device_update_parser.set_defaults(func=device_update)
 device_update_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 device_update_parser.add_argument('-l','--itemlist',type=str,default="", help='item list ex: "id1,id2,id3"', dest="ITEMLIST")
 device_update_parser.add_argument('-t','--trust',type=str,default=True, help='True or False',dest="TRUST")
-
 
 #####
 # Connector Parser
@@ -466,7 +470,7 @@ def resource_delete(args):
 
     ResourcesLogics.item_delete(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
 
-# resource show
+# resource delete
 resource_delete_parser = resource_subparsers.add_parser('delete')
 resource_delete_parser.set_defaults(func=resource_delete)
 resource_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
@@ -539,9 +543,51 @@ account_show_parser.set_defaults(func=account_show)
 account_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
 
+# account <create>
+
+def account_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMNAME:
+        parser.error('no item name passed')
+    if args.RESOURCEIDS != []:
+        AllIDs = args.RESOURCEIDS.split(",")
+        args.RESOURCEIDS = AllIDs
+    ServiceAccountsLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMNAME,args.RESOURCEIDS)
+
+# account Create
+account_create_parser = account_subparsers.add_parser('create')
+account_create_parser.set_defaults(func=account_create)
+account_create_parser.add_argument('-n','--name',type=str,default="", help='account name', dest="ITEMNAME")
+account_create_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESOURCEIDS")
+
+# account <delete>
+
+def account_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    ServiceAccountsLogics.item_delete(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# account delete
+account_delete_parser = account_subparsers.add_parser('delete')
+account_delete_parser.set_defaults(func=account_delete)
+account_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+
+DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':
     args = parser.parse_args()
-    #try:
+    if not args.DEBUGLEVEL.upper() in DebugLevels:
+        args.DEBUGLEVEL = DebugLevels[0]
+
+    logging.basicConfig(level=getattr(logging, args.DEBUGLEVEL.upper()))
     args.func(args)
-    #except:
+    #try:
+        
+    #except Exception as e:
+        #logging.error(e)
     #    print("general error, please check commands & parameters. Hint: Use -h")
+    #    print(e)

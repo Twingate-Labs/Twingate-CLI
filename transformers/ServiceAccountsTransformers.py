@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import logging
 
 AccountColumns = ['AccountID', 'AccountName','CreatedAt','updatedAt','KeyIdList']
 
@@ -26,7 +27,6 @@ def GetShowAsCsv(jsonResults,objectname):
     return df
 
 def GetListAsCsv(jsonResults,objectname):
-
     data = []
     ItemList = jsonResults['data'][objectname]['edges']
     for itemInList in ItemList:
@@ -34,5 +34,4 @@ def GetListAsCsv(jsonResults,objectname):
         data.append(ProcessOneItem(item))
 
     df = pd.DataFrame(data, columns = AccountColumns)
-    #dfItem = pd.json_normalize(DeviceList)
     return df

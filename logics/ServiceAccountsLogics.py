@@ -12,6 +12,45 @@ import ServiceAccountsTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_service_account_delete_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {'id':JsonData['itemid']}
+    Body = """
+        mutation
+            ObjCreate($id:ID!){
+                serviceAccountDelete(id: $id) {
+                    ok
+                    error
+            }
+        }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+def get_service_account_create_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"name":JsonData['name'],"resourceIds":JsonData['resourceIds']}
+    Body = """
+        mutation
+            ObjCreate($name:String!,$resourceIds:[ID!]){
+
+                serviceAccountCreate(name: $name, resourceIds : $resourceIds) {
+                    ok
+                    error
+                entity{
+                    id
+                    name
+                }
+            }
+        }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_service_account_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -84,6 +123,14 @@ def get_service_account_show_resources(sessionname,token,JsonData):
     """
 
     return True,api_call_type,Headers,Body,variables
+
+def item_create(outputFormat,sessionname,itemname,resourceIds):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_create_resources,{'name':itemname,'resourceIds':resourceIds},GenericTransformers.GetCreateAsCsv,"serviceAccountCreate")
+    print(r)
+
+def item_delete(outputFormat,sessionname,itemid):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_delete_resources,{'itemid':itemid},GenericTransformers.GetDeleteAsCsv,"serviceAccountDelete")
+    print(r)
 
 def item_show(outputFormat,sessionname,itemid):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_show_resources,{'itemid':itemid},ServiceAccountsTransformers.GetShowAsCsv,"serviceAccount")

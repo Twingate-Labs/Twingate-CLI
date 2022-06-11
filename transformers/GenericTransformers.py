@@ -1,6 +1,7 @@
 import json
 import os
 import pandas as pd
+import logging
 
 def GetIds(jsonResults,ObjectName):
     IDs = []
@@ -55,9 +56,15 @@ def GetCreateAsCsv(jsonResults,objectname):
     item = jsonResults['data'][objectname]
     IsOk = item['ok']
     IsError = item['error']
-    ent = item['entity']
-    id = ent['id']
-    name = ent['name']
+    if IsError:
+        ent = None
+        id = None
+        name = None
+    else:
+        ent = item['entity']
+        id = ent['id']
+        name = ent['name']
+ 
     data = [[IsOk,IsError,id,name]]
     df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError','ItemID','ItemName'])
     return df
