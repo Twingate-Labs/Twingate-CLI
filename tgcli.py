@@ -24,8 +24,9 @@ import ResourcesLogics
 import UsersLogics
 import GroupsLogics
 import ProtocolValidators
+import ServiceAccountKeyValidators
 import DataUtils
-
+import SAccountKeysLogics
 
 VERSION="1.0.0"
 
@@ -270,9 +271,9 @@ def group_add_resources(args):
     if args.RESIDS != []:
         AllIDs = args.RESIDS.split(",")
         args.RESIDS = AllIDs
-    GroupsLogics.add_users_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.RESIDS)
+    GroupsLogics.add_resources_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.RESIDS)
 
-# group addUsers
+# group addResources
 group_addresources_parser = group_subparsers.add_parser('addResources')
 group_addresources_parser.set_defaults(func=group_add_resources)
 group_addresources_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
@@ -296,23 +297,23 @@ group_removeresources_parser.set_defaults(func=group_remove_resources)
 group_removeresources_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
 group_removeresources_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESIDS")
 
-# group <addResources>
+# group <addUsers>
 
-def group_add_resources(args):
+def group_add_users(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
     if not args.ITEMID:
         parser.error('no item ID passed')
-    if args.RESIDS != []:
-        AllIDs = args.RESIDS.split(",")
-        args.RESIDS = AllIDs
-    GroupsLogics.add_resources_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.RESIDS)
+    if args.USERIDS != []:
+        AllIDs = args.USERIDS.split(",")
+        args.USERIDS = AllIDs
+    GroupsLogics.add_users_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.USERIDS)
 
-# group addResources
-group_addusers_parser = group_subparsers.add_parser('addResources')
-group_addusers_parser.set_defaults(func=group_add_resources)
+# group addUsers
+group_addusers_parser = group_subparsers.add_parser('addUsers')
+group_addusers_parser.set_defaults(func=group_add_users)
 group_addusers_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
-group_addusers_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESIDS")
+group_addusers_parser.add_argument('-r','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
 
 # group <removeUsers>
 
@@ -347,7 +348,7 @@ def group_create(args):
         args.RESOURCEIDS = AllIDs
     GroupsLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMNAME,args.USERIDS,args.RESOURCEIDS)
 
-# group removeUsers
+# group create
 group_create_parser = group_subparsers.add_parser('create')
 group_create_parser.set_defaults(func=group_create)
 group_create_parser.add_argument('-g','--groupname',type=str,default="", help='group name', dest="ITEMNAME")
@@ -514,14 +515,14 @@ network_show_parser.add_argument('-i','--itemid',type=str,default="", help='item
 # account <list>
 #####
 
+# account commands
+account_parser = subparsers.add_parser('account')
+account_subparsers = account_parser.add_subparsers()
+
 def account_list(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
     ServiceAccountsLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME)
-
-# account commands
-account_parser = subparsers.add_parser('account')
-account_subparsers = account_parser.add_subparsers()
 
 # account list
 account_list_parser = account_subparsers.add_parser('list')
@@ -575,6 +576,136 @@ def account_delete(args):
 account_delete_parser = account_subparsers.add_parser('delete')
 account_delete_parser.set_defaults(func=account_delete)
 account_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+
+# account <addResources>
+
+def account_add_resources(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if args.RESIDS != []:
+        AllIDs = args.RESIDS.split(",")
+        args.RESIDS = AllIDs
+    ServiceAccountsLogics.add_resources_to_saccount(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.RESIDS)
+
+# account addResources
+account_addresources_parser = account_subparsers.add_parser('addResources')
+account_addresources_parser.set_defaults(func=account_add_resources)
+account_addresources_parser.add_argument('-g','--itemid',type=str,default="", help='item id', dest="ITEMID")
+account_addresources_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESIDS")
+
+# account <removeResources>
+
+def account_remove_resources(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if args.RESIDS != []:
+        AllIDs = args.RESIDS.split(",")
+        args.RESIDS = AllIDs
+    ServiceAccountsLogics.remove_resources_from_saccount(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.RESIDS)
+
+# account removeResources
+account_removeresources_parser = account_subparsers.add_parser('removeResources')
+account_removeresources_parser.set_defaults(func=account_remove_resources)
+account_removeresources_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+account_removeresources_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESIDS")
+
+
+#####
+# S. Account Key Parser
+# key <cmd>
+#####
+
+# saccount key commands
+saccount_key_parser = subparsers.add_parser('key')
+saccount_key_subparsers = saccount_key_parser.add_subparsers()
+
+# saccount key show
+def key_show(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    SAccountKeysLogics.item_show(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# saccount key show
+saccount_key_show_parser = saccount_key_subparsers.add_parser('show')
+saccount_key_show_parser.set_defaults(func=key_show)
+saccount_key_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+# saccount key create
+def saccount_key_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMNAME:
+        parser.error('no item name passed')
+    if not args.SACCID:
+        parser.error('no service account id passed') 
+    isOK, ProcessedExp = ServiceAccountKeyValidators.ValidateExpiration(args.EXP)
+    if not isOK:
+        parser.error(ProcessedExp)
+
+    SAccountKeysLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMNAME,args.SACCID,ProcessedExp)
+
+# saccount key Create
+saccount_key_create_parser = saccount_key_subparsers.add_parser('create')
+saccount_key_create_parser.set_defaults(func=saccount_key_create)
+saccount_key_create_parser.add_argument('-n','--name',type=str,default="", help='account name', dest="ITEMNAME")
+saccount_key_create_parser.add_argument('-i','--saccountid',type=str,default=[], help='Service Account Id', dest="SACCID")
+saccount_key_create_parser.add_argument('-e','--expiration',type=str,default=1, help='Expiration (number of days between 0 to 365)', dest="EXP")
+
+# saccount key <delete>
+
+def saccount_key_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    SAccountKeysLogics.item_delete(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# saccount key delete
+saccount_key_delete_parser = saccount_key_subparsers.add_parser('delete')
+saccount_key_delete_parser.set_defaults(func=saccount_key_delete)
+saccount_key_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+# saccount key <revoke>
+
+def saccount_key_revoke(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    SAccountKeysLogics.item_revoke(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# saccount revoke
+saccount_key_revoke_parser = saccount_key_subparsers.add_parser('revoke')
+saccount_key_revoke_parser.set_defaults(func=saccount_key_revoke)
+saccount_key_revoke_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+# saccount key <rename>
+
+def saccount_key_rename(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.ITEMNAME:
+        parser.error('no item name passed')
+
+    SAccountKeysLogics.item_rename(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ITEMNAME)
+
+# saccount revoke
+saccount_key_rename_parser = saccount_key_subparsers.add_parser('rename')
+saccount_key_rename_parser.set_defaults(func=saccount_key_rename)
+saccount_key_rename_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+saccount_key_rename_parser.add_argument('-n','--itemname',type=str,default="", help='new item name', dest="ITEMNAME")
 
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]

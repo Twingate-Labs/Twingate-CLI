@@ -2,13 +2,14 @@ import json
 import pandas as pd
 import logging
 
-AccountColumns = ['AccountID', 'AccountName','CreatedAt','updatedAt','KeyIdList']
+#AccountColumns = ['AccountID', 'AccountName','CreatedAt','updatedAt','KeyIdList']
+AccountColumns = ['AccountID', 'AccountName','KeyIdList','ResIdList']
 
 def ProcessOneItem(item):
     ItemId = item['id']
     ItemName = item['name']
-    createdAt = item['createdAt']
-    updatedAt = item['updatedAt']
+    #createdAt = item['createdAt']
+    #updatedAt = item['updatedAt']
 
     keys = item['keys']['edges']
     keyIdList = []
@@ -17,12 +18,23 @@ def ProcessOneItem(item):
         keyId = key['id']
         keyIdList.append(keyId)
 
-    return [ItemId,ItemName,createdAt,updatedAt,keyIdList]
+    resources = item['resources']['edges']
+    resourceIdList = []
+    for resInList in resources:
+        res = resInList['node']
+        resId = res['id']
+        resourceIdList.append(resId)
+
+    #return [ItemId,ItemName,createdAt,updatedAt,keyIdList]
+    return [ItemId,ItemName,keyIdList,resourceIdList]
 
 def GetShowAsCsv(jsonResults,objectname):
     data = []
     item = jsonResults['data'][objectname]
-    data.append(ProcessOneItem(item))
+    if item is not None:
+        data.append(ProcessOneItem(item))
+    else:
+        data=[[None,None,None,None]]
     df = pd.DataFrame(data, columns = AccountColumns)
     return df
 

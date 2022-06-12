@@ -12,6 +12,78 @@ import ServiceAccountsTransformers
 import StdResponses
 import StdAPIUtils
 
+
+def get_service_account_remove_resources_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {
+        "id":JsonData['itemid'],
+        "resourceIDS":JsonData['resourceids']
+    }
+
+    Body = """
+        mutation removeResToSAccount($id: ID!, $resourceIDS: [ID!]){
+        serviceAccountUpdate(id: $id, removedResourceIds: $resourceIDS) {
+          ok
+          error
+          entity{
+            id
+            name
+            createdAt
+            updatedAt
+            resources {
+                edges{
+                    node{
+                        id
+                        name
+                    }
+                }
+            }
+          }
+
+        }
+    }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
+
+def get_service_account_add_resources_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {
+        "id":JsonData['itemid'],
+        "resourceIDS":JsonData['resourceids']
+    }
+
+    Body = """
+        mutation addResToSAccount($id: ID!, $resourceIDS: [ID!]){
+        serviceAccountUpdate(id: $id, addedResourceIds: $resourceIDS) {
+          ok
+          error
+          entity{
+            id
+            name
+            createdAt
+            updatedAt
+            resources {
+                edges{
+                    node{
+                        id
+                        name
+                    }
+                }
+            }
+          }
+
+        }
+    }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_service_account_delete_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -57,35 +129,44 @@ def get_service_account_list_resources(sessionname,token,JsonData):
     api_call_type = "POST"
 
     Body = """
-        {
-          serviceAccounts(after: null, first:10000) {
+       {
+        serviceAccounts(after: null, first:1000) {
             edges {
-              node {
-                    id
-        name
-        createdAt
-        updatedAt
-        keys {
-            edges{
-                node{
-                    id
-                    name
-                    createdAt
-                    expiresAt
-                    revokedAt
-                    updatedAt
-                    status
+            node {
+                id
+                name
+                createdAt
+                updatedAt
+                resources{
+                    edges{
+                        node{
+                            id
+                            name
+                        }
+                    }
                 }
-            }
+                keys {
+                    edges{
+                        node{
+                            id
+                            name
+                            createdAt
+                            expiresAt
+                            revokedAt
+                            updatedAt
+                            status
+                        }
+                    }
 
-        }
-              }
+                }
+
+            }
             }
             pageInfo {
-              startCursor
-              hasNextPage
+            startCursor
+            hasNextPage
             }
-          }
+        }
         }
     """
 
@@ -138,4 +219,12 @@ def item_show(outputFormat,sessionname,itemid):
 
 def item_list(outputFormat,sessionname):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_list_resources,{},ServiceAccountsTransformers.GetListAsCsv,"serviceAccounts")
+    print(r)
+
+def add_resources_to_saccount(outputFormat,sessionname,itemid,resourceids):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},GenericTransformers.GetAddOrRemoveResourcesAsCsv,'serviceAccountUpdate')
+    print(r)
+
+def remove_resources_from_saccount(outputFormat,sessionname,itemid,resourceids):
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},GenericTransformers.GetAddOrRemoveResourcesAsCsv,'serviceAccountUpdate')
     print(r)
