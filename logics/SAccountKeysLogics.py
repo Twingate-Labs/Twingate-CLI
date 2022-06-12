@@ -83,6 +83,7 @@ def get_saccount_key_create_resources(sessionname,token,JsonData):
                     name
                     expiresAt
                     createdAt
+                    status
                 }
             }
         }
@@ -119,21 +120,21 @@ def get_saccount_key_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_create(outputFormat,sessionname,itemname,saccountId,expirationTime):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_create_resources,{'name':itemname,'serviceAccountId':saccountId,'expirationTime':expirationTime},SAccountKeysTransformers.GetCreateAsCsv,"serviceAccountKeyCreate")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_create_resources,{'name':itemname,'serviceAccountId':saccountId,'expirationTime':expirationTime},SAccountKeysTransformers.GetCreateAsCsv)
     print(r)
 
 def item_delete(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_delete_resources,{'itemid':itemid},GenericTransformers.GetDeleteAsCsv,"serviceAccountKeyDelete")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_delete_resources,{'itemid':itemid},SAccountKeysTransformers.GetDeleteAsCsv)
     print(r)
 
 def item_revoke(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_revoke_resources,{'itemid':itemid},GenericTransformers.GetDeleteAsCsv,"serviceAccountKeyRevoke")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_revoke_resources,{'itemid':itemid},SAccountKeysTransformers.GetRevokeAsCsv)
     print(r)
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_show_resources,{'itemid':itemid},SAccountKeysTransformers.GetShowAsCsv,"serviceAccountKey")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_show_resources,{'itemid':itemid},SAccountKeysTransformers.GetShowAsCsv)
     print(r)
 
 def item_rename(outputFormat,sessionname,itemid,itemname):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_rename_resources,{'itemid':itemid,'itemname':itemname},GenericTransformers.GetDeleteAsCsv,"serviceAccountKeyUpdate")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_rename_resources,{'itemid':itemid,'itemname':itemname},SAccountKeysTransformers.GetDeleteAsCsv)
     print(r)

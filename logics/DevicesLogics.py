@@ -12,7 +12,7 @@ import DevicesTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_device_update_resrouces(sessionname,token,JsonData):
+def get_device_update_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -102,7 +102,6 @@ def get_device_show_resources(sessionname,token,JsonData):
             hostname
             username
             serialNumber
-            user
             lastConnectedAt
             osName
             deviceType
@@ -116,7 +115,7 @@ def get_device_show_resources(sessionname,token,JsonData):
 
 
 def item_list(outputFormat,sessionname,idsfile,idsonly):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},GenericTransformers.GetListAsCsv,"devices")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},DevicesTransformers.GetListAsCsv)
     if idsonly:
         j = GenericTransformers.GetIds(j,"devices")
         print(j)
@@ -129,8 +128,8 @@ def item_list(outputFormat,sessionname,idsfile,idsonly):
             print(r)
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv,"devices")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv)
     print(r)
 def item_update(outputFormat,sessionname,itemid,trust):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resrouces,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv,"devices")
+    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resources,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv)
     print(r)

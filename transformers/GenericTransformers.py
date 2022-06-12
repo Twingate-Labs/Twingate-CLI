@@ -23,80 +23,82 @@ def GetIdsAndCompareToFile(jsonResults,idsfile,ObjectName):
 
     return ItemsAdded,ItemsRemoved
 
-def GetListAsCsv(jsonResults,ObjectName):
+def GetUpdateAsCsvNoNesting(jsonResults,objectname,columns):
+    item = jsonResults['data'][objectname]
+    datarow = []
+    IsOk = item[columns[0]]
+    datarow.append(IsOk)
+    IsError = item[columns[1]]
+    IsError = datarow.append(IsError)
 
+    for col in columns[2:]:
+        if IsOk:
+            if not col == "token":
+                Info = item['entity'][col]
+                if str(Info).startswith('{\'edges\':'):
+                    IDs = []
+                    for el in Info['edges']:
+                        IDs.append(el['node']['id'])
+                    Info = IDs
+                datarow.append(Info)
+
+        else:
+            datarow.append(None)
+    
+    if 'token' in columns:
+        token = item['token']
+        datarow.append(token)
+    data = [datarow]
+    
+    df = pd.DataFrame(data, columns = columns)
+    return df
+
+def GetShowAsCsvNoNesting(jsonResults,objectname,columns):
+    item = jsonResults['data'][objectname]
+    datarow = []
+    for col in columns:
+        if item is not None:
+            if '.' in col:
+                PathToInfo = col.split(".")
+                Info = item[PathToInfo[0]][PathToInfo[1]]
+            else:
+                Info = item[col]
+        
+            if str(Info).startswith('{\'edges\':'):
+                IDs = []
+                for el in Info['edges']:
+                    IDs.append(el['node']['id'])
+                Info = IDs
+            datarow.append(Info)
+        else:
+           datarow.append(None) 
+    data = [datarow]
+
+    df = pd.DataFrame(data, columns = columns)
+    return df
+
+def GetListAsCsvNoNesting(jsonResults,ObjectName,columns):
     GenList = jsonResults['data'][ObjectName]['edges']
-    dfItem = pd.json_normalize(GenList,max_level=2)
-    try:
-        dfItem = dfItem.drop(columns='node.createdAt')
-        dfItem = dfItem.drop(columns='node.updatedAt')
-        dfItem = dfItem.drop(columns='CreatedAt')
-        dfItem = dfItem.drop(columns='UpdatedAt')
-    except:
-        pass
-    return dfItem
-
-def GetShowAsCsv(jsonResults,ObjectName):
-
-    GenList = jsonResults['data'][ObjectName]
-    dfItem = pd.json_normalize(GenList)
-    return dfItem
-
-def GetDeleteAsCsv(jsonResults,objectname):
-    #{'data': {'resourceCreate': {'ok': True, 'error': None, 'entity': {'id': 'UmVzb3VyY2U6MjE2OTgxNA==', 'name': 'MyDevice1'}}}}
-    item = jsonResults['data'][objectname]
-    IsOk = item['ok']
-    IsError = item['error']
-    data = [[IsOk,IsError]]
-    df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError'])
-    return df
-
-def GetCreateAsCsv(jsonResults,objectname):
-    #{'data': {'resourceCreate': {'ok': True, 'error': None, 'entity': {'id': 'UmVzb3VyY2U6MjE2OTgxNA==', 'name': 'MyDevice1'}}}}
-    item = jsonResults['data'][objectname]
-    IsOk = item['ok']
-    IsError = item['error']
-    if IsError:
-        ent = None
-        id = None
-        name = None
-    else:
-        ent = item['entity']
-        id = ent['id']
-        name = ent['name']
- 
-    data = [[IsOk,IsError,id,name]]
-    df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError','ItemID','ItemName'])
-    return df
-
-# Duplicate function below?
-def GetDeleteAsCsv(jsonResults,objectname):
-    #{'data': {'resourceCreate': {'ok': True, 'error': None, 'entity': {'id': 'UmVzb3VyY2U6MjE2OTgxNA==', 'name': 'MyDevice1'}}}}
-    item = jsonResults['data'][objectname]
-    IsOk = item['ok']
-    IsError = item['error']
-    data = [[IsOk,IsError]]
-    df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError'])
-    return df
-
-def GetAddOrRemoveResourcesAsCsv(jsonResults,objectname):
-    GroupColumns = ['APIResponseOK','APIResponseError','ItemID', 'ItemName','ResourceIdList']
     data = []
-    ApiResOK = jsonResults['data'][objectname]['ok']
-    ApiResErr = jsonResults['data'][objectname]['error']
-    item = jsonResults['data'][objectname]['entity']
-    ItemId = item['id']
-    ItemName = item['name']
-    resources = item['resources']['edges']
-    resIdList = []
-    for resInList in resources:
-        res = resInList['node']
-        resId = res['id']
-        resIdList.append(resId)
+    for item in GenList:
+        datarow = []
+        for col in columns:
+            if item['node'] is not None:
+                if '.' in col:
+                    PathToInfo = col.split(".")
+                    content = item['node'][PathToInfo[0]][PathToInfo[1]]
+                else:
+                    content = item['node'][col]
 
-    data.append([ApiResOK,ApiResErr,ItemId,ItemName,resIdList])
+                if str(content).startswith('{\'edges\':'):
+                    IDs = []
+                    for el in content['edges']:
+                        IDs.append(el['node']['id'])
+                    content = IDs
+                datarow.append(content)
+            else:
+                datarow.append(None) 
+        data.append(datarow)
 
-    df = pd.DataFrame(data, columns = GroupColumns)
-
-    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
+    df = pd.DataFrame(data, columns = columns)
     return df

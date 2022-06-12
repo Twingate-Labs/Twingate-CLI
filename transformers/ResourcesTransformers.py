@@ -1,20 +1,23 @@
 import json
 import pandas as pd
 import logging
+import GenericTransformers
 
-def GetUpdateAsCsv(jsonResults,objectname):
-    # {"data":{"deviceUpdate":{"ok":true,"error":null,"entity":{"id":"RGV2aWNlOjE5MzI2OQ==","name":"DESKTOP-FFPADSA","isTrusted":true}}}}
-    IsOk = jsonResults['data']['deviceUpdate']['ok']
-    IsError = jsonResults['data']['deviceUpdate']['error']
-    EntityID = jsonResults['data']['deviceUpdate']['entity']['id']
-    EntityName = jsonResults['data']['deviceUpdate']['entity']['name']
-    EntityIsTrusted = jsonResults['data']['deviceUpdate']['entity']['isTrusted']
-    data = [[IsOk,IsError,EntityID,EntityName,EntityIsTrusted]]
-    df = pd.DataFrame(data, columns = ['APIResponseOK', 'APIResponseError','DeviceID','DeviceName','isTrusted'])
-    return df
+def GetShowAsCsv(jsonResults):
+    columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value','protocols.allowIcmp',
+    'protocols.tcp.policy','protocols.udp.policy']
+    return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'resource',columns)
 
-def GetShowAsCsv(jsonResults,objectname):
+def GetListAsCsv(jsonResults):
+    columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value']
+    return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'resources',columns)
 
-    item = jsonResults['data']
-    dfItem = pd.json_normalize(item)
-    return dfItem
+def GetCreateAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name']
+    #GenericTransformers.GetUpdateAsCsvNoNesting()
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'resourceCreate',columns)
+
+def GetDeleteAsCsv(jsonResults):
+    columns = ['ok','error']
+    #GenericTransformers.GetUpdateAsCsvNoNesting()
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'resourceDelete',columns)

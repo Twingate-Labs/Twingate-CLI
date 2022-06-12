@@ -1,120 +1,29 @@
 import json
 import pandas as pd
 import logging
+import GenericTransformers
 
-#GroupColumns = ['GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
-GroupColumns = ['GroupID', 'GroupName','isActive','Type','UserIdList','ResourceIdList']
+def GetAddOrRemoveResourcesAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','resources']
+    #GenericTransformers.GetUpdateAsCsvNoNesting()
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupUpdate',columns)
 
-def ProcessOneItem(item):
-    ItemId = item['id']
-    ItemName = item['name']
-    #createdAt = item['createdAt']
-    #updatedAt = item['updatedAt']
-    isActive = item['isActive']
-    type = item['type']
+def GetCreateAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','resources','users']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupCreate',columns)
 
-    users = item['users']['edges']
-    userIdList = []
-    for userInList in users:
-        user = userInList['node']
-        userId = user['id']
-        userIdList.append(userId)
+def GetAddOrRemoveUsersAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','users']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupUpdate',columns)
 
-    resourceIdList = []
-    resources = item['resources']['edges']
-    for resourceInList in resources:
-        resource = resourceInList['node']
-        resourceId = resource['id']
-        resourceIdList.append(resourceId)
+def GetShowAsCsv(jsonResults):
+    columns = ['id','name','isActive','type','users','resources']
+    return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'group',columns)
 
-    #return [ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList]
-    return [ItemId,ItemName,isActive,type,userIdList,resourceIdList]
+def GetListAsCsv(jsonResults):
+    columns = ['id','name','isActive','type','users','resources']
+    return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'groups',columns)
 
-def GetAddOrRemoveResourcesAsCsv(jsonResults,objectname):
-    GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','ResourceIdList']
-    data = []
-    ApiResOK = jsonResults['data'][objectname]['ok']
-    ApiResErr = jsonResults['data'][objectname]['error']
-    item = jsonResults['data'][objectname]['entity']
-    ItemId = item['id']
-    ItemName = item['name']
-    resources = item['resources']['edges']
-    resIdList = []
-    for resInList in resources:
-        res = resInList['node']
-        resId = res['id']
-        resIdList.append(resId)
-
-    data.append([ApiResOK,ApiResErr,ItemId,ItemName,resIdList])
-
-    df = pd.DataFrame(data, columns = GroupColumns)
-
-    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
-    return df
-
-def GetAddOrRemoveUsersAsCsv(jsonResults,objectname):
-    GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','UserIdList']
-    data = []
-    ApiResOK = jsonResults['data'][objectname]['ok']
-    ApiResErr = jsonResults['data'][objectname]['error']
-    item = jsonResults['data'][objectname]['entity']
-    ItemId = item['id']
-    ItemName = item['name']
-    users = item['users']['edges']
-    userIdList = []
-    for userInList in users:
-        user = userInList['node']
-        userId = user['id']
-        userIdList.append(userId)
-
-    data.append([ApiResOK,ApiResErr,ItemId,ItemName,userIdList])
-
-    df = pd.DataFrame(data, columns = GroupColumns)
-
-    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
-    return df
-
-def GetCreateAsCsv(jsonResults,objectname):
-    #GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','isActive','Type','UserIdList','ResourceIdList']
-    GroupColumns = ['APIResponseOK','APIResponseError','GroupID', 'GroupName','CreatedAt','updatedAt','isActive','Type','UserIdList','ResourceIdList']
-    data = []
-    ApiResOK = jsonResults['data'][objectname]['ok']
-    ApiResErr = jsonResults['data'][objectname]['error']
-    item = jsonResults['data'][objectname]['entity']
-    ItemId = item['id']
-    ItemName = item['name']
-    #createdAt = item['createdAt']
-    #updatedAt = item['updatedAt']
-    isActive = item['isActive']
-    type = item['type']
-
-    users = item['users']['edges']
-    userIdList = []
-    for userInList in users:
-        user = userInList['node']
-        userId = user['id']
-        userIdList.append(userId)
-
-    resourceIdList = []
-    resources = item['resources']['edges']
-    for resourceInList in resources:
-        resource = resourceInList['node']
-        resourceId = resource['id']
-        resourceIdList.append(resourceId)
-
-    #data.append([ApiResOK,ApiResErr,ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
-    data.append([ApiResOK,ApiResErr,ItemId,ItemName,isActive,type,userIdList,resourceIdList])
-    df = pd.DataFrame(data,columns = GroupColumns)
-
-    return df
-
-def GetShowAsCsv(jsonResults,objectname):
-    data = []
-    item = jsonResults['data'][objectname]
-    if item is not None:
-        data.append(ProcessOneItem(item))
-
-    df = pd.DataFrame(data, columns = GroupColumns)
-
-    #data.append([ItemId,ItemName,createdAt,updatedAt,isActive,type,userIdList,resourceIdList])
-    return df
+def GetDeleteAsCsv(jsonResults):
+    columns = ['ok','error']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupDelete',columns)

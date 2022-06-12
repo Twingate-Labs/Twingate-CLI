@@ -194,6 +194,24 @@ connector_show_parser = connector_subparsers.add_parser('show')
 connector_show_parser.set_defaults(func=connector_show)
 connector_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+# connector <rename>
+
+def connector_rename(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.ITEMNAME:
+        parser.error('no item name passed')
+
+    ConnectorsLogics.item_rename(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ITEMNAME)
+
+# connector rename
+connector_rename_parser = connector_subparsers.add_parser('rename')
+connector_rename_parser.set_defaults(func=connector_rename)
+connector_rename_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+connector_rename_parser.add_argument('-n','--itemname',type=str,default="", help='new item name', dest="ITEMNAME")
+
 #####
 # User Parser
 # user <list>
@@ -313,7 +331,7 @@ def group_add_users(args):
 group_addusers_parser = group_subparsers.add_parser('addUsers')
 group_addusers_parser.set_defaults(func=group_add_users)
 group_addusers_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
-group_addusers_parser.add_argument('-r','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
+group_addusers_parser.add_argument('-u','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
 
 # group <removeUsers>
 
@@ -593,7 +611,7 @@ def account_add_resources(args):
 # account addResources
 account_addresources_parser = account_subparsers.add_parser('addResources')
 account_addresources_parser.set_defaults(func=account_add_resources)
-account_addresources_parser.add_argument('-g','--itemid',type=str,default="", help='item id', dest="ITEMID")
+account_addresources_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 account_addresources_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESIDS")
 
 # account <removeResources>
@@ -701,7 +719,7 @@ def saccount_key_rename(args):
 
     SAccountKeysLogics.item_rename(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ITEMNAME)
 
-# saccount revoke
+# saccount rename
 saccount_key_rename_parser = saccount_key_subparsers.add_parser('rename')
 saccount_key_rename_parser.set_defaults(func=saccount_key_rename)
 saccount_key_rename_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
@@ -715,9 +733,10 @@ if __name__ == '__main__':
         args.DEBUGLEVEL = DebugLevels[0]
 
     logging.basicConfig(level=getattr(logging, args.DEBUGLEVEL.upper()))
-    args.func(args)
+    #
+    args.func(args) 
     #try:
-        
+    #   args.func(args) 
     #except Exception as e:
         #logging.error(e)
     #    print("general error, please check commands & parameters. Hint: Use -h")
