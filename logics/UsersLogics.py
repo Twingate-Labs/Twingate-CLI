@@ -31,6 +31,13 @@ def get_user_list_resources(sessionname,token,JsonData):
                 firstName
                 createdAt
                 updatedAt
+                groups{
+                  edges{
+                    node{
+                      id
+                    }
+                  }
+                }
               }
             }
             pageInfo {

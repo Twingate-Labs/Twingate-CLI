@@ -8,6 +8,6 @@ def GetShowAsCsv(jsonResults):
     return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'user',columns)
 
 def GetListAsCsv(jsonResults):
-    columns = ['id','firstName','lastName','email','isAdmin','state'
+    columns = ['id','firstName','lastName','email','isAdmin','state','groups'
     ]
     return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'users',columns)
