@@ -245,7 +245,7 @@ def get_group_list_resources(sessionname,token,JsonData):
 
     Body = """
             {
-  groups(after: null, first:1000) {
+  groups(after: null, first:null) {
     edges {
       node {
         id

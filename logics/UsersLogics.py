@@ -18,7 +18,7 @@ def get_user_list_resources(sessionname,token,JsonData):
 
     Body = """
             {
-          users(after: null, first:100) {
+          users(after: null, first:null) {
             edges {
               node {
                 id
