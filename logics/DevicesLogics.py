@@ -43,9 +43,16 @@ def get_device_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
+    variables = { "cursor":JsonData['cursor']}
 
-    Body = """{
-          devices(after: null, first:null) {
+    Body = """
+    query listGroup($cursor: String!)
+    {
+          devices(after: $cursor, first:null) {
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
             edges {
               node {
                 id
@@ -72,14 +79,10 @@ def get_device_list_resources(sessionname,token,JsonData):
                 manufacturerName
               }
             }
-            pageInfo {
-              startCursor
-              hasNextPage
-            }
           }
         }"""
 
-    return True,api_call_type,Headers,Body,None
+    return True,api_call_type,Headers,Body,variables
 
 def get_device_show_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)

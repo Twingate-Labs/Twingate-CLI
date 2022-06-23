@@ -16,4 +16,4 @@ def GetShowAsCsv(jsonResults):
 def GetListAsCsv(jsonResults):
     columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','osVersion','lastSuccessfulLoginAt','hardwareModel','hostname','username','serialNumber',
     'clientVersion','manufacturerName']
-    return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'devices',columns)
+    return GenericTransformers.GetListAsCsv(jsonResults,columns)

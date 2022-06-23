@@ -79,7 +79,9 @@ def GetUrl(sessionname):
         text_file = open(SessionFileName, "r")
         tenant = text_file.read()
         logging.debug("Tenant Name: "+str(tenant))
-        fullurl = "https://"+tenant+".twingate.com/api/graphql/"
+        fullprodurl = "https://"+tenant+".twingate.com/api/graphql/"
+        fullstagingurl="https://"+tenant+".stg.opstg.com/api/graphql/"
+        fullurl=fullstagingurl
         logging.debug("Full Url: "+str(fullurl))
         text_file.close()
         return fullurl,tenant

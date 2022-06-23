@@ -241,11 +241,18 @@ def get_group_add_users_resources(sessionname,token,JsonData):
 def get_group_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
+    variables = { "cursor":JsonData['cursor']}
+
     api_call_type = "POST"
 
     Body = """
+    query listGroup($cursor: String!)
             {
-  groups(after: null, first:null) {
+  groups(after: $cursor, first:null) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
     edges {
       node {
         id
@@ -280,15 +287,12 @@ def get_group_list_resources(sessionname,token,JsonData):
 
       }
     }
-    pageInfo {
-      startCursor
-      hasNextPage
-    }
   }
 }
+
     """
 
-    return True,api_call_type,Headers,Body,None
+    return True,api_call_type,Headers,Body,variables
 
 def get_group_show_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
@@ -335,32 +339,48 @@ def get_group_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def add_resources_to_group(outputFormat,sessionname,itemid,resourceids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
+    print(output)
 
 def remove_resources_from_group(outputFormat,sessionname,itemid,resourceids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
+    print(output)
 
 def item_delete(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_delete_resources,{'itemid':itemid},GroupsTransformers.GetDeleteAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_delete_resources,{'itemid':itemid},GroupsTransformers.GetDeleteAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetDeleteAsCsv)
+    print(output)
 
 def item_create(outputFormat,sessionname,itemname,userids,resourceids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_create_resources,{'itemname':itemname,'userids':userids,'resourceids':resourceids},GroupsTransformers.GetCreateAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_create_resources,{'itemname':itemname,'userids':userids,'resourceids':resourceids},GroupsTransformers.GetCreateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetCreateAsCsv)
+    print(output)
 
 def remove_users_from_group(outputFormat,sessionname,itemid,userids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_remove_users_resources,{'itemid':itemid,'userids':userids},GroupsTransformers.GetAddOrRemoveUsersAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_remove_users_resources,{'itemid':itemid,'userids':userids},GroupsTransformers.GetAddOrRemoveUsersAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetAddOrRemoveUsersAsCsv)
+    print(output)
 
 def add_users_to_group(outputFormat,sessionname,itemid,userids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_add_users_resources,{'itemid':itemid,'userids':userids},GroupsTransformers.GetAddOrRemoveUsersAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_add_users_resources,{'itemid':itemid,'userids':userids},GroupsTransformers.GetAddOrRemoveUsersAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetAddOrRemoveUsersAsCsv)
+    print(output)
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_show_resources,{'itemid':itemid},GroupsTransformers.GetShowAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_show_resources,{'itemid':itemid},GroupsTransformers.GetShowAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetShowAsCsv)
+    print(output)
+
 def item_list(outputFormat,sessionname):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_list_resources,{},GroupsTransformers.GetListAsCsv)
-    print(r)
+    ListOfResponses = []
+    hasMorePages = True
+    Cursor = "0"
+    while hasMorePages:
+        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_list_resources,{'cursor':Cursor},GroupsTransformers.GetListAsCsv)
+        hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'groups')
+        #print("DEBUG: Has More pages:"+sthasMorePages)
+        ListOfResponses.append(j['data']['groups']['edges'])
+    output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,GroupsTransformers.GetListAsCsv)
+    print(output)

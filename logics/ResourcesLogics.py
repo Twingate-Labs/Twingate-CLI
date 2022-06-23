@@ -54,10 +54,16 @@ def get_resource_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
-
+    variables = { "cursor":JsonData['cursor']}
     Body = """
+    
+        query listGroup($cursor: String!)
                     {
-          resources(after: null, first:null) {
+          resources(after: $cursor, first:null) {
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
             edges {
               node {
                 id
@@ -92,15 +98,12 @@ def get_resource_list_resources(sessionname,token,JsonData):
                 updatedAt
               }
             }
-            pageInfo {
-              startCursor
-              hasNextPage
-            }
+
           }
         }
     """
 
-    return True,api_call_type,Headers,Body,None
+    return True,api_call_type,Headers,Body,variables
 
 def get_resource_show_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
@@ -159,8 +162,19 @@ def item_create(outputFormat,sessionname,address,name,remoteNetworkId,groupIds,I
     print(r)
 
 def item_list(outputFormat,sessionname):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_list_resources,{},ResourcesTransformers.GetListAsCsv)
-    print(r)
+    #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_list_resources,{},ResourcesTransformers.GetListAsCsv)
+    #print(r)
+    ListOfResponses = []
+    hasMorePages = True
+    Cursor = "0"
+    while hasMorePages:
+        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_list_resources,{'cursor':Cursor},ResourcesTransformers.GetListAsCsv)
+        hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'resources')
+        #print("DEBUG: Has More pages:"+sthasMorePages)
+        ListOfResponses.append(j['data']['resources']['edges'])
+    output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,ResourcesTransformers.GetListAsCsv)
+    print(output)
+
 
 def item_show(outputFormat,sessionname,itemid):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_show_resources,{'itemid':itemid},ResourcesTransformers.GetShowAsCsv)

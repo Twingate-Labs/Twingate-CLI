@@ -22,8 +22,10 @@ def GetShowAsCsv(jsonResults):
 
 def GetListAsCsv(jsonResults):
     columns = ['id','name','isActive','type','users','resources']
-    return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'groups',columns)
+    #return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'groups',columns)
+    return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
 def GetDeleteAsCsv(jsonResults):
     columns = ['ok','error']
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupDelete',columns)
+

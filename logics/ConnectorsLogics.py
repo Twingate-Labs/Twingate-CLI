@@ -8,6 +8,7 @@ sys.path.insert(1, './libs')
 sys.path.insert(1, './transformers')
 import DataUtils
 import ConnectorsTransformers
+import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
@@ -36,10 +37,16 @@ def get_connector_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
+    variables = { "cursor":JsonData['cursor']}
 
     Body = """
+        query listObj($cursor: String!)
         {
-          connectors(after: null, first:null) {
+          connectors(after: $cursor, first:null) {
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
             edges {
               node {
                 id
@@ -50,15 +57,11 @@ def get_connector_list_resources(sessionname,token,JsonData):
                 updatedAt
               }
             }
-            pageInfo {
-              startCursor
-              hasNextPage
-            }
           }
         }
     """
 
-    return True,api_call_type,Headers,Body,None
+    return True,api_call_type,Headers,Body,variables
 
 def get_connector_show_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
@@ -88,8 +91,17 @@ def item_show(outputFormat,sessionname,itemid):
     print(r)
 
 def item_list(outputFormat,sessionname):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_list_resources,{},ConnectorsTransformers.GetListAsCsv)
-    print(r)
+    ListOfResponses = []
+    hasMorePages = True
+    Cursor = "0"
+    while hasMorePages:
+        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_list_resources,{'cursor':Cursor},ConnectorsTransformers.GetListAsCsv)
+        hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'connectors')
+        #print("DEBUG: Has More pages:"+sthasMorePages)
+        ListOfResponses.append(j['data']['connectors']['edges'])
+    output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,ConnectorsTransformers.GetListAsCsv)
+    print(output)
+
 
 def item_rename(outputFormat,sessionname,itemid,itemname):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_rename_resources,{'itemid':itemid,'itemname':itemname},ConnectorsTransformers.GetUpdateAsCsv)

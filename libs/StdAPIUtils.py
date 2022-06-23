@@ -45,19 +45,26 @@ def generic_api_call_handler(outputFormat,sessionname,get_res_func,res_data,df_t
         else:
             logging.debug("Converting Response to JSON Object.")
             json_object = json.loads(response.text)
-            if (outputFormat.upper() == "DF"):
-                logging.debug("Converting JSON Object to DF.")
-                aDF = df_transform_func(json_object)
-                return aDF,json_object
+            return json_object
+
+def format_output(json_object,outputFormat,df_transform_func):
+
+    # check if there is a next page
+            # if so get cursor and apply again
+
+    if (outputFormat.upper() == "DF"):
+        logging.debug("Converting JSON Object to DF.")
+        aDF = df_transform_func(json_object)
+        return aDF,json_object
                
-            elif (outputFormat.upper() == "CSV"):
+    elif (outputFormat.upper() == "CSV"):
                 
-                logging.debug("Converting JSON Object to CSV.")
-                aDF = df_transform_func(json_object)
-                #print(aDF.to_csv(index=False))
-                return aDF.to_csv(index=False),json_object
-            else:
-                logging.debug("Keeping JSON Object to JSON.")
-                json_formatted_str = json.dumps(json_object, indent=2)
-                #print(json_formatted_str)
-                return json_formatted_str,json_object
+        logging.debug("Converting JSON Object to CSV.")
+        aDF = df_transform_func(json_object)
+        #print(aDF.to_csv(index=False))
+        return aDF.to_csv(index=False),json_object
+    else:
+        logging.debug("Keeping JSON Object to JSON.")
+        json_formatted_str = json.dumps(json_object, indent=2)
+        #print(json_formatted_str)
+        return json_formatted_str,json_object

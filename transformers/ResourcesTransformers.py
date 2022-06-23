@@ -10,7 +10,7 @@ def GetShowAsCsv(jsonResults):
 
 def GetListAsCsv(jsonResults):
     columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value']
-    return GenericTransformers.GetListAsCsvNoNesting(jsonResults,'resources',columns)
+    return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
 def GetCreateAsCsv(jsonResults):
     columns = ['ok','error','id', 'name']

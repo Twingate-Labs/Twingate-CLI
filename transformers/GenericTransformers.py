@@ -51,6 +51,7 @@ def GetUpdateAsCsvNoNesting(jsonResults,objectname,columns):
     data = [datarow]
     
     df = pd.DataFrame(data, columns = columns)
+    pd.set_option('display.max_rows', None)
     return df
 
 def GetShowAsCsvNoNesting(jsonResults,objectname,columns):
@@ -75,6 +76,7 @@ def GetShowAsCsvNoNesting(jsonResults,objectname,columns):
     data = [datarow]
 
     df = pd.DataFrame(data, columns = columns)
+    pd.set_option('display.max_rows', None)
     return df
 
 def GetListAsCsvNoNesting(jsonResults,ObjectName,columns):
@@ -101,4 +103,46 @@ def GetListAsCsvNoNesting(jsonResults,ObjectName,columns):
         data.append(datarow)
 
     df = pd.DataFrame(data, columns = columns)
+    pd.set_option('display.max_rows', None)
     return df
+
+
+def GetListAsCsv(jsonResults,columns):
+    AllLists = jsonResults
+    data = []
+    #print(str(AllLists))
+    for GenList in AllLists:
+        for item in GenList:
+            #print("ITEM: "+str(item))
+            datarow = []
+            for col in columns:
+                if item['node'] is not None:
+                    if '.' in col:
+                        PathToInfo = col.split(".")
+                        content = item['node'][PathToInfo[0]][PathToInfo[1]]
+                    else:
+                        content = item['node'][col]
+
+                    if str(content).startswith('{\'edges\':'):
+                        IDs = []
+                        for el in content['edges']:
+                            IDs.append(el['node']['id'])
+                        content = IDs
+                    datarow.append(content)
+                else:
+                    datarow.append(None) 
+            data.append(datarow)
+
+    df = pd.DataFrame(data, columns = columns)
+    pd.set_option('display.max_rows', None)
+    return df
+
+def CheckIfMorePages(jsonResults,objName):
+    pInfo = jsonResults['data'][objName]['pageInfo']
+    hasNextPage = pInfo['hasNextPage']
+    if hasNextPage:
+        Cursor = pInfo['endCursor']
+        return True,Cursor
+    else:
+        return False,None
+
