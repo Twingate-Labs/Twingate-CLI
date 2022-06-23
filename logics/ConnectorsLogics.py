@@ -39,7 +39,7 @@ def get_connector_list_resources(sessionname,token,JsonData):
 
     Body = """
         {
-          connectors(after: null, first:1000) {
+          connectors(after: null, first:null) {
             edges {
               node {
                 id

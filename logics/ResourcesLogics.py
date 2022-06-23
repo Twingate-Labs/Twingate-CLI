@@ -57,7 +57,7 @@ def get_resource_list_resources(sessionname,token,JsonData):
 
     Body = """
                     {
-          resources(after: null, first:10000) {
+          resources(after: null, first:null) {
             edges {
               node {
                 id

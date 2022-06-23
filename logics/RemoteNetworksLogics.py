@@ -19,7 +19,7 @@ def get_network_list_resources(sessionname,token,JsonData):
 
     Body = """
         {
-          remoteNetworks(after: null, first:1000) {
+          remoteNetworks(after: null, first:null) {
             edges {
               node {
                 id

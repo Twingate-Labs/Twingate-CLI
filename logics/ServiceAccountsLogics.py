@@ -130,7 +130,7 @@ def get_service_account_list_resources(sessionname,token,JsonData):
 
     Body = """
        {
-        serviceAccounts(after: null, first:1000) {
+        serviceAccounts(after: null, first:null) {
             edges {
             node {
                 id
