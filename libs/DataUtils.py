@@ -81,7 +81,7 @@ def GetUrl(sessionname):
         logging.debug("Tenant Name: "+str(tenant))
         fullprodurl = "https://"+tenant+".twingate.com/api/graphql/"
         fullstagingurl="https://"+tenant+".stg.opstg.com/api/graphql/"
-        fullurl=fullstagingurl
+        fullurl=fullprodurl
         logging.debug("Full Url: "+str(fullurl))
         text_file.close()
         return fullurl,tenant

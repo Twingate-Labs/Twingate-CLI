@@ -118,17 +118,27 @@ def get_device_show_resources(sessionname,token,JsonData):
 
 
 def item_list(outputFormat,sessionname,idsfile,idsonly):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},DevicesTransformers.GetListAsCsv)
-    if idsonly:
-        j = GenericTransformers.GetIds(j,"devices")
-        print(j)
-        exit(0)
-    else:
-        if idsfile != "":
-            itemsAdded,itemsRemoved = GenericTransformers.GetIdsAndCompareToFile(j,idsfile,"devices")
-            print({'itemsAddedCount':len(list(itemsAdded)),'itemsAdded':list(itemsAdded),'itemsRemovedCount':len(list(itemsRemoved)),'itemsRemoved':list(itemsRemoved)})
-        else:
-            print(r)
+    #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},DevicesTransformers.GetListAsCsv)
+    #if idsonly:
+    #    j = GenericTransformers.GetIds(j,"devices")
+    #    print(j)
+    #    exit(0)
+    #else:
+    #    if idsfile != "":
+    #        itemsAdded,itemsRemoved = GenericTransformers.GetIdsAndCompareToFile(j,idsfile,"devices")
+    #        print({'itemsAddedCount':len(list(itemsAdded)),'itemsAdded':list(itemsAdded),'itemsRemovedCount':len(list(itemsRemoved)),'itemsRemoved':list(itemsRemoved)})
+    #    else:
+    #        print(r)
+    ListOfResponses = []
+    hasMorePages = True
+    Cursor = "0"
+    while hasMorePages:
+        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{'cursor':Cursor},DevicesTransformers.GetListAsCsv)
+        hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'devices')
+        #print("DEBUG: Has More pages:"+sthasMorePages)
+        ListOfResponses.append(j['data']['devices']['edges'])
+    output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,DevicesTransformers.GetListAsCsv)
+    print(output)
 
 def item_show(outputFormat,sessionname,itemid):
     r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv)
