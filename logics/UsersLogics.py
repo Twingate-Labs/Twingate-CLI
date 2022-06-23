@@ -89,8 +89,9 @@ def get_user_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_show_resources,{'itemid':itemid},UsersTransformers.GetShowAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_show_resources,{'itemid':itemid},UsersTransformers.GetShowAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetShowAsCsv)
+    print(output)
 
 def item_list(outputFormat,sessionname):
   ListOfResponses = []

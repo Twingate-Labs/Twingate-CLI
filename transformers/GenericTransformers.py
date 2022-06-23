@@ -49,7 +49,11 @@ def GetUpdateAsCsvNoNesting(jsonResults,objectname,columns):
         token = item['token']
         datarow.append(token)
     data = [datarow]
-    
+    if datarow[0] == False:
+        emptydatarow = [None] * len(columns)
+        emptydatarow[0] = datarow[0]
+        emptydatarow[1] = datarow[1]
+        data = [emptydatarow]
     df = pd.DataFrame(data, columns = columns)
     pd.set_option('display.max_rows', None)
     return df

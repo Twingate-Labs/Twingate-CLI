@@ -141,8 +141,11 @@ def item_list(outputFormat,sessionname,idsfile,idsonly):
     print(output)
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetShowAsCsv)
+    print(output)
+
 def item_update(outputFormat,sessionname,itemid,trust):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resources,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resources,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetUpdateAsCsv)
+    print(output)

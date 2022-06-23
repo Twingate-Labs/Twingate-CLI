@@ -95,8 +95,9 @@ def get_network_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_show_resources,{'itemid':itemid},RemoteNetworksTransformers.GetShowAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_show_resources,{'itemid':itemid},RemoteNetworksTransformers.GetShowAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,RemoteNetworksTransformers.GetShowAsCsv)
+    print(output)
     
 def item_list(outputFormat,sessionname):
     #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_list_resources,{},RemoteNetworksTransformers.GetListAsCsv)

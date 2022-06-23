@@ -153,13 +153,15 @@ def get_resource_show_resources(sessionname,token,JsonData):
 
 def item_delete(outputFormat,sessionname,itemid):
     JsonData = {"itemid":itemid}
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_delete_resources,JsonData,ResourcesTransformers.GetDeleteAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_delete_resources,JsonData,ResourcesTransformers.GetDeleteAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetDeleteAsCsv)
+    print(output)
 
 def item_create(outputFormat,sessionname,address,name,remoteNetworkId,groupIds,IcmpAllow,TcpPolicy,TcpRange,UdpPolicy,UdpRange):
     JsonData = {"address":address,"name":name,"remoteNetworkId":remoteNetworkId,"groupIds":groupIds,"protocols":{"allowIcmp":IcmpAllow,"tcp":{"policy":TcpPolicy,"ports":TcpRange},"udp":{"policy":UdpPolicy,"ports":UdpRange}}}
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_create_resources,JsonData,ResourcesTransformers.GetCreateAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_create_resources,JsonData,ResourcesTransformers.GetCreateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetCreateAsCsv)
+    print(output)
 
 def item_list(outputFormat,sessionname):
     #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_list_resources,{},ResourcesTransformers.GetListAsCsv)
@@ -177,5 +179,7 @@ def item_list(outputFormat,sessionname):
 
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_show_resources,{'itemid':itemid},ResourcesTransformers.GetShowAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_show_resources,{'itemid':itemid},ResourcesTransformers.GetShowAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetShowAsCsv)
+    print(output)
+

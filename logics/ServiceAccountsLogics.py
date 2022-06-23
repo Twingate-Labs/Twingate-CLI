@@ -216,16 +216,20 @@ def get_service_account_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_create(outputFormat,sessionname,itemname,resourceIds):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_create_resources,{'name':itemname,'resourceIds':resourceIds},ServiceAccountsTransformers.GetCreateAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_create_resources,{'name':itemname,'resourceIds':resourceIds},ServiceAccountsTransformers.GetCreateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetCreateAsCsv)
+    print(output)
 
 def item_delete(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_delete_resources,{'itemid':itemid},ServiceAccountsTransformers.GetDeleteAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_delete_resources,{'itemid':itemid},ServiceAccountsTransformers.GetDeleteAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetDeleteAsCsv)
+    print(output)
 
 def item_show(outputFormat,sessionname,itemid):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_show_resources,{'itemid':itemid},ServiceAccountsTransformers.GetShowAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_show_resources,{'itemid':itemid},ServiceAccountsTransformers.GetShowAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetShowAsCsv)
+    print(output)
+
 
 def item_list(outputFormat,sessionname):
     #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_list_resources,{},ServiceAccountsTransformers.GetListAsCsv)
@@ -242,9 +246,11 @@ def item_list(outputFormat,sessionname):
     print(output)
 
 def add_resources_to_saccount(outputFormat,sessionname,itemid,resourceids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
+    print(output)
 
 def remove_resources_from_saccount(outputFormat,sessionname,itemid,resourceids):
-    r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
-    print(r)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
+    print(output)
