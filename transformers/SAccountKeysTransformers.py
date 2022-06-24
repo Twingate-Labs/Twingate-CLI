@@ -19,3 +19,7 @@ def GetDeleteAsCsv(jsonResults):
 def GetRevokeAsCsv(jsonResults):
     columns = ['ok','error']
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'serviceAccountKeyRevoke',columns)
+
+def GetRenameAsCsv(jsonResults):
+    columns = ['ok','error','id','name']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'serviceAccountKeyUpdate',columns)

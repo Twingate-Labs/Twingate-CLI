@@ -474,9 +474,9 @@ resource_create_parser.add_argument('-n','--name',type=str,default="", help='res
 resource_create_parser.add_argument('-r','--networkid',type=str,default="", help='remote network ID', dest="NETWORKID")
 resource_create_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
 resource_create_parser.add_argument('-i','--icmp',type=bool,default=False, help='(Optional) Disallow ICMP Protocol', dest="DISALLOWICMP")
-resource_create_parser.add_argument('-t','--tcppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,DENY_ALL>, Default: ALLOW_ALL', dest="TCPPOLICY")
+resource_create_parser.add_argument('-t','--tcppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,RESTRICTED>, Default: ALLOW_ALL', dest="TCPPOLICY")
 resource_create_parser.add_argument('-c','--tcprange',type=str,default="[]", help='(Optional) <[[a,b],[c,d],..]>, Default: [], ex:[[22-50],[443,443],[654-987]]', dest="TCPRANGE")
-resource_create_parser.add_argument('-u','--udppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,DENY_ALL>, Default: ALLOW_ALL', dest="UDPPOLICY")
+resource_create_parser.add_argument('-u','--udppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,RESTRICTED>, Default: ALLOW_ALL', dest="UDPPOLICY")
 resource_create_parser.add_argument('-d','--udprange',type=str,default="[]", help='(Optional) <[[a,b],[c,d],..]>, Default: [], ex:[[22-50],[443,443],[654-987]]', dest="UDPRANGE")
 
 # resource <delete>

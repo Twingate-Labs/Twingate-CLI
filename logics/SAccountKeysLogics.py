@@ -23,6 +23,10 @@ def get_saccount_key_rename_resources(sessionname,token,JsonData):
             serviceAccountKeyUpdate(id: $id, name: $name) {
             ok
             error
+            entity {
+                id
+                name
+            }
             }
         }
     """
@@ -140,6 +144,6 @@ def item_show(outputFormat,sessionname,itemid):
     print(output)
 
 def item_rename(outputFormat,sessionname,itemid,itemname):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_rename_resources,{'itemid':itemid,'itemname':itemname},SAccountKeysTransformers.GetDeleteAsCsv)
-    output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetDeleteAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_rename_resources,{'itemid':itemid,'itemname':itemname},SAccountKeysTransformers.GetRenameAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetRenameAsCsv)
     print(output)

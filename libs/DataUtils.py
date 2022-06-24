@@ -2,10 +2,12 @@ import os
 import random
 import uuid
 import logging
+from os.path import exists
 
 DATAFILEPATH = "./data/"
 TOKENFILE = os.path.join(DATAFILEPATH, ".token_")
 URLFILE = os.path.join(DATAFILEPATH, ".tenant_")
+STGFILE = os.path.join(DATAFILEPATH, ".stg_")
 
 Animals = ['Dog','Eel','Cat','Bat','Cow','Elk','Fox','Ape','Boa','Yak','Fly']
 Colors = ['Blue','Pink','Yellow','Green','Red','Orange','Purple','White','Black']
@@ -62,6 +64,13 @@ def StoreTenant(tenant,sessionname):
     text_file.write(tenant)
     text_file.close()
 
+def IsStagingFlagPresent(sessionname):
+    StgFlag = STGFILE+sessionname
+    if exists(StgFlag):
+        return True
+    else:
+        return False
+
 def StoreAuthToken(token,tenant,sessionname):
     CheckAndCreateDataFolderIfNeeded()
     SessionFileName = TOKENFILE+sessionname
@@ -81,7 +90,11 @@ def GetUrl(sessionname):
         logging.debug("Tenant Name: "+str(tenant))
         fullprodurl = "https://"+tenant+".twingate.com/api/graphql/"
         fullstagingurl="https://"+tenant+".stg.opstg.com/api/graphql/"
-        fullurl=fullprodurl
+        if IsStagingFlagPresent(sessionname):
+            fullurl=fullstagingurl
+        else:
+            fullurl=fullprodurl
+            
         logging.debug("Full Url: "+str(fullurl))
         text_file.close()
         return fullurl,tenant
