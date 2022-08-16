@@ -27,6 +27,7 @@ import ProtocolValidators
 import ServiceAccountKeyValidators
 import DataUtils
 import SAccountKeysLogics
+import SecPoliciesLogics
 
 VERSION="1.0.0"
 
@@ -724,6 +725,40 @@ saccount_key_rename_parser = saccount_key_subparsers.add_parser('rename')
 saccount_key_rename_parser.set_defaults(func=saccount_key_rename)
 saccount_key_rename_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 saccount_key_rename_parser.add_argument('-n','--itemname',type=str,default="", help='new item name', dest="ITEMNAME")
+
+
+#####
+# Security Policies Parser
+# policy <list>
+#####
+
+def secpol_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    SecPoliciesLogics.item_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# Device commands
+secpol_parser = subparsers.add_parser('policy')
+secpol_subparsers = secpol_parser.add_subparsers()
+
+# policy list
+policy_list_parser = secpol_subparsers.add_parser('list')
+policy_list_parser.set_defaults(func=secpol_list)
+
+# policy <show>
+def secpol_show(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no policy ID passed')
+
+    SecPoliciesLogics.item_show(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# policy show
+policy_show_parser = secpol_subparsers.add_parser('show')
+policy_show_parser.set_defaults(func=secpol_show)
+policy_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
 
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
