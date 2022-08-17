@@ -804,11 +804,29 @@ def secpol_remove_groups(args):
         args.GROUPIDS = AllIDs
     SecPoliciesLogics.remove_groups_from_policy(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPIDS)
 
-# policy addGroups
+# policy removeGroups
 policy_addgroups_parser = secpol_subparsers.add_parser('removeGroups')
 policy_addgroups_parser.set_defaults(func=secpol_remove_groups)
 policy_addgroups_parser.add_argument('-i','--policyid',type=str,default="", help='policy id', dest="ITEMID")
 policy_addgroups_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
+
+# policy <setGroups>
+
+def secpol_set_groups(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if args.GROUPIDS != []:
+        AllIDs = args.GROUPIDS.split(",")
+        args.GROUPIDS = AllIDs
+    SecPoliciesLogics.set_groups_for_policy(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPIDS)
+
+# policy setGroups
+policy_setgroups_parser = secpol_subparsers.add_parser('setGroups')
+policy_setgroups_parser.set_defaults(func=secpol_set_groups)
+policy_setgroups_parser.add_argument('-i','--policyid',type=str,default="", help='policy id', dest="ITEMID")
+policy_setgroups_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
 
 
 

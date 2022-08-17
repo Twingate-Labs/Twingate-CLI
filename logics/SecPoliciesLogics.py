@@ -12,6 +12,42 @@ import SecurityPoliciesTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_policy_set_groups_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {
+        "policyID":JsonData['itemid'],
+        "groupIDS":JsonData['groupids']
+    }
+
+    Body = """
+      mutation setGroupsToPolicy($policyID: ID!, $groupIDS: [ID!]){
+    securityPolicyUpdate(id: $policyID, groupIds: $groupIDS) {
+      ok
+      error
+      entity{
+        id
+        name
+        updatedAt
+        createdAt
+        policyType
+        groups {
+            edges{
+                node{
+                    id
+                    name
+                }
+            }
+        }
+        
+      }
+    }
+    }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_policy_remove_groups_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -175,6 +211,7 @@ def add_groups_to_policy(outputFormat,sessionname,itemid,groupids):
     output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
     print(output)
 
-# TODO - Add Group IDs to Policy
-# TODO - Remove Group IDs from Policy
-# TODO - Define Group IDs to Policy (redundant?)
+def set_groups_for_policy(outputFormat,sessionname,itemid,groupids):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_policy_set_groups_resources,{'itemid':itemid,'groupids':groupids},SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
+    print(output)
