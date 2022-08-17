@@ -12,6 +12,49 @@ import GroupsTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_group_assign_policy_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {
+        "groupID":JsonData['itemid'],
+        "policyID":JsonData['policyid']
+    }
+
+    Body = """
+    
+mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!){
+    groupUpdate(id: $groupID, securityPolicyId: $policyID) {
+      ok
+      error
+      entity{
+        id
+        name
+        isActive
+        securityPolicy{
+            id
+            name
+            policyType
+        }
+        type
+        users {
+            edges{
+                node{
+                    id
+                    email
+                    firstName
+                    lastName
+                }
+            }
+        }
+      }
+      
+    }
+}
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_group_remove_resources_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -338,6 +381,11 @@ def get_group_show_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
+def assign_policy_to_group(outputFormat,sessionname,itemid,policyid):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_assign_policy_resources,{'itemid':itemid,'policyid':policyid},GroupsTransformers.AssignPolicyAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.AssignPolicyAsCsv)
+    print(output)
+
 def add_resources_to_group(outputFormat,sessionname,itemid,resourceids):
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_group_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetAddOrRemoveResourcesAsCsv)
@@ -384,5 +432,3 @@ def item_list(outputFormat,sessionname):
         ListOfResponses.append(j['data']['groups']['edges'])
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,GroupsTransformers.GetListAsCsv)
     print(output)
-
-# TODO - Assign Policy to Group

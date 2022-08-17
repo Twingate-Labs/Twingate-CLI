@@ -29,3 +29,6 @@ def GetDeleteAsCsv(jsonResults):
     columns = ['ok','error']
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupDelete',columns)
 
+def AssignPolicyAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','securityPolicy.id','securityPolicy.name','securityPolicy.policyType']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'groupUpdate',columns)

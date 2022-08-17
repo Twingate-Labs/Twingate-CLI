@@ -403,6 +403,23 @@ group_delete_parser = group_subparsers.add_parser('delete')
 group_delete_parser.set_defaults(func=group_delete)
 group_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+# group <assignPolicy>
+
+def group_assign_policy_resources(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.POLICYID:
+        parser.error('no policy ID passed')
+    GroupsLogics.assign_policy_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.POLICYID)
+
+# group assignPolicy
+group_assignpolicy_parser = group_subparsers.add_parser('assignPolicy')
+group_assignpolicy_parser.set_defaults(func=group_assign_policy_resources)
+group_assignpolicy_parser.add_argument('-g','--groupid',type=str,default="", help='group id', dest="ITEMID")
+group_assignpolicy_parser.add_argument('-p','--policyid',type=str,default="", help='policy id', dest="POLICYID")
+
 #####
 # Resource Parser
 # resource <list>

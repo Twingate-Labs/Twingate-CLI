@@ -34,7 +34,16 @@ def GetUpdateAsCsvNoNesting(jsonResults,objectname,columns):
     for col in columns[2:]:
         if IsOk:
             if not col == "token":
-                Info = item['entity'][col]
+                #print("col:"+col)
+                #Info = item['entity'][col]
+                if '.' in col:
+                    PathToInfo = col.split(".")
+                    #print(PathToInfo)
+                    Info = item['entity'][PathToInfo[0]][PathToInfo[1]]
+                else:
+                    Info = item['entity'][col]
+
+                #print(Info)
                 if str(Info).startswith('{\'edges\':'):
                     IDs = []
                     for el in Info['edges']:
