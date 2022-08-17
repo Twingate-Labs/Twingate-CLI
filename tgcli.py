@@ -213,6 +213,21 @@ connector_rename_parser.set_defaults(func=connector_rename)
 connector_rename_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 connector_rename_parser.add_argument('-n','--itemname',type=str,default="", help='new item name', dest="ITEMNAME")
 
+# connector generate tokens
+
+def connector_generate_tokens(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    ConnectorsLogics.item_get_tokens(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# connector generate_tokens
+connector_gentokens_parser = connector_subparsers.add_parser('generateTokens')
+connector_gentokens_parser.set_defaults(func=connector_generate_tokens)
+connector_gentokens_parser.add_argument('-i','--itemid',type=str,default="", help='connector id', dest="ITEMID")
+
+
 #####
 # User Parser
 # user <list>

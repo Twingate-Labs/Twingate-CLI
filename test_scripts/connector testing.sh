@@ -40,3 +40,8 @@ echo "\nObject update"
 CMD="python3 ./tgcli.py -s ${ENVNAME} -f df ${OBJNAME} rename -i ${OBJID} -n ${OBJCURRENTNAME}"
 echo $CMD
 ${CMD}
+
+#echo "\nObject generate tokens"
+#CMD="python3 ./tgcli.py -s ${ENVNAME} -f df ${OBJNAME} generateTokens -i ${OBJID}"
+#echo $CMD
+#${CMD}

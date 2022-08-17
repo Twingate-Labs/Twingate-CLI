@@ -12,6 +12,26 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_connector_generate_tokens_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {'id':JsonData['itemid']}
+    Body = """
+        mutation
+            GetConnTokens($id:ID!){
+            connectorGenerateTokens(connectorId: $id) {
+            ok
+            error
+            connectorTokens {
+      accessToken
+      refreshToken
+    }
+            }
+        }
+    """
+    return True,api_call_type,Headers,Body,variables
+
 def get_connector_rename_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -104,8 +124,12 @@ def item_list(outputFormat,sessionname):
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,ConnectorsTransformers.GetListAsCsv)
     print(output)
 
-
 def item_rename(outputFormat,sessionname,itemid,itemname):
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_rename_resources,{'itemid':itemid,'itemname':itemname},ConnectorsTransformers.GetUpdateAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetUpdateAsCsv)
+    print(output)
+
+def item_get_tokens(outputFormat,sessionname,itemid):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_generate_tokens_resources,{'itemid':itemid},ConnectorsTransformers.GetGenTokensAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetGenTokensAsCsv)
     print(output)

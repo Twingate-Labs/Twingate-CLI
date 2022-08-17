@@ -14,3 +14,7 @@ def GetShowAsCsv(jsonResults):
 def GetListAsCsv(jsonResults):
     columns = ['id', 'name','state','lastHeartbeatAt']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
+
+def GetGenTokensAsCsv(jsonResults):
+    columns = ['ok', 'error','connectorTokens.accessToken','connectorTokens.refreshToken']
+    return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'connectorGenerateTokens',columns)

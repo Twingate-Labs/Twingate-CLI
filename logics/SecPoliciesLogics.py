@@ -30,9 +30,9 @@ def get_secpol_list_resources(sessionname,token,JsonData):
               node {
                 id
                 name
-                       updatedAt
-        createdAt
-        policyType
+                updatedAt
+                createdAt
+                policyType
         groups {
             edges{
                 node{
@@ -76,7 +76,6 @@ def get_secpol_show_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-
 def item_list(outputFormat,sessionname):
     ListOfResponses = []
     hasMorePages = True
@@ -93,3 +92,7 @@ def item_show(outputFormat,sessionname,itemid):
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_secpol_show_resources,{'itemid':itemid},SecurityPoliciesTransformers.GetShowAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetShowAsCsv)
     print(output)
+
+# TODO - Add Group IDs to Policy
+# TODO - Remove Group IDs from Policy
+# TODO - Define Group IDs to Policy (redundant?)
