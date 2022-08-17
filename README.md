@@ -93,6 +93,8 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
   * policy
     * list
     * show
+    * addGroups
+    * removeGroups
 
   * service account
     * list

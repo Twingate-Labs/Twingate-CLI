@@ -384,3 +384,5 @@ def item_list(outputFormat,sessionname):
         ListOfResponses.append(j['data']['groups']['edges'])
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,GroupsTransformers.GetListAsCsv)
     print(output)
+
+# TODO - Assign Policy to Group

@@ -10,3 +10,7 @@ def GetShowAsCsv(jsonResults):
 def GetListAsCsv(jsonResults):
     columns = ['id', 'name','policyType', 'groups']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
+
+def GetAddOrRemoveGroupsAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','groups']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'securityPolicyUpdate',columns)
