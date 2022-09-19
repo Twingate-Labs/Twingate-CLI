@@ -12,6 +12,32 @@ import ResourcesTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_resource_assign_network_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"itemid":JsonData['itemid'] ,"networkid":JsonData['networkid']}
+    #print(variables)
+    Body = """
+    mutation
+    ObjUpdate($itemid: ID!,$networkid:ID!){
+    resourceUpdate(id: $itemid, remoteNetworkId: $networkid) {
+      ok
+      error
+       entity {
+            id
+            name
+            remoteNetwork{
+                id
+                name
+            }
+            }
+    }
+}
+
+    """
+
+    return True,api_call_type,Headers,Body,variables   
+
 def get_resource_create_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
     api_call_type = "POST"
@@ -177,9 +203,12 @@ def item_list(outputFormat,sessionname):
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,ResourcesTransformers.GetListAsCsv)
     print(output)
 
-
 def item_show(outputFormat,sessionname,itemid):
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_show_resources,{'itemid':itemid},ResourcesTransformers.GetShowAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetShowAsCsv)
     print(output)
 
+def assign_network_to_resource(outputFormat,sessionname,itemid,networkid):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_resource_assign_network_resources,{'itemid':itemid,'networkid':networkid},ResourcesTransformers.GetUpdateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)

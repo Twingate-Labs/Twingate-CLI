@@ -75,6 +75,7 @@ def get_connector_list_resources(sessionname,token,JsonData):
                 lastHeartbeatAt
                 createdAt
                 updatedAt
+                hasStatusNotificationsEnabled
               }
             }
           }
@@ -96,6 +97,7 @@ def get_connector_show_resources(sessionname,token,JsonData):
             name
             state
             lastHeartbeatAt
+            hasStatusNotificationsEnabled
             remoteNetwork{
                 id
                 name

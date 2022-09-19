@@ -528,6 +528,24 @@ resource_delete_parser.set_defaults(func=resource_delete)
 resource_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
 
+# resource <assign_network>
+
+def resource_assign_network(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.NETWORKID:
+        parser.error('no item ID passed')
+
+    ResourcesLogics.assign_network_to_resource(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.NETWORKID)
+
+# resource assign network
+resource_assignnetwork_parser = resource_subparsers.add_parser('assignNetwork')
+resource_assignnetwork_parser.set_defaults(func=resource_assign_network)
+resource_assignnetwork_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+resource_assignnetwork_parser.add_argument('-n','--networkid',type=str,default="", help='remote network id', dest="NETWORKID")
+
 #####
 # Remote Network Parser
 # network <list>
@@ -844,9 +862,6 @@ policy_setgroups_parser = secpol_subparsers.add_parser('setGroups')
 policy_setgroups_parser.set_defaults(func=secpol_set_groups)
 policy_setgroups_parser.add_argument('-i','--policyid',type=str,default="", help='policy id', dest="ITEMID")
 policy_setgroups_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
-
-
-
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':

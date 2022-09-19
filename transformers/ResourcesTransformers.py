@@ -21,3 +21,8 @@ def GetDeleteAsCsv(jsonResults):
     columns = ['ok','error']
     #GenericTransformers.GetUpdateAsCsvNoNesting()
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'resourceDelete',columns)
+
+def GetUpdateAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','remoteNetwork.id','remoteNetwork.name']
+    #GenericTransformers.GetUpdateAsCsvNoNesting()
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'resourceUpdate',columns)

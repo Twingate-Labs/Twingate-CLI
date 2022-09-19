@@ -8,11 +8,11 @@ def GetUpdateAsCsv(jsonResults):
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'connectorUpdate',columns)
 
 def GetShowAsCsv(jsonResults):
-    columns = ['id', 'name','lastHeartbeatAt','state','remoteNetwork.id','remoteNetwork.name']
+    columns = ['id', 'name','lastHeartbeatAt','hasStatusNotificationsEnabled','state','remoteNetwork.id','remoteNetwork.name']
     return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'connector',columns)
 
 def GetListAsCsv(jsonResults):
-    columns = ['id', 'name','state','lastHeartbeatAt']
+    columns = ['id', 'name','state','lastHeartbeatAt','hasStatusNotificationsEnabled']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
 def GetGenTokensAsCsv(jsonResults):
