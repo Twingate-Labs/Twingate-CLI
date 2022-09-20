@@ -25,6 +25,7 @@ import UsersLogics
 import GroupsLogics
 import ProtocolValidators
 import ServiceAccountKeyValidators
+import GenericValidators
 import DataUtils
 import SAccountKeysLogics
 import SecPoliciesLogics
@@ -212,6 +213,30 @@ connector_rename_parser = connector_subparsers.add_parser('rename')
 connector_rename_parser.set_defaults(func=connector_rename)
 connector_rename_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 connector_rename_parser.add_argument('-n','--itemname',type=str,default="", help='new item name', dest="ITEMNAME")
+
+
+# connector <updateNotifications>
+
+def connector_updnotification(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.NOTIFICATION:
+        parser.error('no flag for notifications passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.NOTIFICATION)
+    if not isOK:
+        parser.error('wrong value passed for parameter updateNotifications (true or false)')
+    else:
+        args.NOTIFICATION=Value
+
+    ConnectorsLogics.item_change_status_notification(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.NOTIFICATION)
+
+# connector updateNotifications
+connector_updnotification_parser = connector_subparsers.add_parser('updateNotifications')
+connector_updnotification_parser.set_defaults(func=connector_updnotification)
+connector_updnotification_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+connector_updnotification_parser.add_argument('-s','--sendnotifications',type=str,default="true", help='true or false', dest="NOTIFICATION")
 
 # connector generate tokens
 

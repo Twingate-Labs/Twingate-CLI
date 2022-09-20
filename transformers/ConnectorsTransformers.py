@@ -4,7 +4,7 @@ import logging
 import GenericTransformers
 
 def GetUpdateAsCsv(jsonResults):
-    columns = ['ok','error','id','name']
+    columns = ['ok','error','id','name','hasStatusNotificationsEnabled']
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'connectorUpdate',columns)
 
 def GetShowAsCsv(jsonResults):

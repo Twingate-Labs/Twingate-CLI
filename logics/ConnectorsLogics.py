@@ -32,6 +32,28 @@ def get_connector_generate_tokens_resources(sessionname,token,JsonData):
     """
     return True,api_call_type,Headers,Body,variables
 
+def get_connector_update_email_notification_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {'id':JsonData['itemid'],'hasStatusNotificationsEnabled':JsonData['hasStatusNotificationsEnabled']}
+    Body = """
+        mutation
+            ObjUpd($id:ID!,$hasStatusNotificationsEnabled:Boolean!){
+            connectorUpdate(id: $id, hasStatusNotificationsEnabled: $hasStatusNotificationsEnabled) {
+            ok
+            error
+            entity{
+              id
+              name
+              hasStatusNotificationsEnabled
+            }
+            }
+        }
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_connector_rename_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -46,6 +68,7 @@ def get_connector_rename_resources(sessionname,token,JsonData):
             entity{
               id
               name
+              hasStatusNotificationsEnabled
             }
             }
         }
@@ -128,6 +151,11 @@ def item_list(outputFormat,sessionname):
 
 def item_rename(outputFormat,sessionname,itemid,itemname):
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_rename_resources,{'itemid':itemid,'itemname':itemname},ConnectorsTransformers.GetUpdateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetUpdateAsCsv)
+    print(output)
+
+def item_change_status_notification(outputFormat,sessionname,itemid,hasStatusNotificationsEnabled):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_update_email_notification_resources,{'itemid':itemid,'hasStatusNotificationsEnabled':hasStatusNotificationsEnabled},ConnectorsTransformers.GetUpdateAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetUpdateAsCsv)
     print(output)
 
