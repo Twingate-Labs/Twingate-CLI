@@ -5,11 +5,11 @@ import GenericTransformers
 
 def GetShowAsCsv(jsonResults):
     columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value','protocols.allowIcmp',
-    'protocols.tcp.policy','protocols.udp.policy']
+    'protocols.tcp.policy','protocols.udp.policy','isVisible','isBrowserShortcutEnabled']
     return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'resource',columns)
 
 def GetListAsCsv(jsonResults):
-    columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value']
+    columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value','isVisible','isBrowserShortcutEnabled']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
 def GetCreateAsCsv(jsonResults):
@@ -24,5 +24,10 @@ def GetDeleteAsCsv(jsonResults):
 
 def GetUpdateAsCsv(jsonResults):
     columns = ['ok','error','id', 'name','remoteNetwork.id','remoteNetwork.name']
+    #GenericTransformers.GetUpdateAsCsvNoNesting()
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'resourceUpdate',columns)
+
+def GetVisibilityUpdateAsCsv(jsonResults):
+    columns = ['ok','error','id', 'name','isVisible','isBrowserShortcutEnabled']
     #GenericTransformers.GetUpdateAsCsvNoNesting()
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'resourceUpdate',columns)

@@ -571,6 +571,30 @@ resource_assignnetwork_parser.set_defaults(func=resource_assign_network)
 resource_assignnetwork_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 resource_assignnetwork_parser.add_argument('-n','--networkid',type=str,default="", help='remote network id', dest="NETWORKID")
 
+
+# resource <visibility>
+
+def resource_toggle_visibility(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.ISVISIBLE:
+        parser.error('no value for visibility passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.ISVISIBLE)
+    if not isOK:
+        parser.error('wrong value passed for parameter visibility (true or false)')
+    else:
+        args.ISVISIBLE=Value
+
+    ResourcesLogics.update_visibility(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ISVISIBLE)
+
+# resource assign network
+resource_togglevisibility_parser = resource_subparsers.add_parser('isVisible')
+resource_togglevisibility_parser.set_defaults(func=resource_toggle_visibility)
+resource_togglevisibility_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+resource_togglevisibility_parser.add_argument('-t','--visibility',type=str, default="True", help='True or False (default: True)', dest="ISVISIBLE")
+
 #####
 # Remote Network Parser
 # network <list>
