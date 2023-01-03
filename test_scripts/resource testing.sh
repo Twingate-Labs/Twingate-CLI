@@ -37,6 +37,11 @@ CMD="python3 ./tgcli.py -s ${ENVNAME} -f df ${OBJNAME} assignNetwork -i $RESID -
 echo $CMD
 ${CMD}
 
+echo "\nObject change visibility"
+CMD="python3 ./tgcli.py -s ${ENVNAME} -f df ${OBJNAME} visibility -v "True" -i $RESID"
+echo $CMD
+${CMD}
+
 echo "\nObject delete"
 CMD="python3 ./tgcli.py -s ${ENVNAME} -f df ${OBJNAME} delete -i $RESID"
 echo $CMD
