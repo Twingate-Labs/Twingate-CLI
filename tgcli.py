@@ -590,10 +590,10 @@ def resource_toggle_visibility(args):
     ResourcesLogics.update_visibility(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ISVISIBLE)
 
 # resource assign network
-resource_togglevisibility_parser = resource_subparsers.add_parser('isVisible')
+resource_togglevisibility_parser = resource_subparsers.add_parser('visibility')
 resource_togglevisibility_parser.set_defaults(func=resource_toggle_visibility)
 resource_togglevisibility_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
-resource_togglevisibility_parser.add_argument('-t','--visibility',type=str, default="True", help='True or False (default: True)', dest="ISVISIBLE")
+resource_togglevisibility_parser.add_argument('-v','--value',type=str, default="True", help='True or False (default: True)', dest="ISVISIBLE")
 
 #####
 # Remote Network Parser
