@@ -163,6 +163,48 @@ device_update_parser.add_argument('-i','--itemid',type=str,default="", help='ite
 device_update_parser.add_argument('-l','--itemlist',type=str,default="", help='item list ex: "id1,id2,id3"', dest="ITEMLIST")
 device_update_parser.add_argument('-t','--trust',type=str,default=True, help='True or False',dest="TRUST")
 
+
+# device <block | unblock | archive>
+
+def device_block_unblock_archive(Type,args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no device ID passed')
+
+    if Type == "BLOCK":
+        DevicesLogics.item_block(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+    if Type == "UNBLOCK":
+        DevicesLogics.item_unblock(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+    if Type == "ARCHIVE":
+        DevicesLogics.item_archive(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+
+def device_block(args):
+    device_block_unblock_archive("BLOCK",args)
+
+device_block_parser = device_subparsers.add_parser('block')
+device_block_parser.set_defaults(func=device_block)
+device_block_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+
+def device_unblock(args):
+    device_block_unblock_archive("UNBLOCK",args)
+
+device_unblock_parser = device_subparsers.add_parser('unblock')
+device_unblock_parser.set_defaults(func=device_unblock)
+device_unblock_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+def device_archive(args):
+    device_block_unblock_archive("ARCHIVE",args)
+
+device_archive_parser = device_subparsers.add_parser('archive')
+device_archive_parser.set_defaults(func=device_archive)
+device_archive_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+
 #####
 # Connector Parser
 # connector <list>
