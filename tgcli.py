@@ -295,6 +295,29 @@ connector_gentokens_parser.set_defaults(func=connector_generate_tokens)
 connector_gentokens_parser.add_argument('-i','--itemid',type=str,default="", help='connector id', dest="ITEMID")
 
 
+# connector create
+
+def connector_create(args):
+    if not args.RNID:
+        parser.error('no Remote Network ID passed')
+    if not args.CONNNAME:
+        parser.error('no Connector Name passed')
+    if not args.NOTIFICATION:
+        parser.error('no flag for notifications passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.NOTIFICATION)
+    if not isOK:
+        parser.error('wrong value passed for parameter updateNotifications (true or false)')
+    else:
+        args.NOTIFICATION=Value
+    ConnectorsLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.CONNNAME,args.RNID,args.NOTIFICATION)
+
+# connector create
+connector_create_parser = connector_subparsers.add_parser('create')
+connector_create_parser.set_defaults(func=connector_create)
+connector_create_parser.add_argument('-i','--networkid',type=str,default="", help='Remote Network ID', dest="RNID")
+connector_create_parser.add_argument('-c','--connname',type=str,default="", help='Connector Name', dest="CONNNAME")
+connector_create_parser.add_argument('-s','--sendnotifications',type=str,default="true", help='true or false', dest="NOTIFICATION")
+
 #####
 # User Parser
 # user <list>

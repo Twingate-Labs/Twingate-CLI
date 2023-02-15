@@ -12,6 +12,34 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
+
+def get_connector_create_resources(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {'connName':JsonData['connName'], 'remoteNetworkID':JsonData['remoteNetworkID'],'statNotifications':JsonData['statNotifications']}
+
+    Body = """
+        mutation connectorCreate($connName: String!, $remoteNetworkID: ID!, $statNotifications: Boolean){
+            connectorCreate(name: $connName,remoteNetworkId: $remoteNetworkID, hasStatusNotificationsEnabled: $statNotifications) {
+                ok
+                error
+                entity{
+                    id
+                    name
+                    state
+                    lastHeartbeatAt
+                    hasStatusNotificationsEnabled
+                    remoteNetwork{
+                        id
+                        name
+                    }
+                }
+            }
+        }
+    """
+    return True,api_call_type,Headers,Body,variables
+
 def get_connector_generate_tokens_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -162,4 +190,10 @@ def item_change_status_notification(outputFormat,sessionname,itemid,hasStatusNot
 def item_get_tokens(outputFormat,sessionname,itemid):
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_generate_tokens_resources,{'itemid':itemid},ConnectorsTransformers.GetGenTokensAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetGenTokensAsCsv)
+    print(output)
+
+#     variables = {'connName':JsonData['connName'], 'remoteNetworkID':JsonData['remoteNetworkID'],'statNotifications':JsonData['statNotifications']}
+def item_create(outputFormat,sessionname,connName,remoteNetworkID,statNotifications):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_create_resources,{'connName':connName,'remoteNetworkID':remoteNetworkID,'statNotifications':statNotifications},ConnectorsTransformers.GetCreateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetCreateAsCsv)
     print(output)
