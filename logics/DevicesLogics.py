@@ -206,7 +206,7 @@ def item_list(outputFormat,sessionname,idsfile,idsonly):
     while hasMorePages:
         j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{'cursor':Cursor},DevicesTransformers.GetListAsCsv)
         hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'devices')
-        print("DEBUG: Has More pages:"+str(hasMorePages))
+        #print("DEBUG: Has More pages:"+str(hasMorePages))
         ListOfResponses.append(j['data']['devices']['edges'])
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,DevicesTransformers.GetListAsCsv)
     print(output)
