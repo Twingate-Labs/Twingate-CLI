@@ -654,11 +654,47 @@ def resource_toggle_visibility(args):
 
     ResourcesLogics.update_visibility(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ISVISIBLE)
 
-# resource assign network
+# resource visibility
 resource_togglevisibility_parser = resource_subparsers.add_parser('visibility')
 resource_togglevisibility_parser.set_defaults(func=resource_toggle_visibility)
 resource_togglevisibility_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 resource_togglevisibility_parser.add_argument('-v','--value',type=str, default="True", help='True or False (default: True)', dest="ISVISIBLE")
+
+# resource <address update>
+
+def resource_update_address(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.ADDRESS:
+        parser.error('no value for address passed')
+
+    ResourcesLogics.update_address(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ADDRESS)
+
+# resource address update
+resource_updateaddress_parser = resource_subparsers.add_parser('address')
+resource_updateaddress_parser.set_defaults(func=resource_update_address)
+resource_updateaddress_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+resource_updateaddress_parser.add_argument('-a','--address',type=str, default="", help='CIDR Block / IP / FQDN', dest="ADDRESS")
+
+# resource <alias update>
+
+def resource_update_alias(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.ALIAS:
+        parser.error('no value for alias passed')
+
+    ResourcesLogics.update_alias(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.ALIAS)
+
+# resource alias update
+resource_updatealias_parser = resource_subparsers.add_parser('alias')
+resource_updatealias_parser.set_defaults(func=resource_update_alias)
+resource_updatealias_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+resource_updatealias_parser.add_argument('-a','--alias',type=str, default="", help='alias', dest="ALIAS")
 
 #####
 # Remote Network Parser
