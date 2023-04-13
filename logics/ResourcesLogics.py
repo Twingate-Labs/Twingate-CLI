@@ -41,7 +41,7 @@ def get_resource_update_alias(sessionname,token,JsonData):
     }
 
     """
-    return True,api_call_type,Headers,Body,variables  
+    return True,api_call_type,Headers,Body,variables
 
 def get_resource_update_address(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)

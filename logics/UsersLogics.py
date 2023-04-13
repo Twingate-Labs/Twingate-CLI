@@ -12,6 +12,45 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
+
+def get_user_update_role_resource(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"itemid":JsonData['itemid'] ,"userRole":JsonData['userRole']}
+
+    Body = """
+    mutation
+    updateUserRole($itemid: ID!,$userRole: UserRole!){
+    userRoleUpdate(id:$itemid,role:$userRole) {
+        ok
+      error
+        entity {
+               id
+                state
+                email
+                state
+                role
+                lastName
+                firstName
+                createdAt
+                updatedAt
+                groups{
+                  edges{
+                    node{
+                      id
+                    }
+                  }
+                }
+         }
+        
+      }
+  }
+
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_user_list_resources(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -29,11 +68,10 @@ def get_user_list_resources(sessionname,token,JsonData):
             edges {
               node {
                 id
-               	avatarUrl
                 state
                 email
                 state
-                isAdmin
+                role
                 lastName
                 firstName
                 createdAt
@@ -64,11 +102,10 @@ def get_user_show_resources(sessionname,token,JsonData):
             getObj($itemID: ID!){
           user(id:$itemID) {
                 id
-               	avatarUrl
                 state
                 email
                 state
-                isAdmin
+                role
                 lastName
                 firstName
                 createdAt
@@ -105,3 +142,8 @@ def item_list(outputFormat,sessionname):
   
   output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,UsersTransformers.GetListAsCsv)
   print(output)
+
+def update_role(outputFormat,sessionname,itemid,role):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_update_role_resource,{'itemid':itemid,'userRole':role},UsersTransformers.GetUpdateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetUpdateAsCsv)
+    print(output)

@@ -25,6 +25,7 @@ import UsersLogics
 import GroupsLogics
 import ProtocolValidators
 import ServiceAccountKeyValidators
+import UserValidators
 import GenericValidators
 import DataUtils
 import SAccountKeysLogics
@@ -337,7 +338,6 @@ user_list_parser = user_subparsers.add_parser('list')
 user_list_parser.set_defaults(func=user_list)
 
 # user <show>
-
 def user_show(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
@@ -351,6 +351,26 @@ user_show_parser = user_subparsers.add_parser('show')
 user_show_parser.set_defaults(func=user_show)
 user_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+
+# user <update role>
+def user_update_role(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.ROLE:
+        parser.error('no role passed') 
+    isOK, role = UserValidators.ValidateRole(args.ROLE)
+    if not isOK:
+        parser.error('role passed in not valid: '+str(role))
+
+    UsersLogics.update_role(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,role)
+
+# user update role
+user_role_parser = user_subparsers.add_parser('role')
+user_role_parser.set_defaults(func=user_update_role)
+user_role_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+user_role_parser.add_argument('-r','--role',type=str,default="", help='ADMIN, DEVOPS, SUPPORT or MEMBER', dest="ROLE")
 
 #####
 # Group Parser
