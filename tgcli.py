@@ -372,6 +372,59 @@ user_role_parser.set_defaults(func=user_update_role)
 user_role_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 user_role_parser.add_argument('-r','--role',type=str,default="", help='ADMIN, DEVOPS, SUPPORT or MEMBER', dest="ROLE")
 
+
+# user <create>
+def user_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+
+    if not args.LNAME:
+        parser.error('no last name passed')
+
+    if not args.EMAIL:
+        parser.error('no email passed')
+
+    if not args.ROLE:
+        parser.error('no role passed') 
+    
+    isOK, role = UserValidators.ValidateRole(args.ROLE)
+    if not isOK:
+        parser.error('role passed in not valid: '+str(role))
+    
+    isOK,Value = GenericValidators.checkStringAsBool(args.SENDINVITE)
+    if not isOK:
+        parser.error('wrong value passed for "sendinvite" (true or false)')
+    else:
+        args.SENDINVITE=Value
+
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+
+    UsersLogics.create_user(args.OUTPUTFORMAT,args.SESSIONNAME,args.EMAIL,args.FNAME,args.LNAME,role,args.SENDINVITE)
+
+# user create
+user_role_parser = user_subparsers.add_parser('create')
+user_role_parser.set_defaults(func=user_create)
+user_role_parser.add_argument('-e','--email',type=str,default="", help='email address of the new user', dest="EMAIL")
+user_role_parser.add_argument('-f','--firstname',type=str,default="", help='first name of the new user', dest="FNAME")
+user_role_parser.add_argument('-l','--lastname',type=str,default="", help='last name of the new user', dest="LNAME")
+user_role_parser.add_argument('-r','--role',type=str,default="", help='ADMIN, DEVOPS, SUPPORT or MEMBER', dest="ROLE")
+user_role_parser.add_argument('-s','--sendinvite',type=str,default="True", help='send email invite (True or False (default: True))', dest="SENDINVITE")
+
+# user <delete>
+def user_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    UsersLogics.delete_user(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+# user delete
+user_delete_parser = user_subparsers.add_parser('delete')
+user_delete_parser.set_defaults(func=user_delete)
+user_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
 #####
 # Group Parser
 # group <list>
