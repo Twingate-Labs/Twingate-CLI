@@ -425,6 +425,26 @@ user_delete_parser = user_subparsers.add_parser('delete')
 user_delete_parser.set_defaults(func=user_delete)
 user_delete_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+# user <update state>
+def user_update_state(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+
+    isOK,Value = UserValidators.ValidateState(args.STATE)
+    if not isOK:
+        parser.error('wrong value passed for "state"')
+
+    UsersLogics.update_user_state(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.STATE)
+
+# user update state
+user_update_state_parser = user_subparsers.add_parser('state')
+user_update_state_parser.set_defaults(func=user_update_state)
+user_update_state_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+user_update_state_parser.add_argument('-s','--state',type=str,default="", help='state of user [ACTIVE, DISABLED]', dest="STATE")
+
+
 #####
 # Group Parser
 # group <list>

@@ -12,6 +12,34 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
+def get_user_change_state_resource(sessionname,token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"userID":JsonData['itemid'],"state":JsonData['state']}
+
+    Body = """
+     mutation
+    userDetailsUpdate($userID:ID!,$state:UserStateUpdateInput!){
+    userDetailsUpdate(id:$userID,state:$state) {
+        ok
+      error
+        entity {
+               id
+                state
+                email
+                state
+                role
+                lastName
+                firstName
+                createdAt
+                updatedAt
+         }
+      }
+  }
+    """
+
+    return True,api_call_type,Headers,Body,variables
 
 def get_user_create_resource(sessionname,token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
@@ -36,7 +64,6 @@ def get_user_create_resource(sessionname,token,JsonData):
                 createdAt
                 updatedAt
          }
-        
       }
   }
     """
@@ -205,4 +232,8 @@ def create_user(outputFormat,sessionname,email,firstname,lastname,role,shouldsen
     j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_create_resource,{'email':email,'firstname':firstname,'lastname':lastname,'userRole':role, 'shouldsendinvite':shouldsendinvite},UsersTransformers.GetCreateAsCsv)
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetCreateAsCsv)
     print(output)
-    
+
+def update_user_state(outputFormat,sessionname,itemid,state):
+    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_change_state_resource,{'itemid':itemid,'state':state},UsersTransformers.GetDetailUpdateAsCsv)
+    output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetDetailUpdateAsCsv)
+    print(output)

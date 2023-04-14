@@ -98,6 +98,7 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
     * role
     * create
     * delete
+    * state
 
   * network
     * list

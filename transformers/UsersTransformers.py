@@ -22,3 +22,7 @@ def GetDeleteAsCsv(jsonResults):
 def GetCreateAsCsv(jsonResults):
     columns = ['ok', 'error','id','firstName','lastName','email','role','state']
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'userCreate',columns)
+
+def GetDetailUpdateAsCsv(jsonResults):
+    columns = ['ok', 'error','id','firstName','lastName','email','role','state']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'userDetailsUpdate',columns) 

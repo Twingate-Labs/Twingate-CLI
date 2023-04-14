@@ -7,3 +7,10 @@ def ValidateRole(role):
         return True,role.upper()
     else:
         return False,role
+
+def ValidateState(state):
+    possible_values = ["DISABLED","ACTIVE"]
+    if state.upper() in possible_values:
+        return True,state.upper()
+    else:
+        return False,state
