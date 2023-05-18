@@ -131,6 +131,7 @@ def get_device_list_resources(sessionname,token,JsonData):
                 deviceType
                 lastFailedLoginAt
                 lastSuccessfulLoginAt
+                lastConnectedAt
                 osVersion
                 hardwareModel
                 hostname
@@ -141,7 +142,7 @@ def get_device_list_resources(sessionname,token,JsonData):
                     lastName
                     email
                 }
-                lastConnectedAt
+                
                 osName
                 deviceType
                 activeState
@@ -170,12 +171,13 @@ def get_device_show_resources(sessionname,token,JsonData):
             deviceType
             lastFailedLoginAt
             lastSuccessfulLoginAt
+            lastConnectedAt
             osVersion
             hardwareModel
             hostname
             username
             serialNumber
-            lastConnectedAt
+            
             osName
             deviceType
             activeState
