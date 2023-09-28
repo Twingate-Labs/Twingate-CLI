@@ -12,7 +12,7 @@ import RemoteNetworksTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_network_list_resources(sessionname,token,JsonData):
+def get_network_list_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -58,7 +58,7 @@ def get_network_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_network_show_resources(sessionname,token,JsonData):
+def get_network_show_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -95,20 +95,17 @@ def get_network_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_show(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_show_resources,{'itemid':itemid},RemoteNetworksTransformers.GetShowAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_network_show_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,RemoteNetworksTransformers.GetShowAsCsv)
     print(output)
     
 def item_list(outputFormat,sessionname):
-    #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_list_resources,{},RemoteNetworksTransformers.GetListAsCsv)
-    #print(r)
     ListOfResponses = []
     hasMorePages = True
     Cursor = "0"
     while hasMorePages:
-        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_network_list_resources,{'cursor':Cursor},RemoteNetworksTransformers.GetListAsCsv)
+        j = StdAPIUtils.generic_api_call_handler(sessionname,get_network_list_resources,{'cursor':Cursor})
         hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'remoteNetworks')
-        #print("DEBUG: Has More pages:"+sthasMorePages)
         ListOfResponses.append(j['data']['remoteNetworks']['edges'])
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,RemoteNetworksTransformers.GetListAsCsv)
     print(output)

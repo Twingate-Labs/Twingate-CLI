@@ -12,7 +12,7 @@ import DevicesTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_device_archive_resources(sessionname,token,JsonData):
+def get_device_archive_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -35,7 +35,7 @@ def get_device_archive_resources(sessionname,token,JsonData):
     """
     return True,api_call_type,Headers,Body,variables
 
-def get_device_unblock_resources(sessionname,token,JsonData):
+def get_device_unblock_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -58,7 +58,7 @@ def get_device_unblock_resources(sessionname,token,JsonData):
     """
     return True,api_call_type,Headers,Body,variables
 
-def get_device_block_resources(sessionname,token,JsonData):
+def get_device_block_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -81,7 +81,7 @@ def get_device_block_resources(sessionname,token,JsonData):
     """
     return True,api_call_type,Headers,Body,variables
 
-def get_device_update_resources(sessionname,token,JsonData):
+def get_device_update_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -99,6 +99,7 @@ def get_device_update_resources(sessionname,token,JsonData):
                     id
                     name
                     isTrusted
+                    activeState
 
                 }
             }
@@ -108,7 +109,7 @@ def get_device_update_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 
-def get_device_list_resources(sessionname,token,JsonData):
+def get_device_list_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -155,7 +156,7 @@ def get_device_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_device_show_resources(sessionname,token,JsonData):
+def get_device_show_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -191,22 +192,11 @@ def get_device_show_resources(sessionname,token,JsonData):
 
 
 def item_list(outputFormat,sessionname,idsfile,idsonly):
-    #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{},DevicesTransformers.GetListAsCsv)
-    #if idsonly:
-    #    j = GenericTransformers.GetIds(j,"devices")
-    #    print(j)
-    #    exit(0)
-    #else:
-    #    if idsfile != "":
-    #        itemsAdded,itemsRemoved = GenericTransformers.GetIdsAndCompareToFile(j,idsfile,"devices")
-    #        print({'itemsAddedCount':len(list(itemsAdded)),'itemsAdded':list(itemsAdded),'itemsRemovedCount':len(list(itemsRemoved)),'itemsRemoved':list(itemsRemoved)})
-    #    else:
-    #        print(r)
     ListOfResponses = []
     hasMorePages = True
     Cursor = "0"
     while hasMorePages:
-        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_list_resources,{'cursor':Cursor},DevicesTransformers.GetListAsCsv)
+        j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_list_resources,{'cursor':Cursor})
         hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'devices')
         #print("DEBUG: Has More pages:"+str(hasMorePages))
         ListOfResponses.append(j['data']['devices']['edges'])
@@ -214,26 +204,26 @@ def item_list(outputFormat,sessionname,idsfile,idsonly):
     print(output)
 
 def item_show(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_show_resources,{'itemid':itemid},DevicesTransformers.GetShowAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_show_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetShowAsCsv)
     print(output)
 
 def item_update(outputFormat,sessionname,itemid,trust):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_update_resources,{'itemid':itemid,'trust':trust},DevicesTransformers.GetUpdateAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_update_resources,{'itemid':itemid,'trust':trust})
     output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetUpdateAsCsv)
     print(output)
 
 def item_block(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_block_resources,{'itemid':itemid},DevicesTransformers.GetBlockAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_block_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetBlockAsCsv)
     print(output)
 
 def item_unblock(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_unblock_resources,{'itemid':itemid},DevicesTransformers.GetUnblockAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_unblock_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetUnblockAsCsv)
     print(output)
 
 def item_archive(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_device_archive_resources,{'itemid':itemid},DevicesTransformers.GetArchiveAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_archive_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetArchiveAsCsv)
     print(output)

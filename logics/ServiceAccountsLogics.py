@@ -13,7 +13,7 @@ import StdResponses
 import StdAPIUtils
 
 
-def get_service_account_remove_resources_resources(sessionname,token,JsonData):
+def get_service_account_remove_resources_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -49,7 +49,7 @@ def get_service_account_remove_resources_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 
-def get_service_account_add_resources_resources(sessionname,token,JsonData):
+def get_service_account_add_resources_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -84,7 +84,7 @@ def get_service_account_add_resources_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_service_account_delete_resources(sessionname,token,JsonData):
+def get_service_account_delete_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -101,7 +101,7 @@ def get_service_account_delete_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_service_account_create_resources(sessionname,token,JsonData):
+def get_service_account_create_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -123,7 +123,7 @@ def get_service_account_create_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_service_account_list_resources(sessionname,token,JsonData):
+def get_service_account_list_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -173,7 +173,7 @@ def get_service_account_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_service_account_show_resources(sessionname,token,JsonData):
+def get_service_account_show_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -216,41 +216,37 @@ def get_service_account_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_create(outputFormat,sessionname,itemname,resourceIds):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_create_resources,{'name':itemname,'resourceIds':resourceIds},ServiceAccountsTransformers.GetCreateAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_service_account_create_resources,{'name':itemname,'resourceIds':resourceIds})
     output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetCreateAsCsv)
     print(output)
 
 def item_delete(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_delete_resources,{'itemid':itemid},ServiceAccountsTransformers.GetDeleteAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_service_account_delete_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetDeleteAsCsv)
     print(output)
 
 def item_show(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_show_resources,{'itemid':itemid},ServiceAccountsTransformers.GetShowAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_service_account_show_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetShowAsCsv)
     print(output)
 
-
 def item_list(outputFormat,sessionname):
-    #r,j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_list_resources,{},ServiceAccountsTransformers.GetListAsCsv)
-    #print(r)
     ListOfResponses = []
     hasMorePages = True
     Cursor = "0"
     while hasMorePages:
-        j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_list_resources,{'cursor':Cursor},ServiceAccountsTransformers.GetListAsCsv)
+        j = StdAPIUtils.generic_api_call_handler(sessionname,get_service_account_list_resources,{'cursor':Cursor})
         hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'serviceAccounts')
-        #print("DEBUG: Has More pages:"+sthasMorePages)
         ListOfResponses.append(j['data']['serviceAccounts']['edges'])
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,ServiceAccountsTransformers.GetListAsCsv)
     print(output)
 
 def add_resources_to_saccount(outputFormat,sessionname,itemid,resourceids):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_add_resources_resources,{'itemid':itemid,'resourceids':resourceids},ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_service_account_add_resources_resources,{'itemid':itemid,'resourceids':resourceids})
     output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
     print(output)
 
 def remove_resources_from_saccount(outputFormat,sessionname,itemid,resourceids):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_service_account_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids},ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_service_account_remove_resources_resources,{'itemid':itemid,'resourceids':resourceids})
     output,r = StdAPIUtils.format_output(j,outputFormat,ServiceAccountsTransformers.GetAddOrRemoveResourcesAsCsv)
     print(output)

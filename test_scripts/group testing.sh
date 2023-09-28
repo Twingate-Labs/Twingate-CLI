@@ -33,8 +33,11 @@ ${CMD}
 
 # create resource and get ID
 echo "\ncreate Resource"
-REMNETWORKID=`python3 ./tgcli.py -s ${ENVNAME} -f csv network list | grep "API Test" | awk -F"," '{print $1}'`
+REMNETWORKID=`python3 ./tgcli.py -s ${ENVNAME} -f csv network list | grep "API Test" | head -n 1 | awk -F"," '{print $1}'`
+echo ${ENVNAME}
+echo "Remote Network ID: ${REMNETWORKID}"
 RESID=`python3 ./tgcli.py -s ${ENVNAME} -f csv resource create -a "10.0.0.5" -n "API Created Res3" -r ${REMNETWORKID} -t "RESTRICTED" -c "[[22-23],[443-443]]" | grep "API" | awk -F"," '{print $3}'`
+echo "Resource ID: ${RESID}"
 
 # add RESOURCE
 echo "\nadd Resource"

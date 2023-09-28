@@ -12,7 +12,7 @@ import GenericTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_user_change_state_resource(sessionname,token,JsonData):
+def get_user_change_state_resource(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -41,7 +41,7 @@ def get_user_change_state_resource(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_user_create_resource(sessionname,token,JsonData):
+def get_user_create_resource(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -70,7 +70,7 @@ def get_user_create_resource(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_user_delete_resource(sessionname,token,JsonData):
+def get_user_delete_resource(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -88,7 +88,7 @@ def get_user_delete_resource(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_user_update_role_resource(sessionname,token,JsonData):
+def get_user_update_role_resource(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -126,7 +126,7 @@ def get_user_update_role_resource(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_user_list_resources(sessionname,token,JsonData):
+def get_user_list_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -167,7 +167,7 @@ def get_user_list_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_user_show_resources(sessionname,token,JsonData):
+def get_user_show_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -201,7 +201,7 @@ def get_user_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_show(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_show_resources,{'itemid':itemid},UsersTransformers.GetShowAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_show_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetShowAsCsv)
     print(output)
 
@@ -210,7 +210,7 @@ def item_list(outputFormat,sessionname):
   hasMorePages = True
   Cursor = "0"
   while hasMorePages:
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_list_resources,{'cursor':Cursor},UsersTransformers.GetListAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_list_resources,{'cursor':Cursor})
     hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'users')
     #print("DEBUG: Has More pages:"+sthasMorePages)
     ListOfResponses.append(j['data']['users']['edges'])
@@ -219,21 +219,21 @@ def item_list(outputFormat,sessionname):
   print(output)
 
 def update_role(outputFormat,sessionname,itemid,role):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_update_role_resource,{'itemid':itemid,'userRole':role},UsersTransformers.GetUpdateAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_update_role_resource,{'itemid':itemid,'userRole':role})
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetUpdateAsCsv)
     print(output)
 
 def delete_user(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_delete_resource,{'itemid':itemid},UsersTransformers.GetDeleteAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_delete_resource,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetDeleteAsCsv)
     print(output)
 
 def create_user(outputFormat,sessionname,email,firstname,lastname,role,shouldsendinvite):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_create_resource,{'email':email,'firstname':firstname,'lastname':lastname,'userRole':role, 'shouldsendinvite':shouldsendinvite},UsersTransformers.GetCreateAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_create_resource,{'email':email,'firstname':firstname,'lastname':lastname,'userRole':role, 'shouldsendinvite':shouldsendinvite})
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetCreateAsCsv)
     print(output)
 
 def update_user_state(outputFormat,sessionname,itemid,state):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_user_change_state_resource,{'itemid':itemid,'state':state},UsersTransformers.GetDetailUpdateAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_change_state_resource,{'itemid':itemid,'state':state})
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetDetailUpdateAsCsv)
     print(output)

@@ -12,7 +12,7 @@ import SAccountKeysTransformers
 import StdResponses
 import StdAPIUtils
 
-def get_saccount_key_rename_resources(sessionname,token,JsonData):
+def get_saccount_key_rename_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -33,7 +33,7 @@ def get_saccount_key_rename_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_saccount_key_revoke_resources(sessionname,token,JsonData):
+def get_saccount_key_revoke_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -51,7 +51,7 @@ def get_saccount_key_revoke_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 
-def get_saccount_key_delete_resources(sessionname,token,JsonData):
+def get_saccount_key_delete_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -68,7 +68,7 @@ def get_saccount_key_delete_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_saccount_key_create_resources(sessionname,token,JsonData):
+def get_saccount_key_create_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -95,7 +95,7 @@ def get_saccount_key_create_resources(sessionname,token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
-def get_saccount_key_show_resources(sessionname,token,JsonData):
+def get_saccount_key_show_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
@@ -124,26 +124,26 @@ def get_saccount_key_show_resources(sessionname,token,JsonData):
     return True,api_call_type,Headers,Body,variables
 
 def item_create(outputFormat,sessionname,itemname,saccountId,expirationTime):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_create_resources,{'name':itemname,'serviceAccountId':saccountId,'expirationTime':expirationTime},SAccountKeysTransformers.GetCreateAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_saccount_key_create_resources,{'name':itemname,'serviceAccountId':saccountId,'expirationTime':expirationTime})
     output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetCreateAsCsv)
     print(output)
 
 def item_delete(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_delete_resources,{'itemid':itemid},SAccountKeysTransformers.GetDeleteAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_saccount_key_delete_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetDeleteAsCsv)
     print(output)
 
 def item_revoke(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_revoke_resources,{'itemid':itemid},SAccountKeysTransformers.GetRevokeAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_saccount_key_revoke_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetRevokeAsCsv)
     print(output)
 
 def item_show(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_show_resources,{'itemid':itemid},SAccountKeysTransformers.GetShowAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_saccount_key_show_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetShowAsCsv)
     print(output)
 
 def item_rename(outputFormat,sessionname,itemid,itemname):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_saccount_key_rename_resources,{'itemid':itemid,'itemname':itemname},SAccountKeysTransformers.GetRenameAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_saccount_key_rename_resources,{'itemid':itemid,'itemname':itemname})
     output,r = StdAPIUtils.format_output(j,outputFormat,SAccountKeysTransformers.GetRenameAsCsv)
     print(output)

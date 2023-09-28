@@ -9,7 +9,7 @@ def GetShowAsCsv(jsonResults):
     return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'resource',columns)
 
 def GetListAsCsv(jsonResults):
-    columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value','isVisible','isBrowserShortcutEnabled']
+    columns = ['id','name','isActive','remoteNetwork.id','address.type','address.value','securityPolicy','isVisible','isBrowserShortcutEnabled']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
 def GetCreateAsCsv(jsonResults):

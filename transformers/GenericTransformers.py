@@ -39,8 +39,11 @@ def GetUpdateAsCsvNoNesting(jsonResults,objectname,columns):
                 if '.' in col:
                     PathToInfo = col.split(".")
                     #print(PathToInfo)
+                    logging.debug("path to info:" + str(PathToInfo))
                     Info = item['entity'][PathToInfo[0]][PathToInfo[1]]
                 else:
+                    logging.debug("entity:" + str(item['entity']))
+                    logging.debug("entity:" + str(col))
                     Info = item['entity'][col]
 
                 #print(Info)
@@ -132,6 +135,8 @@ def GetListAsCsv(jsonResults,columns):
                 if item['node'] is not None:
                     if '.' in col:
                         PathToInfo = col.split(".")
+                        logging.debug("path to info:" + str(PathToInfo))
+                        logging.debug("item:" + str(item['node']))
                         content = item['node'][PathToInfo[0]][PathToInfo[1]]
                     else:
                         content = item['node'][col]
