@@ -137,7 +137,12 @@ def GetListAsCsv(jsonResults,columns):
                         PathToInfo = col.split(".")
                         logging.debug("path to info:" + str(PathToInfo))
                         logging.debug("item:" + str(item['node']))
-                        content = item['node'][PathToInfo[0]][PathToInfo[1]]
+                        l1_item = item['node'][PathToInfo[0]]
+                        if l1_item != None:
+                            content = item['node'][PathToInfo[0]][PathToInfo[1]]
+                        else:
+                            content = item['node'][PathToInfo[0]]
+                            logging.debug("Oops - looks like I couldnt find attribute " +str(PathToInfo[1])+" in " +str(item['node']))
                     else:
                         content = item['node'][col]
 
