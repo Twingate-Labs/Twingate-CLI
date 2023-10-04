@@ -178,55 +178,73 @@ def get_resource_list_resources(token,JsonData):
     Body = """
     
         query listGroup($cursor: String!)
-                    {
-          resources(after: $cursor, first:null) {
-            pageInfo {
-              endCursor
-              hasNextPage
-            }
-            edges {
-              node {
-                id
-                remoteNetwork{
-                    name
-                    id
+            {
+                resources(after: $cursor, first:null) {
+                pageInfo {
+                    endCursor
+                    hasNextPage
                 }
-               	address{
-                    type
-                    value
-                }
-                protocols {
-                allowIcmp
-                tcp {
-                    policy
-                    ports {
-                        start
-                        end
+                edges {
+                    node {
+                        id
+                        isActive
+                        name
+                        alias
+                        createdAt
+                        updatedAt
+                        isVisible
+                        isBrowserShortcutEnabled
+                        access{
+                            edges{
+                                node{
+                                    ... on Group {
+                                        id
+                                        name
+                                    }
+                                    ... on ServiceAccount {
+                                        id
+                                        name
+                                    }
+                                }
+                            
+                                securityPolicy {
+                                    id
+                                    name
+                                }
+                            }
+                        }
+                        securityPolicy {
+                            id
+                            name
+                        }
+                        remoteNetwork{
+                            name
+                            id
+                        }
+               	        address{
+                            type
+                            value
+                        }
+                        protocols {
+                            allowIcmp
+                            tcp {
+                                policy
+                                ports {
+                                    start
+                                    end
+                                }
+                            }
+                            udp{
+                                policy
+                                ports {
+                                    start
+                                    end
+                                }
+                            }
+                        }
                     }
                 }
-                udp{
-                    policy
-                    ports {
-                        start
-                        end
-                    }
-                }
-                }
-                isActive
-                name
-                securityPolicy {
-                    id
-                    name
-                }
-                
-                createdAt
-                updatedAt
-                isVisible
-                isBrowserShortcutEnabled
-              }
             }
-
-          }
         }
     """
 
