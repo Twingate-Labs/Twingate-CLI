@@ -141,14 +141,7 @@ def get_secpol_list_resources(token,JsonData):
                 updatedAt
                 createdAt
                 policyType
-        groups {
-            edges{
-                node{
-                    id
-                    name
-                }
-            }
-        }
+
               }
             }
           }
@@ -200,17 +193,17 @@ def item_show(outputFormat,sessionname,itemid):
     output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetShowAsCsv)
     print(output)
 
-def remove_groups_from_policy(outputFormat,sessionname,itemid,groupids):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_policy_remove_groups_resources,{'itemid':itemid,'groupids':groupids})
-    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
-    print(output)
+#def remove_groups_from_policy(outputFormat,sessionname,itemid,groupids):
+#    j = StdAPIUtils.generic_api_call_handler(sessionname,get_policy_remove_groups_resources,{'itemid':itemid,'groupids':groupids})
+#    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
+#    print(output)
 
-def add_groups_to_policy(outputFormat,sessionname,itemid,groupids):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_policy_add_groups_resources,{'itemid':itemid,'groupids':groupids})
-    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
-    print(output)
+#def add_groups_to_policy(outputFormat,sessionname,itemid,groupids):
+#    j = StdAPIUtils.generic_api_call_handler(sessionname,get_policy_add_groups_resources,{'itemid':itemid,'groupids':groupids})
+#    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
+#    print(output)
 
-def set_groups_for_policy(outputFormat,sessionname,itemid,groupids):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_policy_set_groups_resources,{'itemid':itemid,'groupids':groupids})
-    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
-    print(output)
+#def set_groups_for_policy(outputFormat,sessionname,itemid,groupids):
+#    j = StdAPIUtils.generic_api_call_handler(sessionname,get_policy_set_groups_resources,{'itemid':itemid,'groupids':groupids})
+#    output,r = StdAPIUtils.format_output(j,outputFormat,SecurityPoliciesTransformers.GetAddOrRemoveGroupsAsCsv)
+#    print(output)

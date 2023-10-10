@@ -12,7 +12,8 @@ import StdResponses
 
 def get_api_call_headers(token):
     DefaultHeaders = {
-        'X-API-KEY': token
+        'X-API-KEY': token,
+        'User-agent': 'TwingatePythonCLI/1.0.0'
     }
 
     return DefaultHeaders

@@ -1052,8 +1052,9 @@ policy_show_parser = secpol_subparsers.add_parser('show')
 policy_show_parser.set_defaults(func=secpol_show)
 policy_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+# the following logic is no longer applicable since Policies are now applied to Resources and not Groups
+'''
 # policy <addGroups>
-
 def secpol_add_groups(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
@@ -1105,6 +1106,7 @@ policy_setgroups_parser = secpol_subparsers.add_parser('setGroups')
 policy_setgroups_parser.set_defaults(func=secpol_set_groups)
 policy_setgroups_parser.add_argument('-i','--policyid',type=str,default="", help='policy id', dest="ITEMID")
 policy_setgroups_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
+'''
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':
