@@ -123,6 +123,10 @@ def get_connector_list_resources(token,JsonData):
                 id
                 name
                 state
+                hostname
+                version
+                publicIP
+                privateIPs
                 lastHeartbeatAt
                 createdAt
                 updatedAt
@@ -147,6 +151,10 @@ def get_connector_show_resources(token,JsonData):
             id
             name
             state
+            hostname
+            version
+            publicIP
+            privateIPs
             lastHeartbeatAt
             hasStatusNotificationsEnabled
             remoteNetwork{

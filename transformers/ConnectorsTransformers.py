@@ -12,7 +12,8 @@ def GetShowAsCsv(jsonResults):
     return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'connector',columns)
 
 def GetListAsCsv(jsonResults):
-    columns = ['id', 'name','state','lastHeartbeatAt','hasStatusNotificationsEnabled']
+    #privateIPs
+    columns = ['id', 'name','state','hostname','version','publicIP','lastHeartbeatAt','hasStatusNotificationsEnabled']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
 def GetGenTokensAsCsv(jsonResults):
