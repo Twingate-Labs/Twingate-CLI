@@ -152,15 +152,19 @@ def get_group_create_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
+    if not JsonData['securityPolicyId']:
+        JsonData['securityPolicyId'] = None
+
     variables = {
         "groupName":JsonData['itemname'],
         "userIDS":JsonData['userids'],
-        "resourceIDS":JsonData['resourceids']
+        "resourceIDS":JsonData['resourceids'],
+        "securityPolicyId":JsonData['securityPolicyId']
     }
 
     Body = """
-mutation createGroup($groupName: String!, $userIDS: [ID!], $resourceIDS: [ID!]){
-    groupCreate(name: $groupName, resourceIds: $resourceIDS, userIds: $userIDS) {
+mutation createGroup($groupName: String!, $userIDS: [ID!], $resourceIDS: [ID!], $securityPolicyId: ID){
+    groupCreate(name: $groupName, resourceIds: $resourceIDS, userIds: $userIDS, securityPolicyId: $securityPolicyId) {
           ok
           error
           entity{
@@ -401,8 +405,8 @@ def item_delete(outputFormat,sessionname,itemid):
     output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetDeleteAsCsv)
     print(output)
 
-def item_create(outputFormat,sessionname,itemname,userids,resourceids):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_group_create_resources,{'itemname':itemname,'userids':userids,'resourceids':resourceids})
+def item_create(outputFormat,sessionname,itemname,userids,resourceids,securityPolicyId):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_group_create_resources,{'itemname':itemname,'userids':userids,'resourceids':resourceids,'securityPolicyId':securityPolicyId})
     output,r = StdAPIUtils.format_output(j,outputFormat,GroupsTransformers.GetCreateAsCsv)
     print(output)
 

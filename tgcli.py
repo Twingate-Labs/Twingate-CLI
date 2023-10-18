@@ -12,6 +12,8 @@ import argparse
 import sys
 import logging
 import re
+import textwrap
+import array
 sys.path.insert(1, './logics')
 sys.path.insert(1, './validators')
 sys.path.insert(1, './libs')
@@ -49,6 +51,13 @@ subparsers = parser.add_subparsers()
 #logging.basicConfig(level=logging.ERROR)
 
 
+# Unabashedly taken from https://stackoverflow.com/a/64102901 so that we can have newlines in our descriptive text.
+
+from argparse import ArgumentParser, HelpFormatter
+
+class RawFormatter(HelpFormatter):
+    def _fill_text(self, text, width, indent):
+        return "\n".join([textwrap.fill(line, width) for line in textwrap.indent(textwrap.dedent(text), indent).splitlines()])
 
 #####
 # AUTH Parser
@@ -563,7 +572,7 @@ def group_create(args):
     if args.RESOURCEIDS != []:
         AllIDs = args.RESOURCEIDS.split(",")
         args.RESOURCEIDS = AllIDs
-    GroupsLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMNAME,args.USERIDS,args.RESOURCEIDS)
+    GroupsLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMNAME,args.USERIDS,args.RESOURCEIDS, args.POLICYID)
 
 # group create
 group_create_parser = group_subparsers.add_parser('create')
@@ -571,6 +580,7 @@ group_create_parser.set_defaults(func=group_create)
 group_create_parser.add_argument('-g','--groupname',type=str,default="", help='group name', dest="ITEMNAME")
 group_create_parser.add_argument('-u','--userids',type=str,default=[], help='list of User IDs, ex: "id1","id2"', dest="USERIDS")
 group_create_parser.add_argument('-r','--resourceids',type=str,default=[], help='list of Resource IDs, ex: "id1","id2"', dest="RESOURCEIDS")
+group_create_parser.add_argument('-p','--securitypolicyid',type=str,default=[], help='default security policy ID for group', dest="POLICYID")
 
 # group <delete>
 
@@ -592,9 +602,9 @@ def group_assign_policy_resources(args):
     if not args.SESSIONNAME:
         parser.error('no session name passed')
     if not args.ITEMID:
-        parser.error('no item ID passed')
+        parser.error('no item ID passed [-g <group id>]')
     if not args.POLICYID:
-        parser.error('no policy ID passed')
+        parser.error('no policy ID passed [-p <security policy id>]')
     GroupsLogics.assign_policy_to_group(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.POLICYID)
 
 # group assignPolicy
@@ -688,6 +698,7 @@ resource_create_parser.set_defaults(func=resource_create)
 resource_create_parser.add_argument('-a','--address',type=str,default="", help='resource address', dest="ADDRESS")
 resource_create_parser.add_argument('-n','--name',type=str,default="", help='resource name', dest="NAME")
 resource_create_parser.add_argument('-r','--networkid',type=str,default="", help='remote network ID', dest="NETWORKID")
+resource_create_parser.add_argument('-p','--policyid',type=str,default="", help='security policy id', dest="POLICYID")
 resource_create_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
 resource_create_parser.add_argument('-i','--icmp',type=bool,default=False, help='(Optional) Disallow ICMP Protocol', dest="DISALLOWICMP")
 resource_create_parser.add_argument('-t','--tcppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,RESTRICTED>, Default: ALLOW_ALL', dest="TCPPOLICY")
@@ -788,6 +799,134 @@ resource_updatealias_parser = resource_subparsers.add_parser('alias')
 resource_updatealias_parser.set_defaults(func=resource_update_alias)
 resource_updatealias_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 resource_updatealias_parser.add_argument('-a','--alias',type=str, default="", help='alias', dest="ALIAS")
+
+# resource <policy update>
+def resource_update_policy(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.POLICY:
+        parser.error('no value for policy passed')
+
+    ResourcesLogics.update_policy(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.POLICY)
+
+# resource policy update
+resource_updatepolicy_parser = resource_subparsers.add_parser('policy')
+resource_updatepolicy_parser.set_defaults(func=resource_update_policy)
+resource_updatepolicy_parser.add_argument('-i','--itemid',type=str,default="", help='resource id', dest="ITEMID")
+resource_updatepolicy_parser.add_argument('-p','--policyid',type=str, default="", help='security policy id', dest="POLICY")
+
+
+# resource <access remove>
+def resource_access_remove(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no resource ID passed')
+    if not args.GROUPID:
+        parser.error('no value(s) for group or service account id passed')
+
+    ResourcesLogics.access_remove(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID)
+
+access_remove_description = """
+Given a Resource, remove Groups' and Service Accounts' access to the Resource. Any existing relationships outside what get specified here will remain in place.
+
+Example Usage: tgcli -s [session] resource access_remove -i RESOURCEID -g GROUPID1[,GROUPID2,SERVICEACCOUNTID1,ID2 .. if applicable] 
+"""
+
+# resource access_remove
+resource_access_remove_parser = resource_subparsers.add_parser('access_remove',description=access_remove_description, formatter_class=RawFormatter)
+resource_access_remove_parser.set_defaults(func=resource_access_remove)
+resource_access_remove_parser.add_argument('-i','--itemid',type=str,default="", help='resource id', dest="ITEMID")
+resource_access_remove_parser.add_argument('-g','--groupid',type=str, default="", help='group id(s) [multiple ids separated by commas ie. id1,id2]', dest="GROUPID")
+
+
+
+
+# resource <access_set>
+def resource_access_set(args):
+    policySplit = groupsSplit = ''
+    if args.GROUPID:
+        groupsSplit = args.GROUPID.split(',')
+    if args.POLICYID:
+        policySplit = args.POLICYID.split(',')
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no resource ID passed')
+    if (args.GROUPID and not args.POLICYID):
+        parser.error('you cant have a group id with no policy id');
+    if not args.GROUPID and not args.SERVICEID:
+        parser.error('no value(s) for group id (-g [group id]) or service account ([-s [service account id]) passed')
+    if args.SERVICEID and args.POLICYID and not args.GROUPID:
+        parser.error('you cannot specify a security policy when adding access for a service account. Please do not use the -p flag if you\'re only adding access for service accounts.')
+    if len(policySplit) > 1 and len(groupsSplit) != len(policySplit):
+        parser.error('you have ' + str(len(groupsSplit)) + ' groups but ' + str(len(policySplit)) + ' policies. You must have a single policy or ' + str(len(groupsSplit)) + ' policies to use this function. (see help -h)')
+    ResourcesLogics.access_set(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID,args.SERVICEID,args.POLICYID)
+
+access_set_description = """
+Given a Resource, set which Groups or Service Account has access to the Resource and, for a Group, which Security Policy they use. Any existing Group or Service Account connections will be removed.
+
+Example Usage: tgcli -s [session] resource access_set -i RESOURCEID -g GROUPID1[,ID2,ID3 ... if applicable] -p POLICYID1[,ID2,ID3 ... if applicable] -s SERVICEACCOUNTID1[,ID2,ID3 ... if applicable] 
+
+** Note on policies: If only one policy ID is passed, it will be used for all groups specified. If multiple policies are passed, you must have a matching number of groups and policies, and the policies will be applied to the corresponding group (ie GROUPID1 will get POLICYID1, GROUPID2 will get POLICYID2, etc).
+If you do not have an equal count of group and policy IDs, the command will fail. Service accounts cannot have policies attached to them and do not require additional input.
+"""
+
+# resource access_set
+resource_access_set_parser = resource_subparsers.add_parser('access_set',description=access_set_description, formatter_class=RawFormatter)
+resource_access_set_parser.set_defaults(func=resource_access_set)
+resource_access_set_parser.add_argument('-i','--itemid',type=str,default="", help='resource id', dest="ITEMID")
+resource_access_set_parser.add_argument('-g','--group',type=str, default="", help='group id', dest="GROUPID")
+resource_access_set_parser.add_argument('-p','--policy',type=str, default="", help='security policy id', dest="POLICYID")
+resource_access_set_parser.add_argument('-s','--service',type=str, default="", help='service account id', dest="SERVICEID")
+
+
+# resource <access add>
+def resource_access_add(args):
+    policySplit = groupsSplit = ''
+    if args.GROUPID:
+        groupsSplit = args.GROUPID.split(',')
+    if args.POLICYID:
+        policySplit = args.POLICYID.split(',')
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no resource ID passed')
+    if (args.GROUPID and not args.POLICYID):
+        parser.error('you cant have a group id with no policy id');
+    if not args.GROUPID and not args.SERVICEID:
+        parser.error('no value(s) for group id (-g [group id]) or service account ([-s [service account id]) passed')
+    if args.SERVICEID and args.POLICYID and not args.GROUPID:
+        parser.error('you cannot specify a security policy when adding access for a service account. Please do not use the -p flag if you\'re only adding access for service accounts.')
+    if len(policySplit) > 1 and len(groupsSplit) != len(policySplit):
+        parser.error('you have ' + str(len(groupsSplit)) + ' groups but ' + str(len(policySplit)) + ' policies. You must have a single policy or ' + str(len(groupsSplit)) + ' policies to use this function. (see help -h)')
+  
+
+    ResourcesLogics.access_add(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID,args.SERVICEID,args.POLICYID)
+
+# resource add access
+access_add_description = """
+Given a Resource, add Groups or Service Accounts with access to the Resource and, for Groups, define which Security Policy they use. This is additive and will not remove any existing relationships for Groups/Service Accounts not used here.
+
+Example Usage: tgcli -s [session] resource access_add -i RESOURCEID -g GROUPID1[,ID2,ID3 ... if applicable] -p POLICYID1[,ID2,ID3 ... if applicable] -s SERVICEACCOUNTID1[,ID2,ID3 ... if applicable] 
+
+** Note on policies: If only one policy ID is passed, it will be used for all groups specified. If multiple policies are passed, you must have a matching number of groups and policies, and the policies will be applied to the corresponding group (ie GROUPID1 will get POLICYID1, GROUPID2 will get POLICYID2, etc).
+If you do not have an equal count of group and policy IDs, the command will fail. Service accounts cannot have policies attached to them and do not require additional input.
+"""
+resource_access_add_parser = resource_subparsers.add_parser('access_add', description=access_add_description, formatter_class=RawFormatter)
+resource_access_add_parser.set_defaults(func=resource_access_add)
+resource_access_add_parser.add_argument('-i','--itemid',type=str,default="", help='resource id', dest="ITEMID")
+resource_access_add_parser.add_argument('-g','--group',type=str, default="", help='group id(s)', dest="GROUPID")
+resource_access_add_parser.add_argument('-p','--policy',type=str, default="", help='security policy id(s)', dest="POLICYID")
+resource_access_add_parser.add_argument('-s','--service',type=str, default="", help='service account id', dest="SERVICEID")
+
+
+
+
+
+
 
 #####
 # Remote Network Parser
