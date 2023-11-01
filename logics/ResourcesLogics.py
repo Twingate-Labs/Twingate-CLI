@@ -3,6 +3,7 @@ import json
 import sys
 import os
 import urllib.parse
+import array
 
 sys.path.insert(1, './libs')
 sys.path.insert(1, './transformers')
@@ -76,6 +77,33 @@ def get_resource_update_address(token,JsonData):
 
     return True,api_call_type,Headers,Body,variables  
 
+def get_resource_update_policy(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"itemid":JsonData['itemid'] ,"securityPolicyId":JsonData['securityPolicyId']}
+    #print(variables)
+    Body = """
+    mutation
+    ObjUpdate($itemid: ID!,$securityPolicyId: ID!){
+    resourceUpdate(id: $itemid, securityPolicyId: $securityPolicyId) {
+      ok
+      error
+        entity {
+                   
+                id
+                name
+                alias
+                securityPolicy {
+                id
+              }
+            }
+        }
+    
+    }
+
+    """
+
+    return True,api_call_type,Headers,Body,variables  
 
 def get_resource_toggle_visibility(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
@@ -135,17 +163,20 @@ def get_resource_assign_network_resources(token,JsonData):
 def get_resource_create_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
     api_call_type = "POST"
-    variables = {"address":JsonData['address'] ,"name":JsonData['name'],"remoteNetworkId":JsonData['remoteNetworkId'],"groupIds":JsonData['groupIds'],"protocols":JsonData['protocols']}
+    variables = {"address":JsonData['address'] ,"name":JsonData['name'],"remoteNetworkId":JsonData['remoteNetworkId'],"groupIds":JsonData['groupIds'],"protocols":JsonData['protocols'],"securityPolicyId":JsonData['securityPolicyId']}
     #print(variables)
     Body = """
         mutation
-            ObjCreate($address: String!,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!],$protocols:ProtocolsInput!){
-            resourceCreate(protocols: $protocols, address: $address, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId) {
+            ObjCreate($address: String!,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!],$protocols:ProtocolsInput!,$securityPolicyId:ID!){
+            resourceCreate(protocols: $protocols, address: $address, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId, securityPolicyId: $securityPolicyId) {
               ok
               error
             entity{
               id
               name
+              securityPolicy {
+                id
+              }
             }
             }
         }
@@ -298,14 +329,139 @@ def get_resource_show_resources(token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
+def get_resource_access_remove(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"groupid":JsonData['groupid'],"itemid":JsonData['itemid']}
+    #print(variables)
+
+    Body = """
+
+    mutation
+    ObjUpdate($itemid: ID!,$groupid:[ID!]!){
+    resourceAccessRemove(principalIds: $groupid, resourceId: $itemid) {
+      ok
+      error
+        entity {   
+                id
+            }
+        }
+    }
+    """
+    return True,api_call_type,Headers,Body,variables
+
+def get_resource_access_set(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    AccessArray = []
+    api_call_type = "POST"
+    if JsonData['serviceid']:
+        sids =  JsonData['serviceid'].split(',')
+        for sid in sids:
+            tmpDict = dict()
+            tmpDict['principalId'] = sid
+            tmpDict['securityPolicyId'] = None
+            AccessArray.append(tmpDict)
+    if JsonData['groupid']:
+        gids = JsonData['groupid'].split(',')
+        pols = JsonData['policyid'].split(',')
+        if len(pols) != 1:
+            i = 0
+            while (i < len(gids)):
+                print("gidsing " + str(i) + " " + gids[i])
+                tmpDict = dict()
+                tmpDict['principalId'] = gids[i]
+                tmpDict['securityPolicyId'] = pols[i]
+                AccessArray.append(tmpDict)
+                i += 1
+        else: 
+            for gid in gids:
+                tmpDict = dict()
+                tmpDict['principalId'] = gid
+                tmpDict['securityPolicyId'] = pols[0]
+                AccessArray.append(tmpDict)
+   
+    variables = {"accessids":AccessArray,"itemid":JsonData['itemid']}
+    Body = """
+
+    mutation 
+        ObjUpdate($accessids: [AccessInput!]!, $itemid: ID!) {
+        resourceAccessSet(access: $accessids, resourceId: $itemid) {
+            ok
+            error
+            entity {
+                id
+                createdAt
+                updatedAt
+                name
+            }
+        }
+    }
+
+    """
+    return True,api_call_type,Headers,Body,variables
+
+
+def get_resource_access_add(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    AccessArray = []
+    api_call_type = "POST"
+    if JsonData['serviceid']:
+        sids =  JsonData['serviceid'].split(',')
+        for sid in sids:
+            tmpDict = dict()
+            tmpDict['principalId'] = sid
+            tmpDict['securityPolicyId'] = None
+            AccessArray.append(tmpDict)
+    if JsonData['groupid']:
+        gids = JsonData['groupid'].split(',')
+        pols = JsonData['policyid'].split(',')
+        if len(pols) != 1:
+            i = 0
+            while (i < len(gids)):
+                print("gidsing " + str(i) + " " + gids[i])
+                tmpDict = dict()
+                tmpDict['principalId'] = gids[i]
+                tmpDict['securityPolicyId'] = pols[i]
+                AccessArray.append(tmpDict)
+                i += 1
+        else: 
+            for gid in gids:
+                tmpDict = dict()
+                tmpDict['principalId'] = gid
+                tmpDict['securityPolicyId'] = pols[0]
+                AccessArray.append(tmpDict)
+   
+    variables = {"accessids":AccessArray,"itemid":JsonData['itemid']}
+    Body = """
+
+    mutation 
+        ObjUpdate($accessids: [AccessInput!]!, $itemid: ID!) {
+        resourceAccessAdd(access: $accessids, resourceId: $itemid) {
+            ok
+            error
+            entity {
+                id
+                createdAt
+                updatedAt
+                name
+            }
+        }
+    }
+
+    """
+    return True,api_call_type,Headers,Body,variables
+
+
+
 def item_delete(outputFormat,sessionname,itemid):
     JsonData = {"itemid":itemid}
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_delete_resources,JsonData)
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetDeleteAsCsv)
     print(output)
 
-def item_create(outputFormat,sessionname,address,name,remoteNetworkId,groupIds,IcmpAllow,TcpPolicy,TcpRange,UdpPolicy,UdpRange):
-    JsonData = {"address":address,"name":name,"remoteNetworkId":remoteNetworkId,"groupIds":groupIds,"protocols":{"allowIcmp":IcmpAllow,"tcp":{"policy":TcpPolicy,"ports":TcpRange},"udp":{"policy":UdpPolicy,"ports":UdpRange}}}
+def item_create(outputFormat,sessionname,address,name,remoteNetworkId,groupIds,IcmpAllow,TcpPolicy,TcpRange,UdpPolicy,UdpRange,PolicyId):
+    JsonData = {"address":address,"name":name,"remoteNetworkId":remoteNetworkId,"securityPolicyId":PolicyId,"groupIds":groupIds,"protocols":{"allowIcmp":IcmpAllow,"tcp":{"policy":TcpPolicy,"ports":TcpRange},"udp":{"policy":UdpPolicy,"ports":UdpRange}}}
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_create_resources,JsonData)
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetCreateAsCsv)
     print(output)
@@ -350,3 +506,25 @@ def update_alias(outputFormat,sessionname,itemid,alias):
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
     #get_resource_update_address
+
+def update_policy(outputFormat,sessionname,itemid,securityPolicyId):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_policy,{'itemid':itemid,'securityPolicyId':securityPolicyId})
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)
+    #get_resource_update_address
+
+def access_remove(outputFormat,sessionname,itemid,groupid):
+    groupid = groupid.split(",")
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_remove,{'itemid':itemid,'groupid':groupid})
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)
+
+def access_set(outputFormat,sessionname,itemid,groupid,serviceid,policyid):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_set,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid})
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)
+
+def access_add(outputFormat,sessionname,itemid,groupid,serviceid,policyid):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_add,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid})
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)
