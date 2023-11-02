@@ -17,14 +17,14 @@ def get_resources_from_group_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
     api_call_type = "POST"
-    variables = { "groupID":JsonData['id']}
+    variables = { "cursor":JsonData['cursor'],"groupID":JsonData['id']}
 
     Body = """
-      query getGroup($groupID: ID!)
+      query getGroup($cursor: String!,$groupID: ID!)
         {
   group(id:$groupID) {
 
-        resources {
+        resources (after: $cursor) {
             edges{
                 node{
                     id
@@ -37,16 +37,12 @@ def get_resources_from_group_resources(token,JsonData):
                 }
             }
             pageInfo {
-                startCursor
+                endCursor
                 hasNextPage
             }
         }
-
-
-
   }
 }
-
     """
 
     return True,api_call_type,Headers,Body,variables
@@ -101,29 +97,38 @@ def get_user_mappings(outputFormat,sessionname,emailaddr):
     
     groupIDs = []
     alledges = j['data']['users']['edges']
-    if len(alledges) != 1:
-        print("no corresponding user found.")
-    else:
+    if len(alledges) == 1:
         groups = alledges[0]['node']['groups']['edges']
         if len(groups) == 0:
             print("no group assigned to user.")
         else:
-            
             for grp in groups:
                 id = grp['node']['id']
                 groupIDs.append(id)
-    
+    #else:
+    #    print("no corresponding user found.")
+        
     allResources = []
+    hasMorePages = True
+    Cursor = "0"
     for id in groupIDs:
-        a = StdAPIUtils.generic_api_call_handler(sessionname,get_resources_from_group_resources,{'id':id})
-        allresedges = a['data']['group']['resources']['edges']
-        if len(allresedges) == 0:
-            print("no resource assigned to group.")
-        else:
-            for res in allresedges:
-                aResource = res['node']
-                allResources.append(aResource)
 
+        while hasMorePages:
+            a = StdAPIUtils.generic_api_call_handler(sessionname,get_resources_from_group_resources,{'cursor':Cursor,'id':id})
+            pInfo = a['data']['group']['resources']['pageInfo']
+            hasMorePages = pInfo['hasNextPage']
+            if hasMorePages:
+                Cursor = pInfo['endCursor']
+
+            allresedges = a['data']['group']['resources']['edges']
+
+            if len(allresedges) != 0:
+                for res in allresedges:
+                    aResource = res['node']
+                    allResources.append(aResource)
+            #else:
+            #    print("no resource assigned to group.")
+            
     df1 = pd.json_normalize(allResources)
     
     if (outputFormat.upper() == "DF"):
