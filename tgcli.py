@@ -32,6 +32,7 @@ import GenericValidators
 import DataUtils
 import SAccountKeysLogics
 import SecPoliciesLogics
+import MappingsLogics
 
 VERSION="1.0.0"
 
@@ -1246,6 +1247,30 @@ policy_setgroups_parser.set_defaults(func=secpol_set_groups)
 policy_setgroups_parser.add_argument('-i','--policyid',type=str,default="", help='policy id', dest="ITEMID")
 policy_setgroups_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
 '''
+
+
+#####
+# Mapping Parser
+# key <cmd>
+#####
+
+# mappings commands
+mappings_parser = subparsers.add_parser('mappings')
+mappings_subparsers = mappings_parser.add_subparsers()
+
+# get user based mapping
+def user_to_resource_mappings(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.EMAILADDR:
+        parser.error('no email address passed')
+
+    MappingsLogics.get_user_mappings(args.OUTPUTFORMAT,args.SESSIONNAME,args.EMAILADDR)
+
+# saccount key show
+mappings_user_res_parser = mappings_subparsers.add_parser('user-resource')
+mappings_user_res_parser.set_defaults(func=user_to_resource_mappings)
+mappings_user_res_parser.add_argument('-e','--email',type=str,default="", help='user email address', dest="EMAILADDR")
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':
