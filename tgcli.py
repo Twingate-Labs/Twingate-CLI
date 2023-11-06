@@ -1265,12 +1265,13 @@ def user_to_resource_mappings(args):
     if not args.EMAILADDR:
         parser.error('no email address passed')
 
-    MappingsLogics.get_user_mappings(args.OUTPUTFORMAT,args.SESSIONNAME,args.EMAILADDR)
+    MappingsLogics.get_user_mappings(args.OUTPUTFORMAT,args.SESSIONNAME,args.EMAILADDR,args.FQDN)
 
 # saccount key show
 mappings_user_res_parser = mappings_subparsers.add_parser('user-resource')
 mappings_user_res_parser.set_defaults(func=user_to_resource_mappings)
 mappings_user_res_parser.add_argument('-e','--email',type=str,default="", help='user email address', dest="EMAILADDR")
+mappings_user_res_parser.add_argument('-f','--fqdn',type=str,default="", help='[optional] FQDN to use and analyze against available resources', dest="FQDN")
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':
