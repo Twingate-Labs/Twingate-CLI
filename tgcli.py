@@ -26,6 +26,7 @@ import ResourcesLogics
 import UsersLogics
 import GroupsLogics
 import ProtocolValidators
+import RNValidators
 import ServiceAccountKeyValidators
 import UserValidators
 import GenericValidators
@@ -923,12 +924,6 @@ resource_access_add_parser.add_argument('-g','--group',type=str, default="", hel
 resource_access_add_parser.add_argument('-p','--policy',type=str, default="", help='security policy id(s)', dest="POLICYID")
 resource_access_add_parser.add_argument('-s','--service',type=str, default="", help='service account id', dest="SERVICEID")
 
-
-
-
-
-
-
 #####
 # Remote Network Parser
 # network <list>
@@ -961,6 +956,46 @@ def network_show(args):
 network_show_parser = network_subparsers.add_parser('show')
 network_show_parser.set_defaults(func=network_show)
 network_show_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
+# network <create>
+
+def network_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.NAME:
+        parser.error('name not passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.ISACTIVE)
+    if not isOK:
+        parser.error('wrong value passed for parameter updateNotifications (true or false)')
+    isSuccess,checked_location = RNValidators.ValidateRNLocation(args.LOCATION)
+    if not isSuccess:
+        parser.error(str(args.LOCATION)+" is incorrect, possible values are: "+checked_location)
+
+    RemoteNetworksLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.NAME,checked_location,Value)
+
+# network create
+network_create_parser = network_subparsers.add_parser('create')
+network_create_parser.set_defaults(func=network_create)
+network_create_parser.add_argument('-n','--name',type=str,default="", help='Remote Network name', dest="NAME")
+network_create_parser.add_argument('-l','--location',type=str,default="OTHER", help='location, possible values: [OTHER, AWS, AZURE, GOOGLE_CLOUD, ON_PREMISE]', dest="LOCATION")
+network_create_parser.add_argument('-a','--active',type=str,default="", help='Create the Remote Network in active or inactive state', dest="ISACTIVE")
+
+
+# network <delete>
+
+def network_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ID:
+        parser.error('id not passed')
+
+    RemoteNetworksLogics.item_delete(args.OUTPUTFORMAT,args.SESSIONNAME,args.ID)
+
+# network delete
+network_delete_parser = network_subparsers.add_parser('delete')
+network_delete_parser.set_defaults(func=network_delete)
+network_delete_parser.add_argument('-i','--id',type=str,default="", help='item id', dest="ID")
+
 
 #####
 # Service Account Parser
