@@ -1308,6 +1308,19 @@ mappings_user_res_parser.set_defaults(func=user_to_resource_mappings)
 mappings_user_res_parser.add_argument('-e','--email',type=str,default="", help='user email address', dest="EMAILADDR")
 mappings_user_res_parser.add_argument('-f','--fqdn',type=str,default="", help='[optional] FQDN to use and analyze against available resources', dest="FQDN")
 
+
+# get user - RN based mapping
+def user_to_rn_mappings(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+
+    MappingsLogics.get_user_rn_mapping(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# saccount key show
+mappings_user_res_parser = mappings_subparsers.add_parser('user-network')
+mappings_user_res_parser.set_defaults(func=user_to_rn_mappings)
+
+
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':
     args = parser.parse_args()

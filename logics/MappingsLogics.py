@@ -15,6 +15,54 @@ import StdResponses
 import StdAPIUtils
 import TGUtils
 
+def get_resources_from_user_rn_mappings(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = { "cursor":JsonData['cursor']}
+
+    Body = """
+query getUsers ($cursor: String!)
+{
+  users(after: $cursor) {
+    edges {
+      node {
+        id
+        firstName
+        lastName
+        email
+        groups {
+            edges {
+                node {
+                    name
+                    resources {
+                        edges {
+                            node {
+                                id
+                                name
+                                remoteNetwork {
+                                    id
+                                    name
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+      }
+    }
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+  }
+}
+    """
+
+    return True,api_call_type,Headers,Body,variables
+
 def get_resources_from_group_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -52,8 +100,8 @@ def get_resources_from_group_resources(token,JsonData):
   }
 }
     """
-
     return True,api_call_type,Headers,Body,variables
+
 def get_user_groups_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -92,6 +140,81 @@ def get_user_groups_resources(token,JsonData):
     """
 
     return True,api_call_type,Headers,Body,variables
+
+
+def get_user_rn_mapping(outputFormat,sessionname):
+    hasMorePages = True
+    Cursor = "0"
+
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resources_from_user_rn_mappings,{'cursor':Cursor})
+    logging.debug("output of groups assigned to user: "+str(j))
+    allUsers = []
+    while hasMorePages:
+        a = StdAPIUtils.generic_api_call_handler(sessionname,get_resources_from_user_rn_mappings,{'cursor':Cursor})
+        pInfo = a['data']['users']['pageInfo']
+        logging.debug("pagination info: "+str(pInfo))
+        hasMorePages = pInfo['hasNextPage']
+        if hasMorePages:
+            Cursor = pInfo['endCursor']
+        #userEdges = a['data']['users']['edges']
+        allUsers.append(a['data']['users']['edges'])
+    
+    # [[{'node': {'id': 'VXNlcjoxOTU5NA==', 'firstName': 'Alex', 'lastName': 'Marshall', 'email': 'alexm@twindemo.com', 'groups': {'edges': [{'node': {'name': 'Everyone', 'resources': {'edges': [{'node': {'remoteNetwork': {'name': 'AWS Twindemo'}}}
+    alluserinfo = []
+    for node in allUsers:
+        for user in node:
+            allRNS = []
+            allResources = []
+            username = user['node']['email']
+            groups = user['node']['groups']['edges']
+            for group in groups:
+                resources = group['node']['resources']['edges']
+                
+                
+                for res in resources:
+                    resname = res['node']['name']
+                    resid = res['node']['id']
+                    rnname = res['node']['remoteNetwork']['name']
+                    rnid = res['node']['remoteNetwork']['id']
+
+                    if rnname not in allRNS:
+                        allRNS.append(rnname)
+
+                    if resname not in allResources:
+                        allResources.append(resname)
+
+            #print(username)
+            #print(len(allRNS))
+            #print(len(allResources))
+
+            entry = {
+                "user.email":username,
+                "networks.count":len(allRNS),
+                "resources.count":len(allResources),
+                "networks": allRNS,
+                "resources": allResources
+            }
+
+            alluserinfo.append(entry)
+            #print(entry)
+    
+    df1 = pd.json_normalize(alluserinfo)
+    #print(df1)
+
+    if (outputFormat.upper() == "DF"):
+        logging.debug("Converting JSON Object to DF.")
+        print(df1)
+               
+    elif (outputFormat.upper() == "CSV"):
+                
+        logging.debug("Converting JSON Object to CSV.")
+        #print(aDF.to_csv(index=False))
+        print(df1.to_csv(index=False))
+    else:
+        logging.debug("Keeping JSON Object to JSON.")
+        json_formatted_str = json.dumps(alluserinfo, indent=2)
+        print(json_formatted_str)
+
 
 # user query on users with filter -> get user ID and Group IDs
 # for each Group ID, get the list of Resource definitions
