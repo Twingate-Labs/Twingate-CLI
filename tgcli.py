@@ -34,6 +34,7 @@ import DataUtils
 import SAccountKeysLogics
 import SecPoliciesLogics
 import MappingsLogics
+import DNSSecLogics
 
 VERSION="1.0.0"
 
@@ -1285,6 +1286,61 @@ policy_setgroups_parser.add_argument('-g','--groupids',type=str,default=[], help
 
 
 #####
+#
+# DNS Security Parser
+# 
+#####
+
+# DNS Security commands
+## dnssec_parser = subparsers.add_parser('dnssec')
+## dnssec_subparsers = dnssec_parser.add_subparsers()
+
+# DNS Security <show>
+
+def dnssec_show(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+
+    DNSSecLogics.item_show(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# DNS Security show
+## dnssec_show_parser = dnssec_subparsers.add_parser('show')
+## dnssec_show_parser.set_defaults(func=dnssec_show)
+
+# DNS Security <SetAllowList>
+
+def dnssec_allow_list_resources(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.CSVDOMAINS:
+        parser.error('no Domains passed')
+    Domains = args.CSVDOMAINS.split(",")
+
+    DNSSecLogics.set_allow_list(args.OUTPUTFORMAT,args.SESSIONNAME,Domains)
+
+# DNS Security <SetAllowList>
+## dnssec_allowlist_parser = dnssec_subparsers.add_parser('setAllowList')
+## dnssec_allowlist_parser.set_defaults(func=dnssec_allow_list_resources)
+## dnssec_allowlist_parser.add_argument('-d','--domains',type=str,default="", help='CSV list of domains', dest="CSVDOMAINS")
+
+# DNS Security <SetDenyList>
+
+def dnssec_deny_list_resources(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.CSVDOMAINS:
+        parser.error('no Domains passed')
+
+    Domains = args.CSVDOMAINS.split(",")
+
+    DNSSecLogics.set_deny_list(args.OUTPUTFORMAT,args.SESSIONNAME,Domains)
+
+# DNS Security <SetAllowList>
+## dnssec_denylist_parser = dnssec_subparsers.add_parser('setDenyList')
+## dnssec_denylist_parser.set_defaults(func=dnssec_deny_list_resources)
+## dnssec_denylist_parser.add_argument('-d','--domains',type=str,default="", help='CSV list of domains', dest="CSVDOMAINS")
+
+#####
 # Mapping Parser
 # key <cmd>
 #####
@@ -1302,7 +1358,6 @@ def user_to_resource_mappings(args):
 
     MappingsLogics.get_user_mappings(args.OUTPUTFORMAT,args.SESSIONNAME,args.EMAILADDR,args.FQDN)
 
-# saccount key show
 mappings_user_res_parser = mappings_subparsers.add_parser('user-resource')
 mappings_user_res_parser.set_defaults(func=user_to_resource_mappings)
 mappings_user_res_parser.add_argument('-e','--email',type=str,default="", help='user email address', dest="EMAILADDR")

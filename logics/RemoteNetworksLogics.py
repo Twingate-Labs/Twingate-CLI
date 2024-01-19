@@ -12,7 +12,6 @@ import RemoteNetworksTransformers
 import StdResponses
 import StdAPIUtils
 
-
 def get_network_delete_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 

@@ -1,13 +1,14 @@
+import sys
+
+sys.path.insert(1, './libs')
+sys.path.insert(1, './transformers')
+
 import requests
 import json
-import sys
 import os
 import urllib.parse
 import pandas as pd
 import logging
-
-sys.path.insert(1, './libs')
-sys.path.insert(1, './transformers')
 import DataUtils
 import GenericTransformers
 import GroupsTransformers
@@ -22,43 +23,43 @@ def get_resources_from_user_rn_mappings(token,JsonData):
     variables = { "cursor":JsonData['cursor']}
 
     Body = """
-query getUsers ($cursor: String!)
-{
-  users(after: $cursor) {
-    edges {
-      node {
-        id
-        firstName
-        lastName
-        email
-        groups {
+    query getUsers ($cursor: String!)
+    {
+        users(after: $cursor) {
             edges {
-                node {
-                    name
-                    resources {
-                        edges {
-                            node {
-                                id
-                                name
-                                remoteNetwork {
-                                    id
-                                    name
+            node {
+                id
+                firstName
+                lastName
+                email
+                groups {
+                    edges {
+                        node {
+                            name
+                            resources {
+                                edges {
+                                    node {
+                                        id
+                                        name
+                                        remoteNetwork {
+                                            id
+                                            name
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+            }
+            }
+            pageInfo {
+            endCursor
+            hasNextPage
             }
         }
-
-      }
     }
-    pageInfo {
-      endCursor
-      hasNextPage
-    }
-  }
-}
     """
 
     return True,api_call_type,Headers,Body,variables
@@ -72,33 +73,33 @@ def get_resources_from_group_resources(token,JsonData):
     Body = """
       query getGroup($cursor: String!,$groupID: ID!)
         {
-  group(id:$groupID) {
-        id
-        name
-        resources (after: $cursor) {
-            edges{
-                node{
+            group(id:$groupID) {
                     id
                     name
-                    address {
-                        type
-                        value
-                    }
-                    remoteNetwork {
-                    id
-                    name
+                    resources (after: $cursor) {
+                        edges{
+                            node{
+                                id
+                                name
+                                address {
+                                    type
+                                    value
+                                }
+                                remoteNetwork {
+                                id
+                                name
 
+                                }
+                                isActive
+                            }
+                        }
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
                     }
-                    isActive
-                }
-            }
-            pageInfo {
-                endCursor
-                hasNextPage
             }
         }
-  }
-}
     """
     return True,api_call_type,Headers,Body,variables
 
@@ -136,11 +137,10 @@ def get_user_groups_resources(token,JsonData):
                 hasNextPage
                 }
             }
-            }
+        }
     """
 
     return True,api_call_type,Headers,Body,variables
-
 
 def get_user_rn_mapping(outputFormat,sessionname):
     hasMorePages = True
@@ -158,8 +158,7 @@ def get_user_rn_mapping(outputFormat,sessionname):
             Cursor = pInfo['endCursor']
         #userEdges = a['data']['users']['edges']
         allUsers.append(a['data']['users']['edges'])
-    
-    # [[{'node': {'id': 'VXNlcjoxOTU5NA==', 'firstName': 'Alex', 'lastName': 'Marshall', 'email': 'alexm@twindemo.com', 'groups': {'edges': [{'node': {'name': 'Everyone', 'resources': {'edges': [{'node': {'remoteNetwork': {'name': 'AWS Twindemo'}}}
+ 
     alluserinfo = []
     for node in allUsers:
         for user in node:
@@ -183,10 +182,6 @@ def get_user_rn_mapping(outputFormat,sessionname):
                     if resname not in allResources:
                         allResources.append(resname)
 
-            #print(username)
-            #print(len(allRNS))
-            #print(len(allResources))
-
             entry = {
                 "user.email":username,
                 "networks.count":len(allRNS),
@@ -199,7 +194,6 @@ def get_user_rn_mapping(outputFormat,sessionname):
             #print(entry)
     
     df1 = pd.json_normalize(alluserinfo)
-    #print(df1)
 
     if (outputFormat.upper() == "DF"):
         logging.debug("Converting JSON Object to DF.")
@@ -208,7 +202,6 @@ def get_user_rn_mapping(outputFormat,sessionname):
     elif (outputFormat.upper() == "CSV"):
                 
         logging.debug("Converting JSON Object to CSV.")
-        #print(aDF.to_csv(index=False))
         print(df1.to_csv(index=False))
     else:
         logging.debug("Keeping JSON Object to JSON.")
@@ -235,9 +228,7 @@ def get_user_mappings(outputFormat,sessionname,emailaddr,fqdn):
             for grp in groups:
                 id = grp['node']['id']
                 groupIDs.append(id)
-    #else:
-    #    print("no corresponding user found.")
-        
+ 
     allResources = []
     
     for id in groupIDs:
@@ -262,9 +253,7 @@ def get_user_mappings(outputFormat,sessionname,emailaddr,fqdn):
                     aResource['group.id']=grpid
                     aResource['group.name']=grpname
                     allResources.append(aResource)
-            #else:
-            #    print("no resource assigned to group.")
-            
+       
     df1 = pd.json_normalize(allResources)
     
     if fqdn != "":
@@ -348,5 +337,3 @@ def get_user_mappings(outputFormat,sessionname,emailaddr,fqdn):
                 print("None")
             else:
                 print(df1)
-
-
