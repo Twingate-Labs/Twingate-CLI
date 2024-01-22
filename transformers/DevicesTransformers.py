@@ -29,3 +29,15 @@ def GetListAsCsv(jsonResults):
     columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','lastConnectedAt','osVersion','username','serialNumber','clientVersion']
     #columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','lastConnectedAt','osVersion','hardwareModel','hostname','username','serialNumber','activeState','clientVersion','manufacturerName']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
+
+def GetAddSerialAsCsv(jsonResults):
+    columns = ['ok','error']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'serialNumbersCreate',columns)
+
+def GetRemoveSerialAsCsv(jsonResults):
+    columns = ['ok','error']
+    return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'serialNumbersDelete',columns)
+
+def GetSNListAsCsv(jsonResults):
+    columns = ['id', 'serialNumber','createdAt','matchedDevices']
+    return GenericTransformers.GetListAsCsv(jsonResults,columns)

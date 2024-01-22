@@ -12,6 +12,81 @@ import DevicesTransformers
 import StdResponses
 import StdAPIUtils
 
+
+def get_serialnum_list_resources(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = { "cursor":JsonData['cursor']}
+
+
+    Body = """
+     query PM_GetListOfSerialNumbers($cursor: String!)
+    {
+    serialNumbers(after: $cursor) {
+        edges {
+        node {
+            id
+            serialNumber
+            createdAt
+            matchedDevices {
+                id
+                name
+            }
+        }
+        }
+        pageInfo {
+        endCursor
+        hasNextPage
+        }
+    }
+    }
+    """
+    return True,api_call_type,Headers,Body,variables
+
+def get_serialnum_add_resources(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"serialnums":JsonData['serialnums']}
+
+    Body = """
+        mutation PM_serialNumbersCreate($serialnums: [String!]!) {
+
+            serialNumbersCreate(serialNumbers: $serialnums) {
+            ok
+            error
+            entities {
+                id
+                createdAt
+                serialNumber
+                matchedDevices {
+                    id
+                    name
+                }
+            }
+            }
+        }
+    """
+    return True,api_call_type,Headers,Body,variables
+
+def get_serialnum_delete_resources(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"serialnums":JsonData['serialnums']}
+
+    Body = """
+        mutation PM_serialNumbersDelete($serialnums: [String!]!) {
+
+            serialNumbersDelete(serialNumbers: $serialnums) {
+            ok
+            error
+            }
+        }
+    """
+    return True,api_call_type,Headers,Body,variables
+
 def get_device_archive_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -226,4 +301,26 @@ def item_unblock(outputFormat,sessionname,itemid):
 def item_archive(outputFormat,sessionname,itemid):
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_archive_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetArchiveAsCsv)
+    print(output)
+
+def add_serialnumbers(outputFormat,sessionname,serialnums):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_serialnum_add_resources,{'serialnums':serialnums})
+    output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetAddSerialAsCsv)
+    print(output)
+
+def remove_serialnumbers(outputFormat,sessionname,serialnums):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_serialnum_delete_resources,{'serialnums':serialnums})
+    output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetRemoveSerialAsCsv)
+    print(output)
+
+def snumber_list(outputFormat,sessionname):
+    ListOfResponses = []
+    hasMorePages = True
+    Cursor = "0"
+    while hasMorePages:
+        j = StdAPIUtils.generic_api_call_handler(sessionname,get_serialnum_list_resources,{'cursor':Cursor})
+        hasMorePages,Cursor = GenericTransformers.CheckIfMorePages(j,'serialNumbers')
+        #print("DEBUG: Has More pages:"+str(hasMorePages))
+        ListOfResponses.append(j['data']['serialNumbers']['edges'])
+    output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,DevicesTransformers.GetSNListAsCsv)
     print(output)

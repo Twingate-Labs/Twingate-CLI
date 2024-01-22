@@ -1197,6 +1197,57 @@ saccount_key_rename_parser.add_argument('-n','--itemname',type=str,default="", h
 
 
 #####
+# 
+# Serial Number Parser
+# 
+#####
+
+# snumber commands
+serialnumber_parser = subparsers.add_parser('snumber')
+serialnumber_subparsers = serialnumber_parser.add_subparsers()
+
+# serial numbers list
+
+def snumbers_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    DevicesLogics.snumber_list(args.OUTPUTFORMAT,args.SESSIONNAME)
+
+# serial numbers add
+snumber_list_parser = serialnumber_subparsers.add_parser('list')
+snumber_list_parser.set_defaults(func=snumbers_list)
+
+# serial numbers add
+
+def snumbers_add(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.SNUMBERS:
+        parser.error('no serial numbers passed')
+    SerialNumbers = args.SNUMBERS.split(",")
+    DevicesLogics.add_serialnumbers(args.OUTPUTFORMAT,args.SESSIONNAME,SerialNumbers)
+
+# serial numbers add
+snumber_add_parser = serialnumber_subparsers.add_parser('add')
+snumber_add_parser.set_defaults(func=snumbers_add)
+snumber_add_parser.add_argument('-n','--snumbers',type=str,default="", help='<serial number 1>,<serial number 2>,etc.', dest="SNUMBERS")
+
+# serial numbers remove
+
+def snumbers_remove(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.SNUMBERS:
+        parser.error('no serial numbers passed')
+    SerialNumbers = args.SNUMBERS.split(",")
+    DevicesLogics.remove_serialnumbers(args.OUTPUTFORMAT,args.SESSIONNAME,SerialNumbers)
+
+# serial numbers remove
+snumber_remove_parser = serialnumber_subparsers.add_parser('remove')
+snumber_remove_parser.set_defaults(func=snumbers_remove)
+snumber_remove_parser.add_argument('-n','--snumbers',type=str,default="", help='<serial number 1>,<serial number 2>,etc.', dest="SNUMBERS")
+
+#####
 # Security Policies Parser
 # policy <list>
 #####
