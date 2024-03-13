@@ -334,7 +334,7 @@ connector_create_parser.add_argument('-s','--sendnotifications',type=str,default
 
 #####
 # User Parser
-# user <list>
+#    <list>
 #####
 
 def user_list(args):
@@ -867,7 +867,7 @@ def resource_access_set(args):
         parser.error('you cannot specify a security policy when adding access for a service account. Please do not use the -p flag if you\'re only adding access for service accounts.')
     if len(policySplit) > 1 and len(groupsSplit) != len(policySplit):
         parser.error('you have ' + str(len(groupsSplit)) + ' groups but ' + str(len(policySplit)) + ' policies. You must have a single policy or ' + str(len(groupsSplit)) + ' policies to use this function. (see help -h)')
-    ResourcesLogics.access_set(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID,args.SERVICEID,args.POLICYID)
+    ResourcesLogics.access_set(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID,args.SERVICEID,args.POLICYID,args.AUTOLOCKDAYS,args.EXPIRESAT)
 
 access_set_description = """
 Given a Resource, set which Groups or Service Account has access to the Resource and, for a Group, which Security Policy they use. Any existing Group or Service Account connections will be removed.
@@ -885,6 +885,8 @@ resource_access_set_parser.add_argument('-i','--itemid',type=str,default="", hel
 resource_access_set_parser.add_argument('-g','--group',type=str, default="", help='group id', dest="GROUPID")
 resource_access_set_parser.add_argument('-p','--policy',type=str, default="", help='security policy id', dest="POLICYID")
 resource_access_set_parser.add_argument('-s','--service',type=str, default="", help='service account id', dest="SERVICEID")
+resource_access_set_parser.add_argument('-a','--autolock',type=int, default=None, help='usage based autolock duration (in days from 1-365)', dest="AUTOLOCKDAYS")
+resource_access_set_parser.add_argument('-e','--expiresat',type=str, default="", help='expiry date for this access as iso8601 datetime string ie 2024-03-14T20:20:32-07:00', dest="EXPIRESAT")
 
 
 # resource <access add>
@@ -908,7 +910,7 @@ def resource_access_add(args):
         parser.error('you have ' + str(len(groupsSplit)) + ' groups but ' + str(len(policySplit)) + ' policies. You must have a single policy or ' + str(len(groupsSplit)) + ' policies to use this function. (see help -h)')
   
 
-    ResourcesLogics.access_add(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID,args.SERVICEID,args.POLICYID)
+    ResourcesLogics.access_add(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.GROUPID,args.SERVICEID,args.POLICYID,args.AUTOLOCKDAYS,args.EXPIRESAT)
 
 # resource add access
 access_add_description = """
@@ -925,6 +927,8 @@ resource_access_add_parser.add_argument('-i','--itemid',type=str,default="", hel
 resource_access_add_parser.add_argument('-g','--group',type=str, default="", help='group id(s)', dest="GROUPID")
 resource_access_add_parser.add_argument('-p','--policy',type=str, default="", help='security policy id(s)', dest="POLICYID")
 resource_access_add_parser.add_argument('-s','--service',type=str, default="", help='service account id', dest="SERVICEID")
+resource_access_add_parser.add_argument('-a','--autolock',type=int, default=None, help='usage based autolock duration (in days)', dest="AUTOLOCKDAYS")
+resource_access_add_parser.add_argument('-e','--expiresat',type=str, default="", help='expiry date for this access as iso8601 datetime string ie 2024-03-14T20:20:32-07:00', dest="EXPIRESAT")
 
 #####
 # Remote Network Parser
