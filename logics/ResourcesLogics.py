@@ -361,6 +361,10 @@ def get_resource_access_set(token,JsonData):
             tmpDict = dict()
             tmpDict['principalId'] = sid
             tmpDict['securityPolicyId'] = None
+            if JsonData['autolockdays']:
+                tmpDict['usageBasedAutolockDurationDays'] = JsonData['autolockdays']
+            if JsonData['expiresat']:
+                tmpDict['expiresAt'] = JsonData['expiresat']
             AccessArray.append(tmpDict)
     if JsonData['groupid']:
         gids = JsonData['groupid'].split(',')
@@ -372,6 +376,10 @@ def get_resource_access_set(token,JsonData):
                 tmpDict = dict()
                 tmpDict['principalId'] = gids[i]
                 tmpDict['securityPolicyId'] = pols[i]
+                if JsonData['autolockdays']:
+                    tmpDict['usageBasedAutolockDurationDays'] = JsonData['autolockdays']
+                if JsonData['expiresat']:
+                    tmpDict['expiresAt'] = JsonData['expiresat']
                 AccessArray.append(tmpDict)
                 i += 1
         else: 
@@ -379,6 +387,10 @@ def get_resource_access_set(token,JsonData):
                 tmpDict = dict()
                 tmpDict['principalId'] = gid
                 tmpDict['securityPolicyId'] = pols[0]
+                if JsonData['autolockdays']:
+                    tmpDict['usageBasedAutolockDurationDays'] = JsonData['autolockdays']
+                if JsonData['expiresat']:
+                    tmpDict['expiresAt'] = JsonData['expiresat']
                 AccessArray.append(tmpDict)
    
     variables = {"accessids":AccessArray,"itemid":JsonData['itemid']}
@@ -412,6 +424,10 @@ def get_resource_access_add(token,JsonData):
             tmpDict = dict()
             tmpDict['principalId'] = sid
             tmpDict['securityPolicyId'] = None
+            if JsonData['autolockdays']:
+                tmpDict['usageBasedAutolockDurationDays'] = JsonData['autolockdays']
+            if JsonData['expiresat']:
+                tmpDict['expiresAt'] = JsonData['expiresat']
             AccessArray.append(tmpDict)
     if JsonData['groupid']:
         gids = JsonData['groupid'].split(',')
@@ -423,6 +439,10 @@ def get_resource_access_add(token,JsonData):
                 tmpDict = dict()
                 tmpDict['principalId'] = gids[i]
                 tmpDict['securityPolicyId'] = pols[i]
+                if JsonData['autolockdays']:
+                    tmpDict['usageBasedAutolockDurationDays'] = JsonData['autolockdays']
+                if JsonData['expiresat']:
+                    tmpDict['expiresAt'] = JsonData['expiresat']
                 AccessArray.append(tmpDict)
                 i += 1
         else: 
@@ -430,6 +450,10 @@ def get_resource_access_add(token,JsonData):
                 tmpDict = dict()
                 tmpDict['principalId'] = gid
                 tmpDict['securityPolicyId'] = pols[0]
+                if JsonData['autolockdays']:
+                    tmpDict['usageBasedAutolockDurationDays'] = JsonData['autolockdays']
+                if JsonData['expiresat']:
+                    tmpDict['expiresAt'] = JsonData['expiresat']
                 AccessArray.append(tmpDict)
    
     variables = {"accessids":AccessArray,"itemid":JsonData['itemid']}
@@ -519,12 +543,12 @@ def access_remove(outputFormat,sessionname,itemid,groupid):
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
 
-def access_set(outputFormat,sessionname,itemid,groupid,serviceid,policyid):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_set,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid})
+def access_set(outputFormat,sessionname,itemid,groupid,serviceid,policyid,autolockdays,expiresat):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_set,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid,'autolockdays':autolockdays,'expiresat':expiresat})
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
 
-def access_add(outputFormat,sessionname,itemid,groupid,serviceid,policyid):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_add,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid})
+def access_add(outputFormat,sessionname,itemid,groupid,serviceid,policyid,autolockdays,expiresat):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_add,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid,'autolockdays':autolockdays,'expiresat':expiresat})
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
