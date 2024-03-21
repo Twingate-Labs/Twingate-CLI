@@ -694,7 +694,7 @@ def resource_create(args):
         parser.error(ret)
 
     #exit(1)
-    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE)
+    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE,args.POLICYID)
 
 resource_create_parser = resource_subparsers.add_parser('create')
 resource_create_parser.set_defaults(func=resource_create)
