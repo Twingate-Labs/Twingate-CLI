@@ -694,12 +694,13 @@ def resource_create(args):
         parser.error(ret)
 
     #exit(1)
-    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE,args.POLICYID)
+    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.ALIAS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE,args.POLICYID)
 
 resource_create_parser = resource_subparsers.add_parser('create')
 resource_create_parser.set_defaults(func=resource_create)
 
 resource_create_parser.add_argument('-a','--address',type=str,default="", help='resource address', dest="ADDRESS")
+resource_create_parser.add_argument('-l', '--alias', type=str,default="", help='resource alias fqdn', dest="ALIAS")
 resource_create_parser.add_argument('-n','--name',type=str,default="", help='resource name', dest="NAME")
 resource_create_parser.add_argument('-r','--networkid',type=str,default="", help='remote network ID', dest="NETWORKID")
 resource_create_parser.add_argument('-p','--policyid',type=str,default="", help='security policy id', dest="POLICYID")

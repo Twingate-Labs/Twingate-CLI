@@ -163,12 +163,12 @@ def get_resource_assign_network_resources(token,JsonData):
 def get_resource_create_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
     api_call_type = "POST"
-    variables = {"address":JsonData['address'] ,"name":JsonData['name'],"remoteNetworkId":JsonData['remoteNetworkId'],"groupIds":JsonData['groupIds'],"protocols":JsonData['protocols'],"securityPolicyId":JsonData['securityPolicyId']}
+    variables = {"address":JsonData['address'] ,"alias":JsonData['alias'],"name":JsonData['name'],"remoteNetworkId":JsonData['remoteNetworkId'],"groupIds":JsonData['groupIds'],"protocols":JsonData['protocols'],"securityPolicyId":JsonData['securityPolicyId']}
     #print(variables)
     Body = """
         mutation
-            ObjCreate($address: String!,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!],$protocols:ProtocolsInput!,$securityPolicyId:ID!){
-            resourceCreate(protocols: $protocols, address: $address, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId, securityPolicyId: $securityPolicyId) {
+ObjCreate($address: String!,$alias: String,$name:String!,$remoteNetworkId:ID!,$groupIds:[ID!],$protocols:ProtocolsInput!,$securityPolicyId:ID!){
+            resourceCreate(protocols: $protocols, address: $address, alias: $alias, groupIds: $groupIds, name: $name, remoteNetworkId: $remoteNetworkId, securityPolicyId: $securityPolicyId) {
               ok
               error
             entity{
@@ -484,8 +484,8 @@ def item_delete(outputFormat,sessionname,itemid):
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetDeleteAsCsv)
     print(output)
 
-def item_create(outputFormat,sessionname,address,name,remoteNetworkId,groupIds,IcmpAllow,TcpPolicy,TcpRange,UdpPolicy,UdpRange,PolicyId):
-    JsonData = {"address":address,"name":name,"remoteNetworkId":remoteNetworkId,"securityPolicyId":PolicyId,"groupIds":groupIds,"protocols":{"allowIcmp":IcmpAllow,"tcp":{"policy":TcpPolicy,"ports":TcpRange},"udp":{"policy":UdpPolicy,"ports":UdpRange}}}
+def item_create(outputFormat,sessionname,address,alias,name,remoteNetworkId,groupIds,IcmpAllow,TcpPolicy,TcpRange,UdpPolicy,UdpRange,PolicyId):
+    JsonData = {"address":address,"alias":alias,"name":name,"remoteNetworkId":remoteNetworkId,"securityPolicyId":PolicyId,"groupIds":groupIds,"protocols":{"allowIcmp":IcmpAllow,"tcp":{"policy":TcpPolicy,"ports":TcpRange},"udp":{"policy":UdpPolicy,"ports":UdpRange}}}
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_create_resources,JsonData)
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetCreateAsCsv)
     print(output)
