@@ -664,6 +664,7 @@ def resource_create(args):
     if args.GROUPIDS != []:
         AllIDs = args.GROUPIDS.split(",")
         args.GROUPIDS = AllIDs
+    
 
     isSuccess,ret = ProtocolValidators.ValidateRange(args.TCPRANGE)
     if not isSuccess:
@@ -692,9 +693,17 @@ def resource_create(args):
     isSuccess,ret = ProtocolValidators.ValidateRangeWithPolicy(str(args.UDPRANGE),args.UDPPOLICY)
     if not isSuccess:
         parser.error(ret)
+    
+    if not args.ISVISIBLE:
+        parser.error('no value for visibility passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.ISVISIBLE)
+    if not isOK:
+        parser.error('wrong value passed for parameter visibility (true or false)')
+    else:
+        args.ISVISIBLE=Value
 
     #exit(1)
-    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.ALIAS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE,args.POLICYID)
+    ResourcesLogics.item_create(args.OUTPUTFORMAT,args.SESSIONNAME,args.ADDRESS,args.ALIAS,args.NAME,args.NETWORKID,args.GROUPIDS,not args.DISALLOWICMP,args.TCPPOLICY,args.TCPRANGE,args.UDPPOLICY,args.UDPRANGE,args.POLICYID, args.ISVISIBLE)
 
 resource_create_parser = resource_subparsers.add_parser('create')
 resource_create_parser.set_defaults(func=resource_create)
@@ -705,6 +714,7 @@ resource_create_parser.add_argument('-n','--name',type=str,default="", help='res
 resource_create_parser.add_argument('-r','--networkid',type=str,default="", help='remote network ID', dest="NETWORKID")
 resource_create_parser.add_argument('-p','--policyid',type=str,default="", help='security policy id', dest="POLICYID")
 resource_create_parser.add_argument('-g','--groupids',type=str,default=[], help='list of Group IDs, ex: "id1","id2"', dest="GROUPIDS")
+resource_create_parser.add_argument('-v', '--isvisible', type=str, default="True", help='Should this be visible in the main resource list (default to true)', dest="ISVISIBLE")
 resource_create_parser.add_argument('-i','--icmp',type=bool,default=False, help='(Optional) Disallow ICMP Protocol', dest="DISALLOWICMP")
 resource_create_parser.add_argument('-t','--tcppolicy',type=str,default="ALLOW_ALL", help='(Optional) <ALLOW_ALL,RESTRICTED>, Default: ALLOW_ALL', dest="TCPPOLICY")
 resource_create_parser.add_argument('-c','--tcprange',type=str,default="[]", help='(Optional) <[[a,b],[c,d],..]>, Default: [], ex:[[22-50],[443,443],[654-987]]', dest="TCPRANGE")
