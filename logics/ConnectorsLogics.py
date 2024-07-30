@@ -196,7 +196,7 @@ def item_change_status_notification(outputFormat,sessionname,itemid,hasStatusNot
     print(output)
 
 def item_get_tokens(outputFormat,sessionname,itemid):
-    j = StdAPIUtils.generic_api_call_handler(outputFormat,sessionname,get_connector_generate_tokens_resources,{'itemid':itemid},ConnectorsTransformers.GetGenTokensAsCsv)
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_connector_generate_tokens_resources,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,ConnectorsTransformers.GetGenTokensAsCsv)
     print(output)
 
