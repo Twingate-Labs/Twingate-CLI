@@ -85,7 +85,23 @@ def get_user_delete_resource(token,JsonData):
       }
   }
     """
+    return True,api_call_type,Headers,Body,variables
 
+def get_user_reset_mfa(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"itemid":JsonData['itemid']}
+
+    Body = """
+     mutation
+    userResetMfa($itemid:ID!){
+      userResetMfa(id:$itemid) {
+        ok
+        error
+      }
+  }
+    """
     return True,api_call_type,Headers,Body,variables
 
 def get_user_update_role_resource(token,JsonData):
@@ -225,6 +241,11 @@ def update_role(outputFormat,sessionname,itemid,role):
 
 def delete_user(outputFormat,sessionname,itemid):
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_delete_resource,{'itemid':itemid})
+    output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetDeleteAsCsv)
+    print(output)
+
+def reset_mfa(outputFormat,sessionname,itemid):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_user_reset_mfa,{'itemid':itemid})
     output,r = StdAPIUtils.format_output(j,outputFormat,UsersTransformers.GetDeleteAsCsv)
     print(output)
 
