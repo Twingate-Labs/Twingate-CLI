@@ -458,6 +458,18 @@ user_update_state_parser.add_argument('-i','--itemid',type=str,default="", help=
 user_update_state_parser.add_argument('-s','--state',type=str,default="", help='state of user [ACTIVE, DISABLED]', dest="STATE")
 
 
+# Reset MFA For User
+def user_reset_mfa(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    UsersLogics.reset_mfa(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+user_reset_mfa_parser = user_subparsers.add_parser('resetmfa')
+user_reset_mfa_parser.set_defaults(func=user_reset_mfa)
+user_reset_mfa_parser.add_argument('-i','--itemid',type=str,default="", help='user id', dest="ITEMID")
+
 #####
 # Group Parser
 # group <list>
