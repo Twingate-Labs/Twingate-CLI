@@ -253,7 +253,11 @@ def get_device_show_resources(token,JsonData):
             hostname
             username
             serialNumber
-            
+            user{
+                    firstName
+                    lastName
+                    email
+                }
             osName
             deviceType
             activeState

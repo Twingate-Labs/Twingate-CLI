@@ -20,13 +20,13 @@ def GetArchiveAsCsv(jsonResults):
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'deviceArchive',columns)
 
 def GetShowAsCsv(jsonResults):
-    columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','lastConnectedAt','osVersion','hardwareModel','hostname','username','serialNumber','activeState',
+    columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','user.email','osVersion','hardwareModel','hostname','username','serialNumber','activeState',
     'clientVersion','manufacturerName']
 
     return GenericTransformers.GetShowAsCsvNoNesting(jsonResults,'device',columns)
 
 def GetListAsCsv(jsonResults):
-    columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','lastConnectedAt','osVersion','username','serialNumber','clientVersion']
+    columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','user.email','osVersion','username','serialNumber','clientVersion']
     #columns = ['id', 'name','isTrusted','osName','deviceType','lastFailedLoginAt','lastSuccessfulLoginAt','lastConnectedAt','osVersion','hardwareModel','hostname','username','serialNumber','activeState','clientVersion','manufacturerName']
     return GenericTransformers.GetListAsCsv(jsonResults,columns)
 
