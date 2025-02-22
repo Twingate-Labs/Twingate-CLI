@@ -1009,7 +1009,6 @@ network_create_parser.add_argument('-n','--name',type=str,default="", help='Remo
 network_create_parser.add_argument('-l','--location',type=str,default="OTHER", help='location, possible values: [OTHER, AWS, AZURE, GOOGLE_CLOUD, ON_PREMISE]', dest="LOCATION")
 network_create_parser.add_argument('-a','--active',type=str,default="", help='Create the Remote Network in active or inactive state', dest="ISACTIVE")
 
-
 # network <delete>
 
 def network_delete(args):
@@ -1025,6 +1024,60 @@ network_delete_parser = network_subparsers.add_parser('delete')
 network_delete_parser.set_defaults(func=network_delete)
 network_delete_parser.add_argument('-i','--id',type=str,default="", help='item id', dest="ID")
 
+
+# network <updateState>
+def network_updateState(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ID:
+        parser.error('id not passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.ACTIVATE)
+    if not isOK:
+        parser.error('wrong value passed for parameter updateState (true or false)')
+
+    RemoteNetworksLogics.update_state(args.OUTPUTFORMAT,args.SESSIONNAME,args.ID,Value)
+
+# network updateState
+network_updateState_parser = network_subparsers.add_parser('updateState')
+network_updateState_parser.set_defaults(func=network_updateState)
+network_updateState_parser.add_argument('-i','--id',type=str,default="", help='item id', dest="ID")
+network_updateState_parser.add_argument('-a','--active',type=str,default="", help='true or false', dest="ACTIVATE")
+
+# network <updateName>
+def network_updateName(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ID:
+        parser.error('id not passed')
+    if not args.ITEMNAME:
+        parser.error('no item name passed')
+
+    RemoteNetworksLogics.update_name(args.OUTPUTFORMAT,args.SESSIONNAME,args.ID,args.ITEMNAME)
+
+# network updateName
+network_updateName_parser = network_subparsers.add_parser('updateName')
+network_updateName_parser.set_defaults(func=network_updateName)
+network_updateName_parser.add_argument('-i','--id',type=str,default="", help='item id', dest="ID")
+network_updateName_parser.add_argument('-n','--name',type=str,default="", help='new name', dest="ITEMNAME")
+
+
+# network <updateLocation>
+def network_updateLocation(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ID:
+        parser.error('id not passed')
+    isSuccess,checked_location = RNValidators.ValidateRNLocation(args.LOCATION)
+    if not isSuccess:
+        parser.error(str(args.LOCATION)+" is incorrect, possible values are: "+checked_location)
+
+    RemoteNetworksLogics.update_location(args.OUTPUTFORMAT,args.SESSIONNAME,args.ID,checked_location)
+
+# network updateLocation
+network_updateLocation_parser = network_subparsers.add_parser('updateLocation')
+network_updateLocation_parser.set_defaults(func=network_updateLocation)
+network_updateLocation_parser.add_argument('-i','--id',type=str,default="", help='item id', dest="ID")
+network_updateLocation_parser.add_argument('-l','--location',type=str,default="", help='new location [AWS|AZURE|GOOGLE_CLOUD|ON_PREMISE|OTHER]', dest="LOCATION")
 
 #####
 # Service Account Parser
