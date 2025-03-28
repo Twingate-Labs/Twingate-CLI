@@ -38,6 +38,15 @@ def processAPIResponse(response):
             print("API Error: {} - Message: {}".format(response.status_code,"Response received is in HTML Format"))
             return False
         else:
+            result = json.loads(response.text)
+            if "errors" in result:
+                errors = result['errors']
+                if len(errors) > 0:
+                    error_content = errors[0]
+                    if 'message' in error_content:
+                        error_message = error_content['message']
+                        print("API Error: {} - Message: {}".format(response.status_code,error_message))
+                        return False
             return True
 
 def ProcessStdResponse(res,CsvOutput):
@@ -47,7 +56,7 @@ def ProcessStdResponse(res,CsvOutput):
         exit(1)
     if(res.status_code >= 400):
 
-        print("Error Code: "+str(res.status_code))
+        #print("Error Code: "+str(res.status_code))
         try:
             result = json.loads(res.text)
             if result['message']:
@@ -59,6 +68,7 @@ def ProcessStdResponse(res,CsvOutput):
         return True,None
 
     else:
+        
         try:
             return False,CsvOutput
         except:

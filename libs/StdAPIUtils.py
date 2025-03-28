@@ -39,6 +39,7 @@ def generic_api_call_handler(sessionname,get_res_func,res_data):
             response = requests.request(method=CallType, url=FULLURL, json={'query': Body}, headers=Headers)
         
         logging.debug("Response:" + str(response.text))
+        logging.debug("status code:"+str(response.status_code))
         isAPICallOK = StdResponses.processAPIResponse(response)
 
         if(not isAPICallOK):
