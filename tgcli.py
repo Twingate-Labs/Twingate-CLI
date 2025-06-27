@@ -827,6 +827,26 @@ resource_updatealias_parser.set_defaults(func=resource_update_alias)
 resource_updatealias_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 resource_updatealias_parser.add_argument('-a','--alias',type=str, default="", help='alias', dest="ALIAS")
 
+
+# resource <autolock update>
+
+def resource_update_autolock(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    if not args.AUTOLOCK:
+        parser.error('no value for autolock passed')
+
+    ResourcesLogics.update_autolock(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.AUTOLOCK)
+
+# resource autolock update
+resource_updateautolock_parser = resource_subparsers.add_parser('autolock')
+resource_updateautolock_parser.set_defaults(func=resource_update_autolock)
+resource_updateautolock_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+resource_updateautolock_parser.add_argument('-a','--autolock',type=int, default="", help='autolock (number of days)', dest="AUTOLOCK")
+
+
 # resource <policy update>
 def resource_update_policy(args):
     if not args.SESSIONNAME:

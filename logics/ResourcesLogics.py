@@ -13,6 +13,39 @@ import ResourcesTransformers
 import StdResponses
 import StdAPIUtils
 
+
+def get_resource_update_autolock(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"itemid":JsonData['itemid'] ,"autolock":JsonData['autolock']}
+    #print(variables)
+    Body = """
+    mutation
+    ObjUpdate($itemid: ID!,$autolock:Int!){
+    resourceUpdate(id: $itemid, usageBasedAutolockDurationDays: $autolock) {
+      ok
+      error
+        entity {   
+                id
+                name
+                alias
+                usageBasedAutolockDurationDays
+                address{
+                    type
+                    value
+                }
+                remoteNetwork{
+                    id
+                    name
+                }
+            }
+        }
+    
+    }
+
+    """
+    return True,api_call_type,Headers,Body,variables
+
 def get_resource_update_alias(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
     api_call_type = "POST"
@@ -28,6 +61,7 @@ def get_resource_update_alias(token,JsonData):
                 id
                 name
                 alias
+                usageBasedAutolockDurationDays
                 address{
                     type
                     value
@@ -60,6 +94,7 @@ def get_resource_update_address(token,JsonData):
                 id
                 name
                 alias
+                usageBasedAutolockDurationDays
                 address{
                     type
                     value
@@ -93,6 +128,7 @@ def get_resource_update_policy(token,JsonData):
                 id
                 name
                 alias
+                usageBasedAutolockDurationDays
                 securityPolicy {
                 id
               }
@@ -553,3 +589,9 @@ def access_add(outputFormat,sessionname,itemid,groupid,serviceid,policyid,autolo
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_access_add,{'itemid':itemid,'groupid':groupid,'serviceid':serviceid,'policyid':policyid,'autolockdays':autolockdays,'expiresat':expiresat})
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
+
+def update_autolock(outputFormat,sessionname,itemid,autolock):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_autolock,{'itemid':itemid,'autolock':autolock})
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)
+    #get_resource_update_address
