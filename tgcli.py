@@ -852,7 +852,7 @@ def resource_update_autolock(args):
 resource_updateautolock_parser = resource_subparsers.add_parser('autolock')
 resource_updateautolock_parser.set_defaults(func=resource_update_autolock)
 resource_updateautolock_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
-resource_updateautolock_parser.add_argument('-a','--autolock',type=int, default=0, help='autolock (number of days)', dest="AUTOLOCK")
+resource_updateautolock_parser.add_argument('-a','--autolock',type=int, default=0, help='autolock (number of days), set to -1 to disable autolock', dest="AUTOLOCK")
 resource_updateautolock_parser.add_argument('-r','--autoapprove',type=str,default="False", help='autoapprove', dest="AUTOAPPROVE")
 
 

@@ -56,7 +56,7 @@ def get_resource_update_autolock(token,JsonData):
     
     Body = """
     mutation
-    ObjUpdate($itemid: ID!,$autolock:Int!,$autoapprovemode:AccessApprovalMode!){
+    ObjUpdate($itemid: ID!,$autolock:Int,$autoapprovemode:AccessApprovalMode!){
     resourceUpdate(id: $itemid, usageBasedAutolockDurationDays: $autolock, approvalMode: $autoapprovemode) {
       ok
       error
@@ -633,6 +633,8 @@ def access_add(outputFormat,sessionname,itemid,groupid,serviceid,policyid,autolo
     print(output)
 
 def update_autolock(outputFormat,sessionname,itemid,autolock,autoapprovemode):
+    if autolock == -1:
+        autolock = None
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_autolock,{'itemid':itemid,'autolock':autolock,'autoapprovemode':autoapprovemode})
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
@@ -641,4 +643,4 @@ def update_autoapprove(outputFormat,sessionname,itemid,autoapprovemode):
     j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_autoapprove,{'itemid':itemid,'autoapprovemode':autoapprovemode})
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
-    
+
