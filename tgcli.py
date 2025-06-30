@@ -837,15 +837,48 @@ def resource_update_autolock(args):
         parser.error('no item ID passed')
     if not args.AUTOLOCK:
         parser.error('no value for autolock passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.AUTOAPPROVE)
+    if not isOK:
+        parser.error('wrong value passed for parameter updateNotifications (true or false)')
+    else:
+        if Value:
+            autoapprovemode = 'AUTOMATIC'
+        else:
+            autoapprovemode = 'MANUAL'
 
-    ResourcesLogics.update_autolock(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.AUTOLOCK)
+    ResourcesLogics.update_autolock(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,args.AUTOLOCK,autoapprovemode)
 
 # resource autolock update
 resource_updateautolock_parser = resource_subparsers.add_parser('autolock')
 resource_updateautolock_parser.set_defaults(func=resource_update_autolock)
 resource_updateautolock_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
-resource_updateautolock_parser.add_argument('-a','--autolock',type=int, default="", help='autolock (number of days)', dest="AUTOLOCK")
+resource_updateautolock_parser.add_argument('-a','--autolock',type=int, default=0, help='autolock (number of days)', dest="AUTOLOCK")
+resource_updateautolock_parser.add_argument('-r','--autoapprove',type=str,default="False", help='autoapprove', dest="AUTOAPPROVE")
 
+
+# resource <autoapprove update>
+
+def resource_update_autoapprove(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no item ID passed')
+    isOK,Value = GenericValidators.checkStringAsBool(args.AUTOAPPROVE)
+    if not isOK:
+        parser.error('wrong value passed for parameter updateNotifications (true or false)')
+    else:
+        if Value:
+            autoapprovemode = 'AUTOMATIC'
+        else:
+            autoapprovemode = 'MANUAL'
+
+    ResourcesLogics.update_autoapprove(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID,autoapprovemode)
+
+# resource autoapprove update
+resource_updateautoapprove_parser = resource_subparsers.add_parser('autoapprove')
+resource_updateautoapprove_parser.set_defaults(func=resource_update_autoapprove)
+resource_updateautoapprove_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+resource_updateautoapprove_parser.add_argument('-r','--autoapprove',type=str,default="False", help='autoapprove', dest="AUTOAPPROVE")
 
 # resource <policy update>
 def resource_update_policy(args):

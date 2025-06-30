@@ -13,16 +13,15 @@ import ResourcesTransformers
 import StdResponses
 import StdAPIUtils
 
-
-def get_resource_update_autolock(token,JsonData):
+def get_resource_update_autoapprove(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
     api_call_type = "POST"
-    variables = {"itemid":JsonData['itemid'] ,"autolock":JsonData['autolock']}
-    #print(variables)
+    variables = {"itemid":JsonData['itemid'],"autoapprovemode":JsonData['autoapprovemode']}
+    
     Body = """
     mutation
-    ObjUpdate($itemid: ID!,$autolock:Int!){
-    resourceUpdate(id: $itemid, usageBasedAutolockDurationDays: $autolock) {
+    ObjUpdate($itemid: ID!,$autoapprovemode:AccessApprovalMode!){
+    resourceUpdate(id: $itemid, approvalMode: $autoapprovemode) {
       ok
       error
         entity {   
@@ -30,6 +29,43 @@ def get_resource_update_autolock(token,JsonData):
                 name
                 alias
                 usageBasedAutolockDurationDays
+                approvalMode
+                address{
+                    type
+                    value
+                }
+                remoteNetwork{
+                    id
+                    name
+                }
+            }
+        }
+    
+    }
+
+    """
+    return True,api_call_type,Headers,Body,variables
+
+def get_resource_update_autolock(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"itemid":JsonData['itemid'] ,"autolock":JsonData['autolock'],"autoapprovemode":JsonData['autoapprovemode']}
+    #print(variables)
+    #if JsonData['autolock'] == -1:
+    #    JsonData['autolock'] = null
+    
+    Body = """
+    mutation
+    ObjUpdate($itemid: ID!,$autolock:Int!,$autoapprovemode:AccessApprovalMode!){
+    resourceUpdate(id: $itemid, usageBasedAutolockDurationDays: $autolock, approvalMode: $autoapprovemode) {
+      ok
+      error
+        entity {   
+                id
+                name
+                alias
+                usageBasedAutolockDurationDays
+                approvalMode
                 address{
                     type
                     value
@@ -262,6 +298,11 @@ def get_resource_list_resources(token,JsonData):
                         updatedAt
                         isVisible
                         isBrowserShortcutEnabled
+                        usageBasedAutolockDurationDays
+                        tags{
+                            key
+                            value
+                        }
                         access{
                             edges{
                                 node{
@@ -333,6 +374,7 @@ def get_resource_show_resources(token,JsonData):
         updatedAt
         isVisible
         isBrowserShortcutEnabled
+        usageBasedAutolockDurationDays
         isActive
         remoteNetwork{
             name
@@ -590,8 +632,13 @@ def access_add(outputFormat,sessionname,itemid,groupid,serviceid,policyid,autolo
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
 
-def update_autolock(outputFormat,sessionname,itemid,autolock):
-    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_autolock,{'itemid':itemid,'autolock':autolock})
+def update_autolock(outputFormat,sessionname,itemid,autolock,autoapprovemode):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_autolock,{'itemid':itemid,'autolock':autolock,'autoapprovemode':autoapprovemode})
     output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
     print(output)
-    #get_resource_update_address
+
+def update_autoapprove(outputFormat,sessionname,itemid,autoapprovemode):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_resource_update_autoapprove,{'itemid':itemid,'autoapprovemode':autoapprovemode})
+    output,r = StdAPIUtils.format_output(j,outputFormat,ResourcesTransformers.GetUpdateAsCsv)
+    print(output)
+    

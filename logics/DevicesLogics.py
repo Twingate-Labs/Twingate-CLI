@@ -208,6 +208,7 @@ def get_device_list_resources(token,JsonData):
                 lastFailedLoginAt
                 lastSuccessfulLoginAt
                 lastConnectedAt
+                
                 osVersion
                 hardwareModel
                 hostname
