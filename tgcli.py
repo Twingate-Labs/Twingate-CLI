@@ -1562,9 +1562,36 @@ def user_to_rn_mappings(args):
 mappings_user_res_parser = mappings_subparsers.add_parser('user-network')
 mappings_user_res_parser.set_defaults(func=user_to_rn_mappings)
 
+# Command line parsing adjustments to allow "-ABC" type apikeys, where a dash is a starting value
+def _attach_dashy_apikey(argv, parser):
+    """
+    If we see '-a' or '--apikey' followed by a token that *looks* like an option
+    (starts with '-') but is NOT a known option string, rewrite as '-a=<token>'.
+    This lets values like '-ABC' be consumed as the apikey argument without the user
+    needing to do any quoting or escaping.
+    """
+    option_strings = set(parser._option_string_actions.keys())
+    out = [argv[0]]
+    i = 1
+    while i < len(argv):
+        tok = argv[i]
+        if tok in ('-a', '--apikey') and i + 1 < len(argv):
+            nxt = argv[i + 1]
+            if nxt.startswith('-') and nxt not in option_strings:
+                out.append(f"{tok}={nxt}")
+                i += 2
+                continue
+        out.append(tok)
+        i += 1
+    return out
+
+
 
 DebugLevels = ["ERROR","DEBUG","WARNING","INFO"]
 if __name__ == '__main__':
+    # normalize argv so '-a -ABC' becomes '-a=-ABC' only for apikey
+    sys.argv = _attach_dashy_apikey(sys.argv, parser)
+    
     args = parser.parse_args()
     if not args.DEBUGLEVEL.upper() in DebugLevels:
         args.DEBUGLEVEL = DebugLevels[0]
