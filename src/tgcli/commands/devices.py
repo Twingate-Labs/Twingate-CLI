@@ -37,8 +37,8 @@ def device_show(
 
 @app.command("updateTrust")
 def device_update_trust(
-    itemid: str = typer.Option("", "-i", "--itemid", help="Single device ID."),
-    itemlist: str = typer.Option("", "-l", "--itemlist", help="Comma-separated device IDs."),
+    itemid: str = typer.Option("", "-i", "--itemid", help="Single device ID. Mandatory if not using --itemlist."),
+    itemlist: str = typer.Option("", "-l", "--itemlist", help="Comma-separated device IDs. Mandatory if not using --itemid."),
     trust: str = typer.Option("True", "-t", "--trust", help="Trust value: True or False."),
 ) -> None:
     """Update the trust status of one or more devices."""
