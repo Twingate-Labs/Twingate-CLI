@@ -83,7 +83,7 @@ def resource_create(
     name: str = typer.Option(..., "-n", "--name", help="Resource name."),
     networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
     alias: str = typer.Option("", "-l", "--alias", help="Resource alias FQDN."),
-    policyid: str = typer.Option("", "-p", "--policyid", help="Security policy ID."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Security policy ID."),
     groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated group IDs."),
     isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible in resource list: true or false."),
     icmp: bool = typer.Option(False, "-i", "--icmp", help="Disallow ICMP protocol."),
