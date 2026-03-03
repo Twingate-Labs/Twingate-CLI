@@ -11,7 +11,7 @@ from tgcli.output.transformers import devices as t
 from tgcli.queries import devices as q
 from tgcli.validators.generic import parse_bool_string
 
-app = typer.Typer(help="Manage Twingate devices.")
+app = typer.Typer(help="Manage Twingate Devices.")
 
 
 @app.command("list")
@@ -37,11 +37,11 @@ def device_show(
 
 @app.command("updateTrust")
 def device_update_trust(
-    itemid: str = typer.Option("", "-i", "--itemid", help="Single device ID. Mandatory if not using --itemlist."),
-    itemlist: str = typer.Option("", "-l", "--itemlist", help="Comma-separated device IDs. Mandatory if not using --itemid."),
+    itemid: str = typer.Option("", "-i", "--itemid", help="Single Device ID. Mandatory if not using --itemlist."),
+    itemlist: str = typer.Option("", "-l", "--itemlist", help="Comma-separated Device IDs. Mandatory if not using --itemid."),
     trust: str = typer.Option("True", "-t", "--trust", help="Trust value: True or False."),
 ) -> None:
-    """Update the trust status of one or more devices."""
+    """Update the trust status of one or more Devices."""
     if not itemid and not itemlist:
         typer.echo("Error: Provide -i (single ID) or -l (comma-separated IDs).", err=True)
         raise typer.Exit(1)
@@ -87,13 +87,13 @@ def device_archive(
 
 # --- Serial number sub-commands (snumber) ---
 
-snumber_app = typer.Typer(help="Manage device serial number allowlist.")
+snumber_app = typer.Typer(help="Manage Device serial number allowlist.")
 app.add_typer(snumber_app, name="snumber")
 
 
 @snumber_app.command("list")
 def snumber_list() -> None:
-    """List device serial numbers on the allowlist."""
+    """List Device serial numbers on the allowlist."""
     run_paginated(get_client(), q.LIST_SERIAL_NUMBERS, "serialNumbers", t.get_sn_list_as_csv)
 
 

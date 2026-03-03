@@ -14,7 +14,7 @@ from tgcli.commands._common import get_client
 from tgcli.main import state
 from tgcli.queries import mappings as q
 
-app = typer.Typer(help="Analyse user-to-resource and user-to-network mappings.")
+app = typer.Typer(help="Extract User-to-Resource and User-to-Remote-Network mappings.")
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @app.command("user-network")
 def user_network() -> None:
-    """Show all users and the remote networks / resources they can access."""
+    """Show all Asers and the Remote Networks + Resources they can access."""
     client = get_client()
     cursor = "0"
     has_next = True
@@ -88,9 +88,9 @@ def user_network() -> None:
 @app.command("user-resource")
 def user_resource(
     email: str = typer.Option(..., "-e", "--email", help="User email address."),
-    fqdn: str = typer.Option("", "-f", "--fqdn", help="FQDN to match against resource definitions."),
+    fqdn: str = typer.Option("", "-f", "--fqdn", help="FQDN to match against Resource definitions accessible by the User."),
 ) -> None:
-    """Show resources accessible to a specific user (optionally matched against an FQDN)."""
+    """Show Resources accessible to a specific User (optionally matched against an FQDN)."""
     client = get_client()
 
     # 1. Resolve user → group IDs
@@ -102,7 +102,7 @@ def user_resource(
 
     edges = user_result["data"]["users"]["edges"]
     if not edges:
-        typer.echo(f"No user found with email '{email}'.")
+        typer.echo(f"No User found with email '{email}'.")
         raise typer.Exit(0)
 
     group_ids = [
@@ -132,7 +132,7 @@ def user_resource(
                 if has_next:
                     cursor = page_info["endCursor"]
         except (TwingateAuthError, TwingateAPIError) as exc:
-            typer.echo(f"Error fetching resources for group {gid}: {exc}", err=True)
+            typer.echo(f"Error fetching Resources for Group {gid}: {exc}", err=True)
             raise typer.Exit(1)
 
     df = pd.json_normalize(all_resources)
@@ -162,9 +162,9 @@ def user_resource(
         _print_section("Duplicate Resources (served by more than 1 Group)", df_duplicates, fmt)
 
         if nb_ambig > 0:
-            typer.echo(f"\nConflicting resource definition pairs: {ambig_list}")
+            typer.echo(f"\nConflicting Resource definition pairs: {ambig_list}")
         else:
-            typer.echo("\nNo conflicting resource definitions found.")
+            typer.echo("\nNo conflicting Resource definitions found.")
     else:
         _print_section("Resources available for User", df, fmt)
 

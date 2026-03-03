@@ -19,7 +19,7 @@ from tgcli.validators.protocol import (
 )
 from tgcli.main import state
 
-app = typer.Typer(help="Manage Twingate resources.")
+app = typer.Typer(help="Manage Twingate Resources.")
 
 
 def _build_access_array(
@@ -46,8 +46,8 @@ def _build_access_array(
         pols = split_ids(policyid) if policyid else [""]
         if len(pols) > 1 and len(pols) != len(gids):
             typer.echo(
-                "Error: Number of policy IDs must be 1 (applied to all groups) "
-                "or match the number of group IDs.",
+                "Error: Number of Policy IDs must be 1 (applied to all Groups) "
+                "or match the number of Group IDs.",
                 err=True,
             )
             raise typer.Exit(1)
@@ -65,7 +65,7 @@ def _build_access_array(
 
 @app.command("list")
 def resource_list() -> None:
-    """List all resources."""
+    """List all Resources."""
     run_paginated(get_client(), q.LIST_RESOURCES, "resources", t.get_list_as_csv)
 
 
@@ -73,7 +73,7 @@ def resource_list() -> None:
 def resource_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
 ) -> None:
-    """Show details for a specific resource."""
+    """Show details for a specific Resource."""
     run_query(get_client(), q.SHOW_RESOURCE, {"itemID": itemid}, t.get_show_as_csv)
 
 
@@ -83,16 +83,16 @@ def resource_create(
     name: str = typer.Option(..., "-n", "--name", help="Resource name."),
     networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
     alias: str = typer.Option("", "-l", "--alias", help="Resource alias FQDN."),
-    policyid: str = typer.Option(..., "-p", "--policyid", help="Security policy ID."),
-    groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated group IDs."),
-    isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible in resource list: true or false."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Resource Policy ID."),
+    groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated Group IDs."),
+    isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible in Resource list: true or false."),
     icmp: bool = typer.Option(False, "-i", "--icmp", help="Disallow ICMP protocol."),
     tcppolicy: str = typer.Option("ALLOW_ALL", "-t", "--tcppolicy", help="TCP policy: ALLOW_ALL or RESTRICTED."),
     tcprange: str = typer.Option("[]", "-c", "--tcprange", help="TCP port ranges e.g. [[22,22],[443,446]]."),
     udppolicy: str = typer.Option("ALLOW_ALL", "-u", "--udppolicy", help="UDP policy: ALLOW_ALL or RESTRICTED."),
     udprange: str = typer.Option("[]", "-d", "--udprange", help="UDP port ranges e.g. [[53,53]]."),
 ) -> None:
-    """Create a new resource."""
+    """Create a new Resource."""
     visible_bool = parse_bool_string(isvisible)
     tcp_policy = validate_protocol_policy(tcppolicy)
     udp_policy = validate_protocol_policy(udppolicy)
@@ -122,7 +122,7 @@ def resource_create(
 def resource_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
 ) -> None:
-    """Delete a resource."""
+    """Delete a Resource."""
     run_query(get_client(), q.DELETE_RESOURCE, {"id": itemid}, t.get_delete_as_csv)
 
 
@@ -131,7 +131,7 @@ def resource_assign_network(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     networkid: str = typer.Option(..., "-n", "--networkid", help="Remote Network ID."),
 ) -> None:
-    """Assign a resource to a different remote network."""
+    """Assign a Resource to a different Remote Network."""
     run_query(
         get_client(),
         q.UPDATE_RESOURCE_NETWORK,
@@ -145,7 +145,7 @@ def resource_visibility(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     value: str = typer.Option("True", "-v", "--value", help="Visibility: true or false."),
 ) -> None:
-    """Toggle resource visibility in the resource list."""
+    """Toggle Resource visibility in the Resource list."""
     vis_bool = parse_bool_string(value)
     run_query(
         get_client(),
@@ -160,7 +160,7 @@ def resource_address(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     address: str = typer.Option(..., "-a", "--address", help="New address: CIDR/IP/FQDN."),
 ) -> None:
-    """Update a resource's address."""
+    """Update a Resource's address."""
     run_query(
         get_client(),
         q.UPDATE_RESOURCE_ADDRESS,
@@ -174,7 +174,7 @@ def resource_alias(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     alias: str = typer.Option(..., "-a", "--alias", help="New alias FQDN."),
 ) -> None:
-    """Update a resource's alias."""
+    """Update a Resource's alias."""
     run_query(
         get_client(),
         q.UPDATE_RESOURCE_ALIAS,
@@ -186,9 +186,9 @@ def resource_alias(
 @app.command("policy")
 def resource_policy(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
-    policyid: str = typer.Option(..., "-p", "--policyid", help="Security policy ID."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Resource policy ID."),
 ) -> None:
-    """Update the security policy for a resource."""
+    """Update the Resource Policy for a Resource."""
     run_query(
         get_client(),
         q.UPDATE_RESOURCE_POLICY,
@@ -203,7 +203,7 @@ def resource_autolock(
     autolock: int = typer.Option(..., "-a", "--autolock", help="Autolock duration in days (1–365, or -1 to disable)."),
     autoapprove: str = typer.Option("False", "-r", "--autoapprove", help="Auto-approve mode: true (AUTOMATIC) or false (MANUAL)."),
 ) -> None:
-    """Update usage-based autolock duration for a resource."""
+    """Update usage-based autolock duration for a Resource."""
     approve_bool = parse_bool_string(autoapprove)
     approve_mode = "AUTOMATIC" if approve_bool else "MANUAL"
     autolock_val = None if autolock == -1 else autolock
@@ -220,7 +220,7 @@ def resource_autoapprove(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     autoapprove: str = typer.Option("False", "-r", "--autoapprove", help="Auto-approve: true (AUTOMATIC) or false (MANUAL)."),
 ) -> None:
-    """Update the auto-approve mode for a resource."""
+    """Update the auto-approve mode for a Resource."""
     approve_bool = parse_bool_string(autoapprove)
     approve_mode = "AUTOMATIC" if approve_bool else "MANUAL"
     run_query(
@@ -240,7 +240,7 @@ def resource_access_set(
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601, e.g. 2024-03-14T20:20:32-07:00)."),
 ) -> None:
-    """Set resource access (replaces all existing group/service-account relationships)."""
+    """Set Resource access (replaces all existing Group/Service Account relationships)."""
     access_array = _build_access_array(groupid, serviceid, policyid, autolockdays, expiresat)
     run_query(
         get_client(),
@@ -259,7 +259,7 @@ def resource_access_add(
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601)."),
 ) -> None:
-    """Add group/service-account access to a resource (non-destructive)."""
+    """Add Group/Service Account access to a Resource (non-destructive)."""
     access_array = _build_access_array(groupid, serviceid, policyid, autolockdays, expiresat)
     run_query(
         get_client(),
@@ -274,7 +274,7 @@ def resource_access_remove(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     groupid: str = typer.Option(..., "-g", "--groupid", help="Comma-separated group/service-account IDs to remove."),
 ) -> None:
-    """Remove group/service-account access from a resource."""
+    """Remove Group/Service Account access from a Resource."""
     principal_ids = split_ids(groupid)
     run_query(
         get_client(),

@@ -9,20 +9,20 @@ from tgcli.output.transformers import connectors as t
 from tgcli.queries import connectors as q
 from tgcli.validators.generic import parse_bool_string
 
-app = typer.Typer(help="Manage Twingate connectors.")
+app = typer.Typer(help="Manage Twingate Connectors.")
 
 
 @app.command("list")
 def connector_list() -> None:
-    """List all connectors."""
-    run_paginated(get_client(), q.LIST_CONNECTORS, "connectors", t.get_list_as_csv)
+    """List all Connectors."""
+    run_paginated(get_client(), q.LIST_CONNECTORS, "Connectors", t.get_list_as_csv)
 
 
 @app.command("show")
 def connector_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
 ) -> None:
-    """Show details for a specific connector."""
+    """Show details for a specific Connector."""
     run_query(get_client(), q.SHOW_CONNECTOR, {"itemID": itemid}, t.get_show_as_csv)
 
 
@@ -45,7 +45,7 @@ def connector_create(
 @app.command("rename")
 def connector_rename(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
-    itemname: str = typer.Option(..., "-n", "--itemname", help="New connector name."),
+    itemname: str = typer.Option(..., "-n", "--itemname", help="New Connector name."),
 ) -> None:
     """Rename a connector."""
     run_query(get_client(), q.RENAME_CONNECTOR, {"id": itemid, "name": itemname}, t.get_update_as_csv)
@@ -55,7 +55,7 @@ def connector_rename(
 def connector_generate_tokens(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
 ) -> None:
-    """Generate new access/refresh tokens for a connector."""
+    """Generate new access/refresh tokens for a Connector."""
     run_query(get_client(), q.GENERATE_CONNECTOR_TOKENS, {"id": itemid}, t.get_gen_tokens_as_csv)
 
 
@@ -64,7 +64,7 @@ def connector_update_notifications(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
     sendnotifications: str = typer.Option("true", "-s", "--sendnotifications", help="Enable notifications: true or false."),
 ) -> None:
-    """Enable or disable status email notifications for a connector."""
+    """Enable or disable status email notifications for a Connector."""
     notifications = parse_bool_string(sendnotifications)
     run_query(
         get_client(),

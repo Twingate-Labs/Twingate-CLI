@@ -8,12 +8,12 @@ from tgcli.commands._common import get_client, run_paginated, run_query, split_i
 from tgcli.output.transformers import groups as t
 from tgcli.queries import groups as q
 
-app = typer.Typer(help="Manage Twingate groups.")
+app = typer.Typer(help="Manage Twingate Groups.")
 
 
 @app.command("list")
 def group_list() -> None:
-    """List all groups."""
+    """List all Groups."""
     run_paginated(get_client(), q.LIST_GROUPS, "groups", t.get_list_as_csv)
 
 
@@ -28,11 +28,11 @@ def group_show(
 @app.command("create")
 def group_create(
     groupname: str = typer.Option(..., "-g", "--groupname", help="Group name."),
-    userids: str = typer.Option("", "-u", "--userids", help="Comma-separated user IDs."),
-    resourceids: str = typer.Option("", "-r", "--resourceids", help="Comma-separated resource IDs."),
-    policyid: str = typer.Option("", "-p", "--securitypolicyid", help="Default security policy ID."),
+    userids: str = typer.Option("", "-u", "--userids", help="Comma-separated User IDs."),
+    resourceids: str = typer.Option("", "-r", "--resourceids", help="Comma-separated Resource IDs."),
+    policyid: str = typer.Option("", "-p", "--securitypolicyid", help="Default Resource Policy ID."),
 ) -> None:
-    """Create a new group."""
+    """Create a new Group."""
     run_query(
         get_client(),
         q.CREATE_GROUP,
@@ -50,14 +50,14 @@ def group_create(
 def group_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Group ID."),
 ) -> None:
-    """Delete a group."""
+    """Delete a Group."""
     run_query(get_client(), q.DELETE_GROUP, {"groupId": itemid}, t.get_delete_as_csv)
 
 
 @app.command("addUsers")
 def group_add_users(
     groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
-    userids: str = typer.Option("", "-u", "--userids", help="Comma-separated user IDs."),
+    userids: str = typer.Option("", "-u", "--userids", help="Comma-separated User IDs."),
 ) -> None:
     """Add users to a group."""
     run_query(
@@ -71,7 +71,7 @@ def group_add_users(
 @app.command("removeUsers")
 def group_remove_users(
     groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
-    userids: str = typer.Option("", "-u", "--userids", help="Comma-separated user IDs."),
+    userids: str = typer.Option("", "-u", "--userids", help="Comma-separated User IDs."),
 ) -> None:
     """Remove users from a group."""
     run_query(
@@ -85,9 +85,9 @@ def group_remove_users(
 @app.command("addResources")
 def group_add_resources(
     groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
-    resourceids: str = typer.Option("", "-r", "--resourceids", help="Comma-separated resource IDs."),
+    resourceids: str = typer.Option("", "-r", "--resourceids", help="Comma-separated Resource IDs."),
 ) -> None:
-    """Add resources to a group."""
+    """Add Resources to a Group."""
     run_query(
         get_client(),
         q.ADD_RESOURCES_TO_GROUP,
@@ -99,9 +99,9 @@ def group_add_resources(
 @app.command("removeResources")
 def group_remove_resources(
     groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
-    resourceids: str = typer.Option("", "-r", "--resourceids", help="Comma-separated resource IDs."),
+    resourceids: str = typer.Option("", "-r", "--resourceids", help="Comma-separated Resource IDs."),
 ) -> None:
-    """Remove resources from a group."""
+    """Remove Resources from a Group."""
     run_query(
         get_client(),
         q.REMOVE_RESOURCES_FROM_GROUP,
@@ -113,9 +113,9 @@ def group_remove_resources(
 @app.command("assignPolicy")
 def group_assign_policy(
     groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
-    policyid: str = typer.Option(..., "-p", "--policyid", help="Security policy ID."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Resource Policy ID."),
 ) -> None:
-    """Assign a security policy to a group."""
+    """Assign a Resource Policy to a Group."""
     run_query(
         get_client(),
         q.ASSIGN_POLICY_TO_GROUP,
