@@ -27,7 +27,7 @@ def user_show(
     run_query(get_client(), q.SHOW_USER, {"itemID": itemid}, t.get_show_as_csv)
 
 
-@app.command("create")
+@app.command("create") 
 def user_create(
     email: str = typer.Option(..., "-e", "--email", help="User email address."),
     firstname: str = typer.Option("", "-f", "--firstname", help="First name."),
