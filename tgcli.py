@@ -36,6 +36,7 @@ import SAccountKeysLogics
 import SecPoliciesLogics
 import MappingsLogics
 import DNSSecLogics
+import DevicePostureLogics
 
 VERSION="1.0.0"
 
@@ -1526,6 +1527,109 @@ def dnssec_deny_list_resources(args):
 dnssec_denylist_parser = dnssec_subparsers.add_parser('setDenyList')
 dnssec_denylist_parser.set_defaults(func=dnssec_deny_list_resources)
 dnssec_denylist_parser.add_argument('-d','--domains',type=str,default="", help='CSV list of domains', dest="CSVDOMAINS")
+
+#####
+#
+# Device Posture Parser
+# posture <list, show, create, update, delete>
+#
+#####
+
+POSTURE_TYPES = [
+    'OS_VERSION', 'ANTIVIRUS', 'FIREWALL', 'DISK_ENCRYPTION',
+    'SCREEN_LOCK', 'PROCESS', 'FILE', 'REGISTRY'
+]
+POSTURE_ACTIONS = ['ALLOW_ACCESS', 'BLOCK_ACCESS']
+POSTURE_STATUSES = ['ENABLED', 'DISABLED']
+
+# posture commands
+posture_parser = subparsers.add_parser('posture')
+posture_subparsers = posture_parser.add_subparsers()
+
+# posture list
+def posture_list(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    DevicePostureLogics.item_list(args.OUTPUTFORMAT, args.SESSIONNAME)
+
+posture_list_parser = posture_subparsers.add_parser('list')
+posture_list_parser.set_defaults(func=posture_list)
+
+# posture show
+def posture_show(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no posture check ID passed')
+    DevicePostureLogics.item_show(args.OUTPUTFORMAT, args.SESSIONNAME, args.ITEMID)
+
+posture_show_parser = posture_subparsers.add_parser('show')
+posture_show_parser.set_defaults(func=posture_show)
+posture_show_parser.add_argument('-i', '--itemid', type=str, default="", help='posture check id', dest="ITEMID")
+
+# posture create
+def posture_create(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMNAME:
+        parser.error('no name passed')
+    if not args.CHECKTYPE:
+        parser.error('no check type passed')
+    if args.CHECKTYPE.upper() not in POSTURE_TYPES:
+        parser.error('invalid check type. Valid types: ' + ', '.join(POSTURE_TYPES))
+    if not args.ACTION:
+        parser.error('no action passed')
+    if args.ACTION.upper() not in POSTURE_ACTIONS:
+        parser.error('invalid action. Valid actions: ' + ', '.join(POSTURE_ACTIONS))
+    DevicePostureLogics.item_create(
+        args.OUTPUTFORMAT, args.SESSIONNAME,
+        args.ITEMNAME, args.CHECKTYPE.upper(), args.ACTION.upper(), args.DESCRIPTION
+    )
+
+posture_create_parser = posture_subparsers.add_parser('create')
+posture_create_parser.set_defaults(func=posture_create)
+posture_create_parser.add_argument('-n', '--name', type=str, default="", help='posture check name', dest="ITEMNAME")
+posture_create_parser.add_argument('-t', '--type', type=str, default="", help='check type [' + '|'.join(POSTURE_TYPES) + ']', dest="CHECKTYPE")
+posture_create_parser.add_argument('-a', '--action', type=str, default="", help='action [' + '|'.join(POSTURE_ACTIONS) + ']', dest="ACTION")
+posture_create_parser.add_argument('-d', '--description', type=str, default="", help='(optional) description', dest="DESCRIPTION")
+
+# posture update
+def posture_update(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no posture check ID passed')
+    if args.ACTION and args.ACTION.upper() not in POSTURE_ACTIONS:
+        parser.error('invalid action. Valid actions: ' + ', '.join(POSTURE_ACTIONS))
+    if args.STATUS and args.STATUS.upper() not in POSTURE_STATUSES:
+        parser.error('invalid status. Valid statuses: ' + ', '.join(POSTURE_STATUSES))
+    DevicePostureLogics.item_update(
+        args.OUTPUTFORMAT, args.SESSIONNAME, args.ITEMID,
+        args.ITEMNAME,
+        args.ACTION.upper() if args.ACTION else "",
+        args.STATUS.upper() if args.STATUS else "",
+        args.DESCRIPTION
+    )
+
+posture_update_parser = posture_subparsers.add_parser('update')
+posture_update_parser.set_defaults(func=posture_update)
+posture_update_parser.add_argument('-i', '--itemid', type=str, default="", help='posture check id', dest="ITEMID")
+posture_update_parser.add_argument('-n', '--name', type=str, default="", help='new name', dest="ITEMNAME")
+posture_update_parser.add_argument('-a', '--action', type=str, default="", help='action [' + '|'.join(POSTURE_ACTIONS) + ']', dest="ACTION")
+posture_update_parser.add_argument('-s', '--status', type=str, default="", help='status [' + '|'.join(POSTURE_STATUSES) + ']', dest="STATUS")
+posture_update_parser.add_argument('-d', '--description', type=str, default="", help='description', dest="DESCRIPTION")
+
+# posture delete
+def posture_delete(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no posture check ID passed')
+    DevicePostureLogics.item_delete(args.OUTPUTFORMAT, args.SESSIONNAME, args.ITEMID)
+
+posture_delete_parser = posture_subparsers.add_parser('delete')
+posture_delete_parser.set_defaults(func=posture_delete)
+posture_delete_parser.add_argument('-i', '--itemid', type=str, default="", help='posture check id', dest="ITEMID")
 
 #####
 # Mapping Parser
