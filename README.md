@@ -139,7 +139,15 @@ The output format can be set to CSV, DF (DataFrame) or JSON (Default) by using t
     * revoke
     * delete
     * rename
-    
+
+  * posture
+    * list: list all configured device posture checks
+    * show: show a specific posture check by ID
+    * create: create a new posture check
+    * update: update name, action, status, or description of a posture check
+    * delete: delete a posture check
+    * check: fetch the live posture status of a specific device, including all property checks and TrustProviderVerification results (CrowdStrike, Jamf, Kandji, Intune, SentinelOne, 1Password, manual)
+
 
 ## Examples
 ```
@@ -170,4 +178,40 @@ python ./tgcli.py -s RedPeacock device updateTrust -i "XXXabcNlOjE5MzI2OQ==" -t 
 ```
 # Update trust for a list of devices (and set them to Untrusted)
 python ./tgcli.py -s RedPeacock device updateTrust -l "XXXabcNlOjE5MzI2OQ==,YYYxyzFg4gT4SfC65K==" -t False
+```
+
+```
+# List all configured posture checks
+python ./tgcli.py -s RedPeacock posture list
+```
+
+```
+# Show details of a specific posture check
+python ./tgcli.py -s RedPeacock posture show -i "XXXabcNlOjE5MzI2OQ=="
+```
+
+```
+# Create a new posture check
+python ./tgcli.py -s RedPeacock posture create -n "Require Firewall" -t FIREWALL -a BLOCK_ACCESS -d "Block devices without firewall enabled"
+```
+
+```
+# Update a posture check (disable it)
+python ./tgcli.py -s RedPeacock posture update -i "XXXabcNlOjE5MzI2OQ==" -s DISABLED
+```
+
+```
+# Delete a posture check
+python ./tgcli.py -s RedPeacock posture delete -i "XXXabcNlOjE5MzI2OQ=="
+```
+
+```
+# Check the live posture status of a device (includes TrustProviderVerification for
+# CrowdStrike, Jamf, Kandji, Intune, SentinelOne, 1Password, and manual verification)
+python ./tgcli.py -s RedPeacock posture check -i "XXXabcNlOjE5MzI2OQ=="
+```
+
+```
+# Check live device posture and display as DataFrame
+python ./tgcli.py -s RedPeacock -f DF posture check -i "XXXabcNlOjE5MzI2OQ=="
 ```
