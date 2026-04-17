@@ -81,6 +81,7 @@ def _register_commands() -> None:
         mappings,
         networks,
         policies,
+        posture,
         resources,
         accounts,
         users,
@@ -98,6 +99,7 @@ def _register_commands() -> None:
     app.add_typer(policies.app, name="policy")
     app.add_typer(dnssec.app, name="dnssec")
     app.add_typer(mappings.app, name="mappings")
+    app.add_typer(posture.app, name="posture")
 
 
 _register_commands()

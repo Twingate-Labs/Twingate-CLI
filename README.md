@@ -28,6 +28,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [policy](#policy)
   - [dnssec](#dnssec)
   - [mappings](#mappings)
+  - [posture](#posture)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
 
@@ -487,6 +488,35 @@ tgcli mappings user-resource-detail -e alice@example.com
 # Export all mappings to CSV
 tgcli -f CSV mappings user-resource
 ```
+
+---
+
+### posture
+
+Inspect the live posture status of a device. Returns all property checks and
+[TrustProviderVerification](https://www.twingate.com/docs/api#definition-TrustProviderVerification)
+results from the Twingate `devicePosture` API.
+
+```bash
+# Fetch live posture status for a device (JSON by default)
+tgcli posture check -i "RGV2aWNlOjIzODEwMDk="
+
+# Display as a DataFrame (easier to read in the terminal)
+tgcli -f DF posture check -i "RGV2aWNlOjIzODEwMDk="
+```
+
+**Output fields:**
+
+| Category | Fields |
+|---|---|
+| Property checks | `hardDriveEncryption`, `screenLockPasscode`, `firewall`, `biometric`, `antivirus` — each with `isSatisfied` + `detected` |
+| OS version | `osVersion.isSatisfied`, `osVersion.version` |
+| TrustProviderVerification | `crowdstrike`, `jamf`, `kandji`, `inTune`, `sentinelOne`, `onePassword` — each with `isVerified`, `failureReason`, `expiredAt`, `failureDetails` |
+| Manual | `manualVerification.isVerified`, `manualVerification.value` |
+
+`isSatisfied` values: `YES`, `NO`, `NOT_REQUIRED`
+
+`failureReason` values: `VERIFICATION_FAILED`, `VERIFICATION_EXPIRED`, `NO_SERIAL_NUMBER`, `NOT_DETECTED`, `MISSING_DATA`
 
 ---
 
