@@ -202,3 +202,87 @@ def item_delete(outputFormat, sessionname, itemid):
     j = StdAPIUtils.generic_api_call_handler(sessionname, get_posture_delete_resources, {'itemid': itemid})
     output, r = StdAPIUtils.format_output(j, outputFormat, DevicePostureTransformers.GetDeleteAsCsv)
     print(output)
+
+
+def get_device_posture_resources(token, JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+    api_call_type = "POST"
+    variables = {"deviceID": JsonData['itemid']}
+
+    Body = """
+    query GetDevicePosture($deviceID: ID!) {
+        devicePosture(id: $deviceID) {
+            hardDriveEncryption {
+                isSatisfied
+                detected
+            }
+            screenLockPasscode {
+                isSatisfied
+                detected
+            }
+            firewall {
+                isSatisfied
+                detected
+            }
+            biometric {
+                isSatisfied
+                detected
+            }
+            antivirus {
+                isSatisfied
+                detected
+            }
+            osVersion {
+                isSatisfied
+                version
+            }
+            crowdstrike {
+                isVerified
+                failureReason
+                expiredAt
+                failureDetails
+            }
+            jamf {
+                isVerified
+                failureReason
+                expiredAt
+                failureDetails
+            }
+            kandji {
+                isVerified
+                failureReason
+                expiredAt
+                failureDetails
+            }
+            inTune {
+                isVerified
+                failureReason
+                expiredAt
+                failureDetails
+            }
+            sentinelOne {
+                isVerified
+                failureReason
+                expiredAt
+                failureDetails
+            }
+            onePassword {
+                isVerified
+                failureReason
+                expiredAt
+                failureDetails
+            }
+            manualVerification {
+                isVerified
+                value
+            }
+        }
+    }
+    """
+    return True, api_call_type, Headers, Body, variables
+
+
+def device_posture_check(outputFormat, sessionname, itemid):
+    j = StdAPIUtils.generic_api_call_handler(sessionname, get_device_posture_resources, {'itemid': itemid})
+    output, r = StdAPIUtils.format_output(j, outputFormat, DevicePostureTransformers.GetDevicePostureAsCsv)
+    print(output)

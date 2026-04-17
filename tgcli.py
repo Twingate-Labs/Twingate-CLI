@@ -1631,6 +1631,21 @@ posture_delete_parser = posture_subparsers.add_parser('delete')
 posture_delete_parser.set_defaults(func=posture_delete)
 posture_delete_parser.add_argument('-i', '--itemid', type=str, default="", help='posture check id', dest="ITEMID")
 
+# posture check — fetches live DevicePosture status for a specific device,
+# including all property checks (hardDriveEncryption, firewall, antivirus, etc.)
+# and TrustProviderVerification results (CrowdStrike, Jamf, Kandji, Intune,
+# SentinelOne, 1Password, manualVerification).
+def posture_check(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no device ID passed')
+    DevicePostureLogics.device_posture_check(args.OUTPUTFORMAT, args.SESSIONNAME, args.ITEMID)
+
+posture_check_parser = posture_subparsers.add_parser('check')
+posture_check_parser.set_defaults(func=posture_check)
+posture_check_parser.add_argument('-i', '--itemid', type=str, default="", help='device id', dest="ITEMID")
+
 #####
 # Mapping Parser
 # key <cmd>
