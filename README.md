@@ -1,4 +1,4 @@
-# Twingate CLI
+# Twingate Admin CLI
 
 A command-line interface for the [Twingate](https://www.twingate.com) Admin API. Manage your resources, devices, users, groups, connectors, networks, service accounts, and more — directly from your terminal.
 
