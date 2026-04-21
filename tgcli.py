@@ -218,6 +218,19 @@ device_archive_parser = device_subparsers.add_parser('archive')
 device_archive_parser.set_defaults(func=device_archive)
 device_archive_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
 
+# device <posture>
+
+def device_posture(args):
+    if not args.SESSIONNAME:
+        parser.error('no session name passed')
+    if not args.ITEMID:
+        parser.error('no device ID passed')
+    DevicesLogics.item_posture(args.OUTPUTFORMAT,args.SESSIONNAME,args.ITEMID)
+
+device_posture_parser = device_subparsers.add_parser('posture')
+device_posture_parser.set_defaults(func=device_posture)
+device_posture_parser.add_argument('-i','--itemid',type=str,default="", help='item id', dest="ITEMID")
+
 
 #####
 # Connector Parser

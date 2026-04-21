@@ -232,6 +232,36 @@ def get_device_list_resources(token,JsonData):
 
     return True,api_call_type,Headers,Body,variables
 
+def get_device_posture_resources(token,JsonData):
+    Headers = StdAPIUtils.get_api_call_headers(token)
+
+    api_call_type = "POST"
+    variables = {"deviceID":JsonData['itemid']}
+    Body = """
+        query getDevicePosture($deviceID: ID!) {
+          device(id: $deviceID) {
+            id
+            name
+            posture {
+              hardDriveEncryption { isSatisfied detected }
+              screenLockPasscode  { isSatisfied detected }
+              firewall            { isSatisfied detected }
+              biometric           { isSatisfied detected }
+              antivirus           { isSatisfied detected }
+              osVersion           { isSatisfied version  }
+              crowdstrike  { isVerified failureReason expiredAt failureDetails }
+              jamf         { isVerified failureReason expiredAt failureDetails }
+              kandji       { isVerified failureReason expiredAt failureDetails }
+              inTune       { isVerified failureReason expiredAt failureDetails }
+              sentinelOne  { isVerified failureReason expiredAt failureDetails }
+              onePassword  { isVerified failureReason expiredAt failureDetails }
+              manualVerification { isVerified value }
+            }
+          }
+        }
+    """
+    return True,api_call_type,Headers,Body,variables
+
 def get_device_show_resources(token,JsonData):
     Headers = StdAPIUtils.get_api_call_headers(token)
 
@@ -281,6 +311,11 @@ def item_list(outputFormat,sessionname,idsfile,idsonly):
         #print("DEBUG: Has More pages:"+str(hasMorePages))
         ListOfResponses.append(j['data']['devices']['edges'])
     output,r = StdAPIUtils.format_output(ListOfResponses,outputFormat,DevicesTransformers.GetListAsCsv)
+    print(output)
+
+def item_posture(outputFormat,sessionname,itemid):
+    j = StdAPIUtils.generic_api_call_handler(sessionname,get_device_posture_resources,{'itemid':itemid})
+    output,r = StdAPIUtils.format_output(j,outputFormat,DevicesTransformers.GetPostureAsCsv)
     print(output)
 
 def item_show(outputFormat,sessionname,itemid):

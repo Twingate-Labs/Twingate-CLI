@@ -3,6 +3,34 @@ import pandas as pd
 import logging
 import GenericTransformers
 
+def GetPostureAsCsv(jsonResults):
+    device = jsonResults['data']['device']
+    posture = device.get('posture') or {}
+    rows = []
+
+    property_checks = ['hardDriveEncryption', 'screenLockPasscode', 'firewall', 'biometric', 'antivirus']
+    for check in property_checks:
+        data = posture.get(check) or {}
+        rows.append({'check': check, 'status': data.get('isSatisfied'), 'detail': str(data.get('detected'))})
+
+    os_data = posture.get('osVersion') or {}
+    rows.append({'check': 'osVersion', 'status': os_data.get('isSatisfied'), 'detail': os_data.get('version')})
+
+    provider_checks = ['crowdstrike', 'jamf', 'kandji', 'inTune', 'sentinelOne', 'onePassword']
+    for check in provider_checks:
+        data = posture.get(check) or {}
+        if data:
+            detail = data.get('failureReason') or data.get('failureDetails') or data.get('expiredAt') or ''
+            rows.append({'check': check, 'status': str(data.get('isVerified')), 'detail': detail})
+
+    manual = posture.get('manualVerification') or {}
+    if manual:
+        rows.append({'check': 'manualVerification', 'status': str(manual.get('isVerified')), 'detail': manual.get('value') or ''})
+
+    df = pd.DataFrame(rows, columns=['check', 'status', 'detail'])
+    pd.set_option('display.max_rows', None)
+    return df
+
 def GetUpdateAsCsv(jsonResults):
     columns = ['ok','error','id','name','isTrusted','activeState']
     return GenericTransformers.GetUpdateAsCsvNoNesting(jsonResults,'deviceUpdate',columns)
