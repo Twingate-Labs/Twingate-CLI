@@ -85,6 +85,14 @@ def device_archive(
     run_query(get_client(), q.ARCHIVE_DEVICE, {"deviceID": itemid}, t.get_archive_as_csv)
 
 
+@app.command("posture")
+def device_posture(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Device ID."),
+) -> None:
+    """Show posture check results for a specific device."""
+    run_query(get_client(), q.POSTURE_DEVICE, {"deviceID": itemid}, t.get_posture_as_csv)
+
+
 # --- Serial number sub-commands (snumber) ---
 
 snumber_app = typer.Typer(help="Manage Device serial number allowlist.")
