@@ -22,7 +22,7 @@ SERVICE_NAME = "tgcli"
 
 COLORS = [
     "Blue", "Pink", "Yellow", "Green", "Red",
-    "Orange", "Purple", "White", "Black", "Silver", "Golden",
+    "Orange", "Purple", "White", "Black", "Silver", "Golden","Gray"
 ]
 ANIMALS = [
     "Dog", "Eel", "Cat", "Bat", "Cow",
