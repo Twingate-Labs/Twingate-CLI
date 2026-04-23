@@ -178,10 +178,7 @@ mutation PM_serialNumbersDelete($serialnums: [String!]!) {
 
 POSTURE_DEVICE = """
 query getDevicePosture($deviceID: ID!) {
-  device(id: $deviceID) {
-    id
-    name
-    posture {
+  devicePosture(id: $deviceID) {
       hardDriveEncryption { isSatisfied detected }
       screenLockPasscode  { isSatisfied detected }
       firewall            { isSatisfied detected }
@@ -195,7 +192,7 @@ query getDevicePosture($deviceID: ID!) {
       sentinelOne   { isVerified failureReason expiredAt failureDetails }
       onePassword   { isVerified failureReason expiredAt failureDetails }
       manualVerification { isVerified value }
-    }
+    
   }
 }
 """
