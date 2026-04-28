@@ -182,6 +182,9 @@ tgcli device archive -i "RGV2aWNlOjE5MzI2OQ=="
 tgcli device snumber list
 tgcli device snumber add    -n "SN001,SN002,SN003"
 tgcli device snumber remove -n "SN001"
+
+# --- Get Posture Checks ---
+tgcli device posture -i "RGV2aWNlOjE5MzI2OQ=="
 ```
 
 ---
