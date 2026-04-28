@@ -62,7 +62,7 @@ def get_remove_serial_as_csv(json_results: dict) -> pd.DataFrame:
 
 
 def get_posture_as_csv(json_results: dict) -> pd.DataFrame:
-    posture = (json_results.get("data", {}).get("device") or {}).get("posture") or {}
+    posture = json_results.get("data", {}).get("devicePosture") or {}
     rows = []
 
     for check in ["hardDriveEncryption", "screenLockPasscode", "firewall", "biometric", "antivirus"]:
