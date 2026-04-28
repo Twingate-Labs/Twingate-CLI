@@ -68,22 +68,23 @@ def get_posture_as_csv(json_results: dict) -> pd.DataFrame:
     rows = []
 
     for check in ["hardDriveEncryption", "screenLockPasscode", "firewall", "biometric", "antivirus"]:
-        data = posture.get(check) or {}
-        rows.append({"check": check, "status": data.get("isSatisfied"), "detail": str(data.get("detected"))})
+        d = posture.get(check) or {}
+        data.append([check, d.get("isSatisfied"), str(d.get("detected"))])
 
     os_data = posture.get("osVersion") or {}
-    rows.append({"check": "osVersion", "status": os_data.get("isSatisfied"), "detail": os_data.get("version")})
+    data.append(["osVersion", os_data.get("isSatisfied"), os_data.get("version")])
 
     for check in ["crowdstrike", "jamf", "kandji", "inTune", "sentinelOne", "onePassword"]:
-        data = posture.get(check) or {}
-        if data:
-            detail = data.get("failureReason") or data.get("failureDetails") or data.get("expiredAt") or ""
-            rows.append({"check": check, "status": str(data.get("isVerified")), "detail": detail})
+        d = posture.get(check) or {}
+        if d:
+            detail = d.get("failureReason") or d.get("failureDetails") or d.get("expiredAt") or ""
+            data.append([check, str(d.get("isVerified")), detail])
 
     manual = posture.get("manualVerification") or {}
     if manual:
-        rows.append({"check": "manualVerification", "status": str(manual.get("isVerified")), "detail": manual.get("value") or ""})
+        data.append(["manualVerification", str(manual.get("isVerified")), manual.get("value") or ""])
 
-    df = pd.DataFrame(rows, columns=["check", "status", "detail"])
     pd.set_option("display.max_rows", None)
-    return df
+    pd.set_option("display.max_colwidth", None)
+    pd.set_option("display.width", None)
+    return pd.DataFrame(data, columns=columns)
