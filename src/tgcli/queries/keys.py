@@ -71,3 +71,32 @@ mutation ObjRename($id: ID!, $name: String!) {
   }
 }
 """
+
+LIST_KEYS = """
+query ListKeys($cursor: String) {
+  serviceAccounts(first: 100, after: $cursor) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    edges {
+      node {
+        id
+        name
+        keys {
+          edges {
+            node {
+              id
+              name
+              status
+              createdAt
+              expiresAt
+              revokedAt
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
