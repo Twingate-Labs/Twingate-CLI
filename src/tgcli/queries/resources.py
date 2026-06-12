@@ -352,6 +352,34 @@ mutation ObjUpdate($itemid: ID!, $groupid: [ID!]!) {
 }
 """
 
+DISABLE_RESOURCE = """
+mutation ObjUpdate($itemid: ID!) {
+  resourceUpdate(id: $itemid, isActive: false) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+    }
+  }
+}
+"""
+
+ENABLE_RESOURCE = """
+mutation ObjUpdate($itemid: ID!) {
+  resourceUpdate(id: $itemid, isActive: true) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+    }
+  }
+}
+"""
+
 # Aliases used by commands/resources.py
 UPDATE_RESOURCE_VISIBILITY = TOGGLE_RESOURCE_VISIBILITY
 UPDATE_RESOURCE_NETWORK = ASSIGN_NETWORK_TO_RESOURCE

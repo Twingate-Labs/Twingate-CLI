@@ -69,6 +69,11 @@ def get_autolock_update_as_csv(json_results: dict) -> pd.DataFrame:
     return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
 
 
+def get_active_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "isActive"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
 def get_access_update_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name"]
     return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)

@@ -269,6 +269,22 @@ def resource_access_add(
     )
 
 
+@app.command("disable")
+def resource_disable(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+) -> None:
+    """Disable a Resource."""
+    run_query(get_client(), q.DISABLE_RESOURCE, {"itemid": itemid}, t.get_active_update_as_csv)
+
+
+@app.command("enable")
+def resource_enable(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+) -> None:
+    """Enable a Resource."""
+    run_query(get_client(), q.ENABLE_RESOURCE, {"itemid": itemid}, t.get_active_update_as_csv)
+
+
 @app.command("access_remove")
 def resource_access_remove(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
