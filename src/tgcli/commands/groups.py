@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import csv
+import sys
+from datetime import datetime, timezone
+from typing import Optional
+
 import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
@@ -108,6 +113,142 @@ def group_remove_resources(
         {"groupID": groupid, "resourceIDS": split_ids(resourceids)},
         t.get_add_remove_resources_as_csv,
     )
+
+
+@app.command("migrate")
+def group_migrate(
+    execute: bool = typer.Option(False, "--execute", help="Apply changes. Without this flag, only a dry run is performed."),
+    name_suffix: str = typer.Option(" (Manual)", "--name-suffix", help="Suffix appended to new Manual Group names."),
+    no_copy_policy: bool = typer.Option(False, "--no-copy-security-policy", help="Don't copy the source group's Security Policy."),
+    report: Optional[str] = typer.Option(None, "--report", help="Path to write the CSV report."),
+) -> None:
+    """Migrate all active Synced Groups to new Manual Groups (dry run by default)."""
+    BATCH_SIZE = 200
+    client = get_client()
+
+    def paginate_nested(query, variables, path):
+        items = []
+        after = None
+        while True:
+            vars_ = {**variables, "after": after}
+            result = client.execute(query, vars_)
+            node = result
+            for key in path:
+                node = node[key]
+            items.extend(edge["node"] for edge in node["edges"])
+            if not node["pageInfo"]["hasNextPage"]:
+                break
+            after = node["pageInfo"]["endCursor"]
+        return items
+
+    def chunked(seq, size):
+        for i in range(0, len(seq), size):
+            yield seq[i:i + size]
+
+    typer.echo("Fetching all groups...")
+    pages = client.paginate(q.LIST_GROUPS, lambda c: {"cursor": c}, "groups")
+    all_groups = [item["node"] for page in pages for item in page]
+
+    synced_groups = [g for g in all_groups if g["type"] == "SYNCED" and g["isActive"]]
+    inactive_synced = [g for g in all_groups if g["type"] == "SYNCED" and not g["isActive"]]
+    existing_manual = {g["name"]: g for g in all_groups if g["type"] == "MANUAL"}
+
+    typer.echo(
+        f"Found {len(all_groups)} total groups: "
+        f"{len(synced_groups)} active synced, "
+        f"{len(inactive_synced)} inactive synced (will be skipped)."
+    )
+
+    if not execute:
+        typer.echo("\n*** DRY RUN — no groups will be created or modified. Re-run with --execute to apply. ***")
+
+    report_rows = []
+
+    for g in synced_groups:
+        new_name = f"{g['name']}{name_suffix}"
+        typer.echo(f"\n=== {g['name']} ({g['id']}) -> {new_name} ===")
+
+        users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["group", "users"])
+        resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["group", "resources"])
+        typer.echo(f"  members: {len(users)}   resources: {len(resources)}")
+
+        row = {
+            "source_group_id": g["id"],
+            "source_group_name": g["name"],
+            "target_group_name": new_name,
+            "user_count": len(users),
+            "resource_count": len(resources),
+            "target_group_id": "",
+            "status": "dry-run" if not execute else "",
+            "error": "",
+        }
+
+        if execute:
+            try:
+                sec_policy_id = None
+                if not no_copy_policy and g.get("securityPolicy"):
+                    sec_policy_id = g["securityPolicy"]["id"]
+
+                if new_name in existing_manual:
+                    new_id = existing_manual[new_name]["id"]
+                    typer.echo(f"  reused existing: {new_id}")
+                else:
+                    result = client.execute(q.CREATE_GROUP, {
+                        "groupName": new_name,
+                        "userIDS": [],
+                        "resourceIDS": [],
+                        "securityPolicyId": sec_policy_id,
+                    })["groupCreate"]
+                    if not result["ok"]:
+                        raise RuntimeError(f"groupCreate failed: {result['error']}")
+                    new_id = result["entity"]["id"]
+                    typer.echo(f"  created: {new_id}")
+
+                row["target_group_id"] = new_id
+
+                for chunk in chunked([u["id"] for u in users], BATCH_SIZE):
+                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["groupUpdate"]
+                    if not res["ok"]:
+                        raise RuntimeError(f"adding users failed: {res['error']}")
+
+                for chunk in chunked([r["id"] for r in resources], BATCH_SIZE):
+                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["groupUpdate"]
+                    if not res["ok"]:
+                        raise RuntimeError(f"adding resources failed: {res['error']}")
+
+                row["status"] = "success"
+            except Exception as e:
+                row["status"] = "error"
+                row["error"] = str(e)
+                typer.echo(f"  ERROR: {e}", err=True)
+
+        report_rows.append(row)
+
+    for g in inactive_synced:
+        report_rows.append({
+            "source_group_id": g["id"],
+            "source_group_name": g["name"],
+            "target_group_name": "",
+            "user_count": "",
+            "resource_count": "",
+            "target_group_id": "",
+            "status": "skipped-inactive",
+            "error": "",
+        })
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    report_path = report or f"group_migration_report_{ts}.csv"
+    if report_rows:
+        with open(report_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(report_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(report_rows)
+        typer.echo(f"\nReport written to: {report_path}")
+
+    errors = [r for r in report_rows if r["status"] == "error"]
+    if errors:
+        typer.echo(f"\n{len(errors)} group(s) had errors — see the report for details.", err=True)
+        raise typer.Exit(1)
 
 
 @app.command("assignPolicy")

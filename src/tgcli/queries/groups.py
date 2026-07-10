@@ -245,6 +245,28 @@ mutation removeResToGroup($groupID: ID!, $resourceIDS: [ID!]) {
 }
 """
 
+LIST_GROUP_USERS = """
+query groupUsers($id: ID!, $after: String) {
+  group(id: $id) {
+    users(first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node { id email } }
+    }
+  }
+}
+"""
+
+LIST_GROUP_RESOURCES = """
+query groupResources($id: ID!, $after: String) {
+  group(id: $id) {
+    resources(first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node { id name } }
+    }
+  }
+}
+"""
+
 ASSIGN_POLICY_TO_GROUP = """
 mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {
   groupUpdate(id: $groupID, securityPolicyId: $policyID) {
