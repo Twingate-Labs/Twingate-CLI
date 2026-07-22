@@ -12,7 +12,7 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
         "id", "name", "isActive", "remoteNetwork.id",
         "address.type", "address.value", "access.edges",
         "securityPolicy.id", "alias", "isVisible",
-        "isBrowserShortcutEnabled", "tags",
+        "isBrowserShortcutEnabled", "routingMode", "tags",
     ]
     return generic.get_list_as_csv(json_results, columns)
 
@@ -22,13 +22,13 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "id", "name", "isActive", "remoteNetwork.id",
         "address.type", "address.value",
         "protocols.allowIcmp", "protocols.tcp.policy", "protocols.udp.policy",
-        "isVisible", "isBrowserShortcutEnabled",
+        "isVisible", "isBrowserShortcutEnabled", "routingMode",
     ]
     return generic.get_show_as_csv_no_nesting(json_results, "resource", columns)
 
 
 def get_create_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["ok", "error", "id", "name"]
+    columns = ["ok", "error", "id", "name", "routingMode"]
     return generic.get_update_as_csv_no_nesting(json_results, "resourceCreate", columns)
 
 
@@ -58,6 +58,11 @@ def get_alias_update_as_csv(json_results: dict) -> pd.DataFrame:
 
 def get_policy_update_as_csv(json_results: dict) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name", "securityPolicy.id"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
+def get_routing_mode_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "routingMode"]
     return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
 
 

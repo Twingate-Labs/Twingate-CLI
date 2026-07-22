@@ -11,7 +11,7 @@ from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import resources as t
 from tgcli.queries import resources as q
-from tgcli.validators.generic import parse_bool_string
+from tgcli.validators.generic import parse_bool_string, validate_routing_mode
 from tgcli.validators.protocol import (
     validate_port_range,
     validate_protocol_policy,
@@ -91,6 +91,15 @@ def resource_create(
     tcprange: str = typer.Option("[]", "-c", "--tcprange", help="TCP port ranges e.g. [[22,22],[443,446]]."),
     udppolicy: str = typer.Option("ALLOW_ALL", "-u", "--udppolicy", help="UDP policy: ALLOW_ALL or RESTRICTED."),
     udprange: str = typer.Option("[]", "-d", "--udprange", help="UDP port ranges e.g. [[53,53]]."),
+    routingmode: str = typer.Option(
+        "THROUGH_TWINGATE",
+        "-m",
+        "--routingmode",
+        help=(
+            "Routing mode: THROUGH_TWINGATE (default) or BYPASS_TWINGATE "
+            "(traffic bypasses Twingate and connects directly)."
+        ),
+    ),
 ) -> None:
     """Create a new Resource."""
     visible_bool = parse_bool_string(isvisible)
@@ -100,6 +109,7 @@ def resource_create(
     udp_ports = validate_port_range(udprange)
     validate_range_with_policy(tcp_ports, tcp_policy)
     validate_range_with_policy(udp_ports, udp_policy)
+    routing_mode = validate_routing_mode(routingmode)
 
     variables = {
         "address": address,
@@ -109,6 +119,7 @@ def resource_create(
         "groupIds": split_ids(groupids),
         "securityPolicyId": policyid or None,
         "isVisible": visible_bool,
+        "routingMode": routing_mode,
         "protocols": {
             "allowIcmp": not icmp,
             "tcp": {"policy": tcp_policy, "ports": tcp_ports},
@@ -194,6 +205,29 @@ def resource_policy(
         q.UPDATE_RESOURCE_POLICY,
         {"itemid": itemid, "securityPolicyId": policyid},
         t.get_policy_update_as_csv,
+    )
+
+
+@app.command("routing")
+def resource_routing(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    routingmode: str = typer.Option(
+        ...,
+        "-m",
+        "--routingmode",
+        help=(
+            "Routing mode: THROUGH_TWINGATE or BYPASS_TWINGATE "
+            "(traffic bypasses Twingate and connects directly)."
+        ),
+    ),
+) -> None:
+    """Update the routing mode for a Resource."""
+    routing_mode = validate_routing_mode(routingmode)
+    run_query(
+        get_client(),
+        q.UPDATE_RESOURCE_ROUTING_MODE,
+        {"itemid": itemid, "routingMode": routing_mode},
+        t.get_routing_mode_update_as_csv,
     )
 
 

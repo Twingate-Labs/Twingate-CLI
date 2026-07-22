@@ -20,6 +20,7 @@ query listGroup($cursor: String!) {
         isVisible
         isBrowserShortcutEnabled
         usageBasedAutolockDurationDays
+        routingMode
         tags {
           key
           value
@@ -88,6 +89,7 @@ query getResource($itemID: ID!) {
     isBrowserShortcutEnabled
     usageBasedAutolockDurationDays
     isActive
+    routingMode
     remoteNetwork {
       name
       id
@@ -127,6 +129,7 @@ mutation ObjCreate(
   $protocols: ProtocolsInput!
   $securityPolicyId: ID!
   $isVisible: Boolean!
+  $routingMode: RoutingMode
 ) {
   resourceCreate(
     protocols: $protocols
@@ -137,6 +140,7 @@ mutation ObjCreate(
     remoteNetworkId: $remoteNetworkId
     securityPolicyId: $securityPolicyId
     isVisible: $isVisible
+    routingMode: $routingMode
   ) {
     ok
     error
@@ -144,6 +148,7 @@ mutation ObjCreate(
       id
       name
       isVisible
+      routingMode
       securityPolicy {
         id
       }
@@ -347,6 +352,20 @@ mutation ObjUpdate($itemid: ID!, $groupid: [ID!]!) {
     error
     entity {
       id
+    }
+  }
+}
+"""
+
+UPDATE_RESOURCE_ROUTING_MODE = """
+mutation ObjUpdate($itemid: ID!, $routingMode: RoutingMode!) {
+  resourceUpdate(id: $itemid, routingMode: $routingMode) {
+    ok
+    error
+    entity {
+      id
+      name
+      routingMode
     }
   }
 }

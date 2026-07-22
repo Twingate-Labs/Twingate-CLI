@@ -213,6 +213,13 @@ tgcli resource create \
   -c "[[443,443],[8080,8080]]" \
   -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 
+# Create a bypass resource (traffic connects directly, skipping Twingate)
+tgcli resource create \
+  -a app.internal.example.com \
+  -n "Bypass App" \
+  -r "UmVtb3RlTmV0d29yazox" \
+  -m BYPASS_TWINGATE
+
 # Delete a resource
 tgcli resource delete -i "UmVzb3VyY2U6MQ=="
 
@@ -229,6 +236,10 @@ tgcli resource alias   -i "UmVzb3VyY2U6MQ==" -a myapp.internal
 
 # Update security policy
 tgcli resource policy -i "UmVzb3VyY2U6MQ==" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+
+# Update routing mode on an existing resource
+tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m BYPASS_TWINGATE
+tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m THROUGH_TWINGATE
 
 # Usage-based autolock (disable with -a -1)
 tgcli resource autolock -i "UmVzb3VyY2U6MQ==" -a 7
@@ -266,6 +277,7 @@ tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
 | `-u` | UDP policy: `ALLOW_ALL` or `RESTRICTED` | `ALLOW_ALL` |
 | `-d` | UDP port ranges JSON | `[]` |
 | `-i` | Disable ICMP | `false` |
+| `-m` | Routing mode: `THROUGH_TWINGATE` or `BYPASS_TWINGATE` | `THROUGH_TWINGATE` |
 
 ---
 

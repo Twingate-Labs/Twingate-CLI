@@ -155,6 +155,65 @@ class TestResourceCreate:
         )
         assert result.exit_code != 0
 
+    def test_create_bypass_twingate(self, mock_keyring):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.execute.return_value = _mutation_ok(
+                "resourceCreate",
+                {"id": "res-new", "name": "New Res", "isVisible": True, "routingMode": "BYPASS_TWINGATE", "securityPolicy": None},
+            )
+            result = runner.invoke(
+                app,
+                [
+                    "-s", SESSION, "resource", "create",
+                    "-a", "app.example.com",
+                    "-n", "New Res",
+                    "-r", "rn-1",
+                    "-t", "ALLOW_ALL",
+                    "-u", "ALLOW_ALL",
+                    "-p", "pol-1",
+                    "-m", "bypass_twingate",
+                ],
+            )
+            call_kwargs = MockClient.return_value.execute.call_args
+        assert result.exit_code == 0
+        assert call_kwargs.args[1]["routingMode"] == "BYPASS_TWINGATE"
+
+    def test_create_invalid_routing_mode_exits_nonzero(self, mock_keyring):
+        result = runner.invoke(
+            app,
+            [
+                "-s", SESSION, "resource", "create",
+                "-a", "app.example.com",
+                "-n", "New Res",
+                "-r", "rn-1",
+                "-t", "ALLOW_ALL",
+                "-u", "ALLOW_ALL",
+                "-p", "pol-1",
+                "-m", "sideways",
+            ],
+        )
+        assert result.exit_code != 0
+
+
+class TestResourceRouting:
+    def test_routing_bypass(self, mock_keyring):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.execute.return_value = _mutation_ok(
+                "resourceUpdate", {"id": "res-1", "name": "R", "routingMode": "BYPASS_TWINGATE"}
+            )
+            result = runner.invoke(
+                app, ["-s", SESSION, "resource", "routing", "-i", "res-1", "-m", "bypass_twingate"]
+            )
+            call_kwargs = MockClient.return_value.execute.call_args
+        assert result.exit_code == 0
+        assert call_kwargs.args[1]["routingMode"] == "BYPASS_TWINGATE"
+
+    def test_routing_invalid_mode_exits_nonzero(self, mock_keyring):
+        result = runner.invoke(
+            app, ["-s", SESSION, "resource", "routing", "-i", "res-1", "-m", "sideways"]
+        )
+        assert result.exit_code != 0
+
 
 class TestResourceDelete:
     def test_delete_exits_zero(self, mock_keyring):
