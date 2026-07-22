@@ -71,7 +71,7 @@ The `tgcli` command is now available in your shell.
 
 ```bash
 # Log in — stores your credentials in the OS keychain
-tgcli auth login -a acme -t tgp_xxxxxxxxxxxxxxxxxxxx
+tgcli auth login -a tgp_xxxxxxxxxxxxxxxxxxxx -t acme
 
 # Verify it worked
 tgcli -v            # tgcli version 2.0.0
@@ -118,8 +118,8 @@ You can manage several Twingate tenants at once by naming your sessions:
 
 ```bash
 # Log in to two tenants
-tgcli auth login -a acme -t tgp_xxx -s prod
-tgcli auth login -a acme-staging -t tgp_yyy -s staging
+tgcli auth login -a tgp_xxx -t acme -s prod
+tgcli auth login -a tgp_yyy -t acme-staging -s staging
 
 # Use them with -s
 tgcli -s prod    resource list
@@ -142,8 +142,8 @@ Manage authentication sessions.
 
 ```bash
 # Log in (saves credentials to OS keychain)
-tgcli auth login -a <tenant> -t <api-token>
-tgcli auth login -a acme -t tgp_xxxx -s my-session   # named session
+tgcli auth login -a <api-token> -t <tenant>
+tgcli auth login -a tgp_xxxx -t acme -s my-session   # named session
 
 # List all saved sessions
 tgcli auth list
@@ -198,11 +198,12 @@ Manage Twingate resources and their access controls.
 tgcli resource list
 tgcli resource show -i "UmVzb3VyY2U6MQ=="
 
-# Create a resource
+# Create a resource (-r Remote Network ID, -p Security Policy ID — both required)
 tgcli resource create \
   -a 10.0.0.0/24 \
   -n "Internal Network" \
-  -r "UmVtb3RlTmV0d29yazox"          # Remote Network ID
+  -r "UmVtb3RlTmV0d29yazox" \
+  -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 
 # Create with TCP port restriction and a security policy
 tgcli resource create \
@@ -218,6 +219,7 @@ tgcli resource create \
   -a app.internal.example.com \
   -n "Bypass App" \
   -r "UmVtb3RlTmV0d29yazox" \
+  -p "U2VjdXJpdHlQb2xpY3k6MQ==" \
   -m BYPASS_TWINGATE
 
 # Delete a resource
@@ -247,6 +249,10 @@ tgcli resource autolock -i "UmVzb3VyY2U6MQ==" -a 30 -r True   # auto-approve
 
 # Auto-approve mode
 tgcli resource autoapprove -i "UmVzb3VyY2U6MQ==" -r True
+
+# Enable / disable a resource
+tgcli resource enable  -i "UmVzb3VyY2U6MQ=="
+tgcli resource disable -i "UmVzb3VyY2U6MQ=="
 
 # --- Access control ---
 
@@ -318,11 +324,12 @@ Manage Twingate groups and their members.
 tgcli group list
 tgcli group show -i "R3JvdXA6MQ=="
 
-# Create a group (members and resources are optional)
+# Create a group (members, resources, and security policy are optional)
 tgcli group create -g "Engineering"
 tgcli group create -g "DevOps" \
   -u "VXNlcjox,VXNlcjoy" \
-  -r "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg=="
+  -r "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg==" \
+  -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 
 # Delete a group
 tgcli group delete -i "R3JvdXA6MQ=="
@@ -337,7 +344,19 @@ tgcli group removeResources -g "R3JvdXA6MQ==" -r "UmVzb3VyY2U6MQ=="
 
 # Assign a security policy to a group
 tgcli group assignPolicy -g "R3JvdXA6MQ==" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+
+# Migrate all active Synced Groups to new Manual Groups (dry run by default)
+tgcli group migrate
+tgcli group migrate --execute
+
+# Customize the migration
+tgcli group migrate --execute \
+  --name-suffix " (Manual)" \
+  --no-copy-security-policy \
+  --report my_report.csv
 ```
+
+`group migrate` writes a timestamped CSV report of every group processed (or use `--report` for a custom path), reuses an existing Manual Group if one with the target name already exists, and skips inactive Synced Groups.
 
 ---
 
@@ -490,17 +509,16 @@ tgcli dnssec setDenyList -d "ads.example.com,tracking.io"
 Analyse user-to-resource and user-to-network access mappings.
 
 ```bash
-# Show which resources each user can reach
-tgcli mappings user-resource
-
 # Show which remote networks each user can reach
 tgcli mappings user-network
 
-# Show resource access for a specific user (by email)
-tgcli mappings user-resource-detail -e alice@example.com
+# Show resources accessible to a specific user, optionally matched against an FQDN
+# (also flags duplicate/ambiguous Resource definitions across Groups)
+tgcli mappings user-resource -e alice@example.com
+tgcli mappings user-resource -e alice@example.com -f app.internal.example.com
 
 # Export all mappings to CSV
-tgcli -f CSV mappings user-resource
+tgcli -f CSV mappings user-resource -e alice@example.com
 ```
 
 ---
