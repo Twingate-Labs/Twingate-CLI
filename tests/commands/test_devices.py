@@ -49,7 +49,7 @@ class TestDeviceList:
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.paginate.return_value = [
-                [{"node": {"id": "dev-1", "name": "Laptop", "isTrusted": True, "osName": "macOS", "deviceType": "LAPTOP", "activeState": "ACTIVE", "lastFailedLoginAt": None, "lastSuccessfulLoginAt": None, "lastConnectedAt": None, "osVersion": "14.0", "hardwareModel": "MBP", "hostname": "host", "username": "u", "serialNumber": "SN1", "user": {"firstName": "A", "lastName": "B", "email": "a@b.com"}, "clientVersion": "1.0", "manufacturerName": "Apple"}}]
+                [{"node": {"id": "dev-1", "name": "Laptop", "isTrusted": True, "osName": "macOS", "deviceType": "LAPTOP", "activeState": "ACTIVE", "lastFailedLoginAt": None, "lastSuccessfulLoginAt": None, "lastConnectedAt": None, "osVersion": "14.0", "hardwareModel": "MBP", "hostname": "host", "username": "u", "serialNumber": "SN1", "user": {"firstName": "A", "lastName": "B", "email": "a@b.com"}, "clientVersion": "1.0", "manufacturerName": "Apple", "internetSecurityConfiguration": "MACHINE_KEY"}}]
             ]
             result = runner.invoke(app, ["-s", SESSION, "device", "list"])
         assert result.exit_code == 0
@@ -69,7 +69,7 @@ class TestDeviceList:
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.paginate.return_value = [
-                [{"node": {"id": "dev-1", "name": "Laptop", "isTrusted": True, "osName": "macOS", "deviceType": "LAPTOP", "activeState": "ACTIVE", "lastFailedLoginAt": None, "lastSuccessfulLoginAt": None, "lastConnectedAt": None, "osVersion": "14.0", "hardwareModel": "MBP", "hostname": "host", "username": "u", "serialNumber": "SN1", "user": {"firstName": "A", "lastName": "B", "email": "a@b.com"}, "clientVersion": "1.0", "manufacturerName": "Apple"}}]
+                [{"node": {"id": "dev-1", "name": "Laptop", "isTrusted": True, "osName": "macOS", "deviceType": "LAPTOP", "activeState": "ACTIVE", "lastFailedLoginAt": None, "lastSuccessfulLoginAt": None, "lastConnectedAt": None, "osVersion": "14.0", "hardwareModel": "MBP", "hostname": "host", "username": "u", "serialNumber": "SN1", "user": {"firstName": "A", "lastName": "B", "email": "a@b.com"}, "clientVersion": "1.0", "manufacturerName": "Apple", "internetSecurityConfiguration": "MACHINE_KEY"}}]
             ]
             result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "device", "list"])
         assert result.exit_code == 0
@@ -99,11 +99,13 @@ class TestDeviceShow:
                         "user": {"firstName": "A", "lastName": "B", "email": "a@b.com"},
                         "clientVersion": "1.0",
                         "manufacturerName": "Apple",
+                        "internetSecurityConfiguration": "MACHINE_KEY",
                     }
                 }
             }
             result = runner.invoke(app, ["-s", SESSION, "device", "show", "-i", "dev-1"])
         assert result.exit_code == 0
+        assert "MACHINE_KEY" in result.output
 
     def test_show_requires_id(self, mock_keyring):
         result = runner.invoke(app, ["-s", SESSION, "device", "show"])

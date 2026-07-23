@@ -185,7 +185,13 @@ tgcli device snumber remove -n "SN001"
 
 # --- Get Posture Checks ---
 tgcli device posture -i "RGV2aWNlOjE5MzI2OQ=="
+
+# --- Check Internet Security Client Configuration (e.g. Machine Key deployment) ---
+tgcli device show -i "RGV2aWNlOjE5MzI2OQ=="       # see the internetSecurityConfiguration field
+tgcli -f CSV device list                          # export all devices with that column included
 ```
+
+`device list` / `device show` include an `internetSecurityConfiguration` field reporting each device's [Internet Security Client Configuration](https://www.twingate.com/docs/internet-security-client-configuration) state — used to see which devices have a Machine Key deployed so Internet Security features (e.g. DNS filtering) keep running while the user is signed out.
 
 ---
 

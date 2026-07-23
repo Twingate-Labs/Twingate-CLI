@@ -33,6 +33,7 @@ query listGroup($cursor: String!)
         activeState
         clientVersion
         manufacturerName
+        internetSecurityConfiguration
       }
     }
   }
@@ -63,6 +64,7 @@ query getDevice($deviceID: ID!) {
     activeState
     clientVersion
     manufacturerName
+    internetSecurityConfiguration
   }
 }
 """

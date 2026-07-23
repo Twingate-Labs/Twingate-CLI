@@ -12,6 +12,7 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
         "id", "name", "isTrusted", "osName", "deviceType",
         "lastFailedLoginAt", "lastSuccessfulLoginAt", "user.email",
         "osVersion", "username", "serialNumber", "clientVersion", "activeState",
+        "internetSecurityConfiguration",
     ]
     return generic.get_list_as_csv(json_results, columns)
 
@@ -22,6 +23,7 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "lastFailedLoginAt", "lastSuccessfulLoginAt", "user.email",
         "osVersion", "hardwareModel", "hostname", "username",
         "serialNumber", "activeState", "clientVersion", "manufacturerName",
+        "internetSecurityConfiguration",
     ]
     return generic.get_show_as_csv_no_nesting(json_results, "device", columns)
 
