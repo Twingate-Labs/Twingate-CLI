@@ -12,7 +12,9 @@ import typer
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.commands._common import get_client
 from tgcli.main import state
+from tgcli.queries import connectors as connq
 from tgcli.queries import mappings as q
+from tgcli.queries import resources as resq
 
 app = typer.Typer(help="Extract User-to-Resource and User-to-Remote-Network mappings.")
 
@@ -177,3 +179,75 @@ def _print_section(title: str, df: pd.DataFrame, fmt: str) -> None:
         typer.echo(df.to_csv(index=False))
     else:
         typer.echo(df.to_string())
+
+
+# ---------------------------------------------------------------------------
+# resource-connectivity
+# ---------------------------------------------------------------------------
+
+@app.command("resource-connectivity")
+def resource_connectivity(
+    offline_only: bool = typer.Option(
+        False, "-o", "--offline-only",
+        help="Only show Resources with no live (ALIVE) Connector in their Remote Network.",
+    ),
+) -> None:
+    """Show which Resources have no live Connector in their Remote Network.
+
+    A Resource is only reachable if at least one Connector in its assigned
+    Remote Network is in the ALIVE state. Nothing in the API links a
+    Resource directly to a Connector, so this joins Resources and
+    Connectors client-side via their shared Remote Network ID.
+    """
+    client = get_client()
+
+    try:
+        connector_pages = client.paginate(connq.LIST_CONNECTORS, lambda c: {"cursor": c}, "connectors")
+    except (TwingateAuthError, TwingateAPIError) as exc:
+        typer.echo(f"Error fetching Connectors: {exc}", err=True)
+        raise typer.Exit(1)
+
+    network_connectors: dict[str, list[dict]] = {}
+    for page in connector_pages:
+        for edge in page:
+            node = edge["node"]
+            rn_id = (node.get("remoteNetwork") or {}).get("id")
+            if rn_id:
+                network_connectors.setdefault(rn_id, []).append(node)
+
+    try:
+        resource_pages = client.paginate(resq.LIST_RESOURCES, lambda c: {"cursor": c}, "resources")
+    except (TwingateAuthError, TwingateAPIError) as exc:
+        typer.echo(f"Error fetching Resources: {exc}", err=True)
+        raise typer.Exit(1)
+
+    rows: list[dict] = []
+    for page in resource_pages:
+        for edge in page:
+            node = edge["node"]
+            remote_network = node.get("remoteNetwork") or {}
+            rn_id = remote_network.get("id")
+            connectors = network_connectors.get(rn_id, [])
+            live_connectors = [c for c in connectors if c.get("state") == "ALIVE"]
+            is_reachable = len(live_connectors) > 0
+            if offline_only and is_reachable:
+                continue
+            rows.append({
+                "resource.id": node["id"],
+                "resource.name": node["name"],
+                "resource.isActive": node.get("isActive"),
+                "remoteNetwork.id": rn_id,
+                "remoteNetwork.name": remote_network.get("name"),
+                "connectorCount": len(connectors),
+                "liveConnectorCount": len(live_connectors),
+                "isReachable": is_reachable,
+            })
+
+    df = pd.json_normalize(rows)
+    fmt = state.output_format.upper()
+    if fmt == "CSV":
+        typer.echo(df.to_csv(index=False))
+    elif fmt == "DF":
+        typer.echo(df.to_string())
+    else:
+        typer.echo(json.dumps(rows, indent=2, default=str))

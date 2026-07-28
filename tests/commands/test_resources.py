@@ -83,6 +83,20 @@ class TestResourceList:
             result = runner.invoke(app, ["-s", SESSION, "resource", "list"])
         assert result.exit_code != 0
 
+    def test_list_active_filter(self, mock_keyring):
+        active_edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "id": "res-active", "isActive": True}}
+        inactive_edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "id": "res-inactive", "isActive": False}}
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.paginate.return_value = [[active_edge, inactive_edge]]
+            result = runner.invoke(app, ["-s", SESSION, "resource", "list", "-a", "false"])
+        assert result.exit_code == 0
+        assert "res-inactive" in result.output
+        assert "res-active" not in result.output
+
+    def test_list_invalid_active_exits_nonzero(self, mock_keyring):
+        result = runner.invoke(app, ["-s", SESSION, "resource", "list", "-a", "maybe"])
+        assert result.exit_code != 0
+
 
 class TestResourceShow:
     def test_show_exits_zero(self, mock_keyring):

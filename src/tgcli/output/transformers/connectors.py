@@ -11,6 +11,7 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
     columns = [
         "id", "name", "state", "hostname", "version",
         "publicIP", "lastHeartbeatAt", "hasStatusNotificationsEnabled",
+        "remoteNetwork.id", "remoteNetwork.name",
     ]
     return generic.get_list_as_csv(json_results, columns)
 

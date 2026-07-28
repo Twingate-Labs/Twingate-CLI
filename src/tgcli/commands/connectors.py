@@ -15,7 +15,7 @@ app = typer.Typer(help="Manage Twingate Connectors.")
 @app.command("list")
 def connector_list() -> None:
     """List all Connectors."""
-    run_paginated(get_client(), q.LIST_CONNECTORS, "Connectors", t.get_list_as_csv)
+    run_paginated(get_client(), q.LIST_CONNECTORS, "connectors", t.get_list_as_csv)
 
 
 @app.command("show")

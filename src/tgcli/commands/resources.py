@@ -64,9 +64,18 @@ def _build_access_array(
 
 
 @app.command("list")
-def resource_list() -> None:
+def resource_list(
+    active: Optional[str] = typer.Option(
+        None, "-a", "--active",
+        help="Filter by active state: true or false. Omit to show all Resources.",
+    ),
+) -> None:
     """List all Resources."""
-    run_paginated(get_client(), q.LIST_RESOURCES, "resources", t.get_list_as_csv)
+    filter_fn = None
+    if active is not None:
+        active_bool = parse_bool_string(active)
+        filter_fn = lambda node: node.get("isActive") == active_bool  # noqa: E731
+    run_paginated(get_client(), q.LIST_RESOURCES, "resources", t.get_list_as_csv, filter_fn=filter_fn)
 
 
 @app.command("show")

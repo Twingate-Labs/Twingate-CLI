@@ -55,8 +55,14 @@ def run_paginated(
     data_key: str,
     transformer: Callable[..., pd.DataFrame],
     extra_vars: dict | None = None,
+    filter_fn: Callable[[dict], bool] | None = None,
 ) -> None:
-    """Execute a paginated list query and print formatted output."""
+    """Execute a paginated list query and print formatted output.
+
+    If provided, ``filter_fn`` is applied to each item's ``node`` dict and
+    only nodes for which it returns True are kept — applied before output
+    formatting, so it affects JSON, CSV, and DF output alike.
+    """
     def make_vars(cursor: str) -> dict:
         v = {"cursor": cursor}
         if extra_vars:
@@ -71,6 +77,10 @@ def run_paginated(
     except TwingateAPIError as exc:
         typer.echo(f"API error: {exc}", err=True)
         raise typer.Exit(1)
+
+    if filter_fn is not None:
+        pages = [[edge for edge in page if filter_fn(edge["node"])] for page in pages]
+
     OutputFormatter.print_output(pages, state.output_format, transformer)
 
 

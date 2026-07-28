@@ -22,6 +22,10 @@ query listObj($cursor: String!) {
         createdAt
         updatedAt
         hasStatusNotificationsEnabled
+        remoteNetwork {
+          id
+          name
+        }
       }
     }
   }

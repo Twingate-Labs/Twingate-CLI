@@ -204,6 +204,10 @@ Manage Twingate resources and their access controls.
 tgcli resource list
 tgcli resource show -i "UmVzb3VyY2U6MQ=="
 
+# List only disabled (or only enabled) resources
+tgcli resource list -a false
+tgcli resource list -a true
+
 # Create a resource (-r Remote Network ID, -p Security Policy ID — both required)
 tgcli resource create \
   -a 10.0.0.0/24 \
@@ -525,6 +529,12 @@ tgcli mappings user-resource -e alice@example.com -f app.internal.example.com
 
 # Export all mappings to CSV
 tgcli -f CSV mappings user-resource -e alice@example.com
+
+# Show which Resources have no live Connector in their Remote Network
+# (joins Resources + Connectors client-side via Remote Network ID —
+# nothing in the API links a Resource directly to a Connector)
+tgcli mappings resource-connectivity
+tgcli mappings resource-connectivity --offline-only
 ```
 
 ---
