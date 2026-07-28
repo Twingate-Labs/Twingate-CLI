@@ -20,7 +20,9 @@ query listGroup($cursor: String!) {
         isVisible
         isBrowserShortcutEnabled
         usageBasedAutolockDurationDays
-        routingMode
+        ... on NetworkResource {
+          routingMode
+        }
         tags {
           key
           value
@@ -89,7 +91,9 @@ query getResource($itemID: ID!) {
     isBrowserShortcutEnabled
     usageBasedAutolockDurationDays
     isActive
-    routingMode
+    ... on NetworkResource {
+      routingMode
+    }
     remoteNetwork {
       name
       id
