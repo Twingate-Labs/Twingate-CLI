@@ -145,6 +145,34 @@ def group_set_state(
     )
 
 
+@app.command("setUsers")
+def group_set_users(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    userids: str = typer.Option(..., "-u", "--userids", help="Comma-separated User IDs (replaces all)."),
+) -> None:
+    """Replace all users in a Group (full-replace)."""
+    run_query(
+        get_client(),
+        q.SET_GROUP_USERS,
+        {"groupID": groupid, "userIDS": split_ids(userids)},
+        t.get_set_users_as_csv,
+    )
+
+
+@app.command("setResources")
+def group_set_resources(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    resourceids: str = typer.Option(..., "-r", "--resourceids", help="Comma-separated Resource IDs (replaces all)."),
+) -> None:
+    """Replace all resources in a Group (full-replace)."""
+    run_query(
+        get_client(),
+        q.SET_GROUP_RESOURCES,
+        {"groupID": groupid, "resourceIDS": split_ids(resourceids)},
+        t.get_set_resources_as_csv,
+    )
+
+
 @app.command("migrate")
 def group_migrate(
     execute: bool = typer.Option(False, "--execute", help="Apply changes. Without this flag, only a dry run is performed."),

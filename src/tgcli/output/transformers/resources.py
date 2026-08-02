@@ -98,3 +98,23 @@ def get_browser_shortcut_update_as_csv(json_results: dict) -> pd.DataFrame:
 def get_access_update_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name"]
     return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_typed_create_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_typed_update_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_tags_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
+def get_approver_groups_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)

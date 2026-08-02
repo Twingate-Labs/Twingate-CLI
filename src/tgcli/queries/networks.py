@@ -18,6 +18,7 @@ query listNetworks($cursor: String!) {
         createdAt
         isActive
         networkType
+        location
         connectors {
           edges {
             node {
@@ -57,6 +58,7 @@ query getObj($itemID: ID!) {
     createdAt
     isActive
     networkType
+    location
     connectors {
       edges {
         node {
@@ -155,6 +157,7 @@ query getNetworkByName($name: String!) {
     createdAt
     isActive
     networkType
+    location
     connectors {
       edges {
         node {

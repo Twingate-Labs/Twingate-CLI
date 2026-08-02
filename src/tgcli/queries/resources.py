@@ -31,6 +31,14 @@ query listResources($cursor: String!) {
           key
           value
         }
+        approverGroups {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
         access {
           edges {
             node {
@@ -129,6 +137,14 @@ query getResource($itemID: ID!) {
     tags {
       key
       value
+    }
+    approverGroups {
+      edges {
+        node {
+          id
+          name
+        }
+      }
     }
     access {
       edges {
@@ -494,6 +510,275 @@ mutation updateResourceBrowserShortcut($itemid: ID!, $isBrowserShortcutEnabled: 
       id
       name
       isBrowserShortcutEnabled
+    }
+  }
+}
+"""
+
+CREATE_SSH_RESOURCE = """
+mutation createSshResource(
+  $name: String!
+  $address: String!
+  $remoteNetworkId: ID!
+  $gatewayId: ID!
+  $securityPolicyId: ID!
+  $groupIds: [ID!]
+  $isVisible: Boolean!
+  $upstreamPort: Int
+  $downstreamPort: Int
+) {
+  sshResourceCreate(
+    name: $name
+    address: $address
+    remoteNetworkId: $remoteNetworkId
+    gatewayId: $gatewayId
+    securityPolicyId: $securityPolicyId
+    groupIds: $groupIds
+    isVisible: $isVisible
+    upstreamPort: $upstreamPort
+    downstreamPort: $downstreamPort
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      address { type value }
+      remoteNetwork { id name }
+    }
+  }
+}
+"""
+
+UPDATE_SSH_RESOURCE = """
+mutation updateSshResource(
+  $id: ID!
+  $name: String
+  $address: String
+  $gatewayId: ID
+  $upstreamPort: Int
+  $downstreamPort: Int
+) {
+  sshResourceUpdate(
+    id: $id
+    name: $name
+    address: $address
+    gatewayId: $gatewayId
+    upstreamPort: $upstreamPort
+    downstreamPort: $downstreamPort
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      address { type value }
+    }
+  }
+}
+"""
+
+CREATE_KUBERNETES_RESOURCE = """
+mutation createKubernetesResource(
+  $name: String!
+  $address: String!
+  $remoteNetworkId: ID!
+  $gatewayId: ID!
+  $securityPolicyId: ID!
+  $groupIds: [ID!]
+  $isVisible: Boolean!
+  $upstreamPort: Int
+  $downstreamPort: Int
+) {
+  kubernetesResourceCreate(
+    name: $name
+    address: $address
+    remoteNetworkId: $remoteNetworkId
+    gatewayId: $gatewayId
+    securityPolicyId: $securityPolicyId
+    groupIds: $groupIds
+    isVisible: $isVisible
+    upstreamPort: $upstreamPort
+    downstreamPort: $downstreamPort
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      address { type value }
+      remoteNetwork { id name }
+    }
+  }
+}
+"""
+
+UPDATE_KUBERNETES_RESOURCE = """
+mutation updateKubernetesResource(
+  $id: ID!
+  $name: String
+  $address: String
+  $gatewayId: ID
+  $upstreamPort: Int
+  $downstreamPort: Int
+) {
+  kubernetesResourceUpdate(
+    id: $id
+    name: $name
+    address: $address
+    gatewayId: $gatewayId
+    upstreamPort: $upstreamPort
+    downstreamPort: $downstreamPort
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      address { type value }
+    }
+  }
+}
+"""
+
+CREATE_WEBAPP_RESOURCE = """
+mutation createWebAppResource(
+  $name: String!
+  $address: String!
+  $remoteNetworkId: ID!
+  $gatewayId: ID!
+  $securityPolicyId: ID!
+  $groupIds: [ID!]
+  $isVisible: Boolean!
+  $upstreamPort: Int
+  $downstreamPort: Int
+) {
+  webAppResourceCreate(
+    name: $name
+    address: $address
+    remoteNetworkId: $remoteNetworkId
+    gatewayId: $gatewayId
+    securityPolicyId: $securityPolicyId
+    groupIds: $groupIds
+    isVisible: $isVisible
+    upstreamPort: $upstreamPort
+    downstreamPort: $downstreamPort
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      address { type value }
+      remoteNetwork { id name }
+    }
+  }
+}
+"""
+
+UPDATE_WEBAPP_RESOURCE = """
+mutation updateWebAppResource(
+  $id: ID!
+  $name: String
+  $address: String
+  $gatewayId: ID
+  $upstreamPort: Int
+  $downstreamPort: Int
+) {
+  webAppResourceUpdate(
+    id: $id
+    name: $name
+    address: $address
+    gatewayId: $gatewayId
+    upstreamPort: $upstreamPort
+    downstreamPort: $downstreamPort
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      address { type value }
+    }
+  }
+}
+"""
+
+UPDATE_RESOURCE_TAGS = """
+mutation updateResourceTags($itemid: ID!, $tags: [TagInput!]!) {
+  resourceUpdate(id: $itemid, tags: $tags) {
+    ok
+    error
+    entity {
+      id
+      name
+      tags {
+        key
+        value
+      }
+    }
+  }
+}
+"""
+
+ADD_APPROVER_GROUPS = """
+mutation addApproverGroups($itemid: ID!, $addedApproverGroupIds: [ID!]!) {
+  resourceUpdate(id: $itemid, addedApproverGroupIds: $addedApproverGroupIds) {
+    ok
+    error
+    entity {
+      id
+      name
+      approverGroups {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+REMOVE_APPROVER_GROUPS = """
+mutation removeApproverGroups($itemid: ID!, $removedApproverGroupIds: [ID!]!) {
+  resourceUpdate(id: $itemid, removedApproverGroupIds: $removedApproverGroupIds) {
+    ok
+    error
+    entity {
+      id
+      name
+      approverGroups {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+SET_APPROVER_GROUPS = """
+mutation setApproverGroups($itemid: ID!, $approverGroupIds: [ID!]!) {
+  resourceUpdate(id: $itemid, approverGroupIds: $approverGroupIds) {
+    ok
+    error
+    entity {
+      id
+      name
+      approverGroups {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
     }
   }
 }

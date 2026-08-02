@@ -251,3 +251,16 @@ def resource_connectivity(
         typer.echo(df.to_string())
     else:
         typer.echo(json.dumps(rows, indent=2, default=str))
+
+
+@app.command("oidc-url")
+def oidc_url() -> None:
+    """Show the OIDC Identity Provider URL for the current tenant."""
+    client = get_client()
+    try:
+        result = client.execute(q.GET_OIDC_PROVIDER_URL)
+    except (TwingateAuthError, TwingateAPIError) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+    url = result.get("data", {}).get("eventsSyncOidcProviderUrl")
+    typer.echo(url or "No OIDC provider URL configured.")

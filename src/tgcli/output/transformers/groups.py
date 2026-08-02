@@ -53,3 +53,13 @@ def get_rename_as_csv(json_results: dict) -> pd.DataFrame:
 def get_update_state_as_csv(json_results: dict) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name", "isActive", "type"]
     return generic.get_update_as_csv_no_nesting(json_results, "groupUpdate", columns)
+
+
+def get_set_users_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "users"]
+    return generic.get_update_as_csv_no_nesting(json_results, "groupUpdate", columns)
+
+
+def get_set_resources_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "resources"]
+    return generic.get_update_as_csv_no_nesting(json_results, "groupUpdate", columns)

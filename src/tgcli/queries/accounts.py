@@ -155,3 +155,24 @@ mutation renameServiceAccount($id: ID!, $name: String!) {
   }
 }
 """
+
+SET_ACCOUNT_RESOURCES = """
+mutation setServiceAccountResources($id: ID!, $resourceIDS: [ID!]!) {
+  serviceAccountUpdate(id: $id, resourceIds: $resourceIDS) {
+    ok
+    error
+    entity {
+      id
+      name
+      resources {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+"""

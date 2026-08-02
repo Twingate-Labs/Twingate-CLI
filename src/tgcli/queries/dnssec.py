@@ -38,3 +38,62 @@ mutation CLI_UpdateDNSFilteringProfile($id: ID!, $allowedDomains: [String!], $de
 
 SET_ALLOWED_DOMAINS = UPDATE_DNS_PROFILE
 SET_DENIED_DOMAINS = UPDATE_DNS_PROFILE
+
+CREATE_DNS_PROFILE = """
+mutation createDnsProfile($name: String!, $priority: Float) {
+  dnsFilteringProfileCreate(name: $name, priority: $priority) {
+    ok
+    error
+    entity {
+      id
+      name
+    }
+  }
+}
+"""
+
+DELETE_DNS_PROFILE = """
+mutation deleteDnsProfile($id: ID!) {
+  dnsFilteringProfileDelete(id: $id) {
+    ok
+    error
+  }
+}
+"""
+
+UPDATE_DNS_PROFILE_FULL = """
+mutation updateDnsProfileFull(
+  $id: ID!
+  $name: String
+  $priority: Float
+  $fallbackMethod: DnsFilteringFallbackMethod
+  $groups: [ID!]
+  $allowedDomains: [String!]
+  $deniedDomains: [String!]
+  $contentCategoryConfig: DnsFilteringContentCategoryConfigInput
+  $securityCategoryConfig: DnsFilteringSecurityCategoryConfigInput
+  $privacyCategoryConfig: DnsFilteringPrivacyCategoryConfigInput
+) {
+  dnsFilteringProfileUpdate(
+    id: $id
+    name: $name
+    priority: $priority
+    fallbackMethod: $fallbackMethod
+    groups: $groups
+    allowedDomains: $allowedDomains
+    deniedDomains: $deniedDomains
+    contentCategoryConfig: $contentCategoryConfig
+    securityCategoryConfig: $securityCategoryConfig
+    privacyCategoryConfig: $privacyCategoryConfig
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+      allowedDomains
+      deniedDomains
+    }
+  }
+}
+"""

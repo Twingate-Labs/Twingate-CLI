@@ -17,6 +17,7 @@ query listUsers($cursor: String!) {
         email
         role
         type
+        avatarUrl
         lastName
         firstName
         createdAt
@@ -25,6 +26,14 @@ query listUsers($cursor: String!) {
           edges {
             node {
               id
+            }
+          }
+        }
+        devices {
+          edges {
+            node {
+              id
+              name
             }
           }
         }
@@ -42,11 +51,20 @@ query getObj($itemID: ID!) {
     email
     role
     type
+    avatarUrl
     lastName
     firstName
     createdAt
     updatedAt
     groups {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    devices {
       edges {
         node {
           id

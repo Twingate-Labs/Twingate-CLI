@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 LIST_GROUPS = """
-query listGroup($cursor: String!) {
+query listGroups($cursor: String!) {
   groups(after: $cursor, first: null) {
     totalCount
     pageInfo {
@@ -335,6 +335,48 @@ mutation updateGroupState($groupID: ID!, $isActive: Boolean!) {
       name
       isActive
       type
+    }
+  }
+}
+"""
+
+SET_GROUP_USERS = """
+mutation setGroupUsers($groupID: ID!, $userIDS: [ID!]!) {
+  groupUpdate(id: $groupID, userIds: $userIDS) {
+    ok
+    error
+    entity {
+      id
+      name
+      users {
+        edges {
+          node {
+            id
+            email
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+SET_GROUP_RESOURCES = """
+mutation setGroupResources($groupID: ID!, $resourceIDS: [ID!]!) {
+  groupUpdate(id: $groupID, resourceIds: $resourceIDS) {
+    ok
+    error
+    entity {
+      id
+      name
+      resources {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
     }
   }
 }

@@ -49,3 +49,25 @@ def dnssec_set_deny_list(
     profile_id = _get_profile_id(client)
     domain_list = [d.strip() for d in domains.split(",") if d.strip()]
     run_query(client, q.UPDATE_DNS_PROFILE, {"id": profile_id, "deniedDomains": domain_list}, t.get_update_deny_as_csv)
+
+
+@app.command("create")
+def dnssec_create(
+    name: str = typer.Option(..., "-n", "--name", help="DNS filtering profile name."),
+    priority: float = typer.Option(None, "--priority", help="Profile priority."),
+) -> None:
+    """Create a new DNS filtering profile."""
+    variables: dict = {"name": name}
+    if priority is not None:
+        variables["priority"] = priority
+    run_query(get_client(), q.CREATE_DNS_PROFILE, variables, t.get_create_as_csv)
+
+
+@app.command("delete")
+def dnssec_delete(
+    profileid: str = typer.Option("", "-i", "--profileid", help="DNS profile ID (auto-detected if omitted)."),
+) -> None:
+    """Delete a DNS filtering profile."""
+    client = get_client()
+    pid = profileid or _get_profile_id(client)
+    run_query(client, q.DELETE_DNS_PROFILE, {"id": pid}, t.get_delete_as_csv)

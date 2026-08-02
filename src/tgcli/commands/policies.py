@@ -19,10 +19,17 @@ def policy_list() -> None:
 
 @app.command("show")
 def policy_show(
-    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource Policy ID."),
+    itemid: str = typer.Option("", "-i", "--itemid", help="Resource Policy ID."),
+    name: str = typer.Option("", "-n", "--name", help="Resource Policy name (alternative to --itemid)."),
 ) -> None:
     """Show details for a specific Resource policy."""
-    run_query(get_client(), q.SHOW_POLICY, {"itemID": itemid}, t.get_show_as_csv)
+    if not itemid and not name:
+        typer.echo("Error: Provide -i (ID) or -n (name).", err=True)
+        raise typer.Exit(1)
+    if name:
+        run_query(get_client(), q.SHOW_POLICY_BY_NAME, {"name": name}, t.get_show_as_csv)
+    else:
+        run_query(get_client(), q.SHOW_POLICY, {"itemID": itemid}, t.get_show_as_csv)
 
 
 @app.command("addGroups")

@@ -87,3 +87,17 @@ def account_rename(
         {"id": itemid, "name": name},
         t.get_rename_as_csv,
     )
+
+
+@app.command("setResources")
+def account_set_resources(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
+    resourceids: str = typer.Option(..., "-r", "--resourceids", help="Comma-separated Resource IDs (replaces all)."),
+) -> None:
+    """Replace all resources on a Service Account (full-replace)."""
+    run_query(
+        get_client(),
+        q.SET_ACCOUNT_RESOURCES,
+        {"id": itemid, "resourceIDS": split_ids(resourceids)},
+        t.get_set_resources_as_csv,
+    )

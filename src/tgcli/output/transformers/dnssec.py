@@ -24,3 +24,13 @@ def get_update_deny_as_csv(json_results: dict) -> pd.DataFrame:
     return generic.get_update_as_csv_no_nesting(
         json_results, "dnsFilteringProfileUpdate", columns
     )
+
+
+def get_create_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "dnsFilteringProfileCreate", columns)
+
+
+def get_delete_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error"]
+    return generic.get_update_as_csv_no_nesting(json_results, "dnsFilteringProfileDelete", columns)

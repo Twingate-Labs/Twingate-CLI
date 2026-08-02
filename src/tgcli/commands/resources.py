@@ -404,3 +404,217 @@ def resource_access_remove(
         {"itemid": itemid, "groupid": principal_ids},
         lambda d: t.get_access_update_as_csv(d, "resourceAccessRemove"),
     )
+
+
+@app.command("createSSH")
+def resource_create_ssh(
+    name: str = typer.Option(..., "-n", "--name", help="SSH Resource name."),
+    address: str = typer.Option(..., "-a", "--address", help="Resource address."),
+    networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
+    gatewayid: str = typer.Option(..., "--gateway-id", help="Gateway ID."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Security Policy ID."),
+    groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated Group IDs."),
+    isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible: true or false."),
+    upstream: int = typer.Option(None, "--upstream-port", help="Upstream port."),
+    downstream: int = typer.Option(None, "--downstream-port", help="Downstream port."),
+) -> None:
+    """Create an SSH Resource."""
+    visible_bool = parse_bool_string(isvisible)
+    variables = {
+        "name": name, "address": address, "remoteNetworkId": networkid,
+        "gatewayId": gatewayid, "securityPolicyId": policyid,
+        "groupIds": split_ids(groupids), "isVisible": visible_bool,
+    }
+    if upstream is not None:
+        variables["upstreamPort"] = upstream
+    if downstream is not None:
+        variables["downstreamPort"] = downstream
+    run_query(get_client(), q.CREATE_SSH_RESOURCE, variables,
+              lambda d: t.get_typed_create_as_csv(d, "sshResourceCreate"))
+
+
+@app.command("updateSSH")
+def resource_update_ssh(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="SSH Resource ID."),
+    name: str = typer.Option("", "-n", "--name", help="New name."),
+    address: str = typer.Option("", "-a", "--address", help="New address."),
+    gatewayid: str = typer.Option("", "--gateway-id", help="New Gateway ID."),
+    upstream: int = typer.Option(None, "--upstream-port", help="Upstream port."),
+    downstream: int = typer.Option(None, "--downstream-port", help="Downstream port."),
+) -> None:
+    """Update an SSH Resource."""
+    variables: dict = {"id": itemid}
+    if name:
+        variables["name"] = name
+    if address:
+        variables["address"] = address
+    if gatewayid:
+        variables["gatewayId"] = gatewayid
+    if upstream is not None:
+        variables["upstreamPort"] = upstream
+    if downstream is not None:
+        variables["downstreamPort"] = downstream
+    run_query(get_client(), q.UPDATE_SSH_RESOURCE, variables,
+              lambda d: t.get_typed_update_as_csv(d, "sshResourceUpdate"))
+
+
+@app.command("createK8s")
+def resource_create_k8s(
+    name: str = typer.Option(..., "-n", "--name", help="Kubernetes Resource name."),
+    address: str = typer.Option(..., "-a", "--address", help="Resource address."),
+    networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
+    gatewayid: str = typer.Option(..., "--gateway-id", help="Gateway ID."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Security Policy ID."),
+    groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated Group IDs."),
+    isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible: true or false."),
+    upstream: int = typer.Option(None, "--upstream-port", help="Upstream port."),
+    downstream: int = typer.Option(None, "--downstream-port", help="Downstream port."),
+) -> None:
+    """Create a Kubernetes Resource."""
+    visible_bool = parse_bool_string(isvisible)
+    variables = {
+        "name": name, "address": address, "remoteNetworkId": networkid,
+        "gatewayId": gatewayid, "securityPolicyId": policyid,
+        "groupIds": split_ids(groupids), "isVisible": visible_bool,
+    }
+    if upstream is not None:
+        variables["upstreamPort"] = upstream
+    if downstream is not None:
+        variables["downstreamPort"] = downstream
+    run_query(get_client(), q.CREATE_KUBERNETES_RESOURCE, variables,
+              lambda d: t.get_typed_create_as_csv(d, "kubernetesResourceCreate"))
+
+
+@app.command("updateK8s")
+def resource_update_k8s(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Kubernetes Resource ID."),
+    name: str = typer.Option("", "-n", "--name", help="New name."),
+    address: str = typer.Option("", "-a", "--address", help="New address."),
+    gatewayid: str = typer.Option("", "--gateway-id", help="New Gateway ID."),
+    upstream: int = typer.Option(None, "--upstream-port", help="Upstream port."),
+    downstream: int = typer.Option(None, "--downstream-port", help="Downstream port."),
+) -> None:
+    """Update a Kubernetes Resource."""
+    variables: dict = {"id": itemid}
+    if name:
+        variables["name"] = name
+    if address:
+        variables["address"] = address
+    if gatewayid:
+        variables["gatewayId"] = gatewayid
+    if upstream is not None:
+        variables["upstreamPort"] = upstream
+    if downstream is not None:
+        variables["downstreamPort"] = downstream
+    run_query(get_client(), q.UPDATE_KUBERNETES_RESOURCE, variables,
+              lambda d: t.get_typed_update_as_csv(d, "kubernetesResourceUpdate"))
+
+
+@app.command("createWebApp")
+def resource_create_webapp(
+    name: str = typer.Option(..., "-n", "--name", help="Web App Resource name."),
+    address: str = typer.Option(..., "-a", "--address", help="Resource address."),
+    networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
+    gatewayid: str = typer.Option(..., "--gateway-id", help="Gateway ID."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Security Policy ID."),
+    groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated Group IDs."),
+    isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible: true or false."),
+    upstream: int = typer.Option(None, "--upstream-port", help="Upstream port."),
+    downstream: int = typer.Option(None, "--downstream-port", help="Downstream port."),
+) -> None:
+    """Create a Web App Resource."""
+    visible_bool = parse_bool_string(isvisible)
+    variables = {
+        "name": name, "address": address, "remoteNetworkId": networkid,
+        "gatewayId": gatewayid, "securityPolicyId": policyid,
+        "groupIds": split_ids(groupids), "isVisible": visible_bool,
+    }
+    if upstream is not None:
+        variables["upstreamPort"] = upstream
+    if downstream is not None:
+        variables["downstreamPort"] = downstream
+    run_query(get_client(), q.CREATE_WEBAPP_RESOURCE, variables,
+              lambda d: t.get_typed_create_as_csv(d, "webAppResourceCreate"))
+
+
+@app.command("updateWebApp")
+def resource_update_webapp(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Web App Resource ID."),
+    name: str = typer.Option("", "-n", "--name", help="New name."),
+    address: str = typer.Option("", "-a", "--address", help="New address."),
+    gatewayid: str = typer.Option("", "--gateway-id", help="New Gateway ID."),
+    upstream: int = typer.Option(None, "--upstream-port", help="Upstream port."),
+    downstream: int = typer.Option(None, "--downstream-port", help="Downstream port."),
+) -> None:
+    """Update a Web App Resource."""
+    variables: dict = {"id": itemid}
+    if name:
+        variables["name"] = name
+    if address:
+        variables["address"] = address
+    if gatewayid:
+        variables["gatewayId"] = gatewayid
+    if upstream is not None:
+        variables["upstreamPort"] = upstream
+    if downstream is not None:
+        variables["downstreamPort"] = downstream
+    run_query(get_client(), q.UPDATE_WEBAPP_RESOURCE, variables,
+              lambda d: t.get_typed_update_as_csv(d, "webAppResourceUpdate"))
+
+
+@app.command("updateTags")
+def resource_update_tags(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    tags: str = typer.Option(..., "--tags", help="Comma-separated key=value tags (replaces all). Use '' to clear."),
+) -> None:
+    """Set tags on a Resource (replaces all existing tags)."""
+    tag_list = []
+    if tags:
+        for pair in tags.split(","):
+            pair = pair.strip()
+            if "=" in pair:
+                k, v = pair.split("=", 1)
+                tag_list.append({"key": k.strip(), "value": v.strip()})
+    run_query(get_client(), q.UPDATE_RESOURCE_TAGS, {"itemid": itemid, "tags": tag_list}, t.get_tags_update_as_csv)
+
+
+@app.command("addApproverGroups")
+def resource_add_approver_groups(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    groupids: str = typer.Option(..., "-g", "--groupids", help="Comma-separated Group IDs to add as approvers."),
+) -> None:
+    """Add approver groups to a Resource."""
+    run_query(
+        get_client(),
+        q.ADD_APPROVER_GROUPS,
+        {"itemid": itemid, "addedApproverGroupIds": split_ids(groupids)},
+        t.get_approver_groups_update_as_csv,
+    )
+
+
+@app.command("removeApproverGroups")
+def resource_remove_approver_groups(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    groupids: str = typer.Option(..., "-g", "--groupids", help="Comma-separated Group IDs to remove as approvers."),
+) -> None:
+    """Remove approver groups from a Resource."""
+    run_query(
+        get_client(),
+        q.REMOVE_APPROVER_GROUPS,
+        {"itemid": itemid, "removedApproverGroupIds": split_ids(groupids)},
+        t.get_approver_groups_update_as_csv,
+    )
+
+
+@app.command("setApproverGroups")
+def resource_set_approver_groups(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    groupids: str = typer.Option(..., "-g", "--groupids", help="Comma-separated Group IDs (replaces all approvers)."),
+) -> None:
+    """Replace all approver groups on a Resource."""
+    run_query(
+        get_client(),
+        q.SET_APPROVER_GROUPS,
+        {"itemid": itemid, "approverGroupIds": split_ids(groupids)},
+        t.get_approver_groups_update_as_csv,
+    )
