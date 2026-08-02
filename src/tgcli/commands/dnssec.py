@@ -54,13 +54,9 @@ def dnssec_set_deny_list(
 @app.command("create")
 def dnssec_create(
     name: str = typer.Option(..., "-n", "--name", help="DNS filtering profile name."),
-    priority: float = typer.Option(None, "--priority", help="Profile priority."),
 ) -> None:
     """Create a new DNS filtering profile."""
-    variables: dict = {"name": name}
-    if priority is not None:
-        variables["priority"] = priority
-    run_query(get_client(), q.CREATE_DNS_PROFILE, variables, t.get_create_as_csv)
+    run_query(get_client(), q.CREATE_DNS_PROFILE, {"name": name}, t.get_create_as_csv)
 
 
 @app.command("delete")

@@ -40,8 +40,8 @@ SET_ALLOWED_DOMAINS = UPDATE_DNS_PROFILE
 SET_DENIED_DOMAINS = UPDATE_DNS_PROFILE
 
 CREATE_DNS_PROFILE = """
-mutation createDnsProfile($name: String!, $priority: Float) {
-  dnsFilteringProfileCreate(name: $name, priority: $priority) {
+mutation createDnsProfile($name: String!) {
+  dnsFilteringProfileCreate(name: $name) {
     ok
     error
     entity {

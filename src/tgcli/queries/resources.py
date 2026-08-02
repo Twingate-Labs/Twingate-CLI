@@ -548,8 +548,8 @@ mutation createSshResource(
   $securityPolicyId: ID!
   $groupIds: [ID!]
   $isVisible: Boolean!
-  $upstreamPort: Int
-  $downstreamPort: Int
+  $upstream: SSHUpstreamInput
+  $downstream: SSHDownstreamInput
 ) {
   sshResourceCreate(
     name: $name
@@ -559,8 +559,8 @@ mutation createSshResource(
     securityPolicyId: $securityPolicyId
     groupIds: $groupIds
     isVisible: $isVisible
-    upstreamPort: $upstreamPort
-    downstreamPort: $downstreamPort
+    upstream: $upstream
+    downstream: $downstream
   ) {
     ok
     error
@@ -580,16 +580,16 @@ mutation updateSshResource(
   $name: String
   $address: String
   $gatewayId: ID
-  $upstreamPort: Int
-  $downstreamPort: Int
+  $upstream: SSHUpstreamInput
+  $downstream: SSHDownstreamInput
 ) {
   sshResourceUpdate(
     id: $id
     name: $name
     address: $address
     gatewayId: $gatewayId
-    upstreamPort: $upstreamPort
-    downstreamPort: $downstreamPort
+    upstream: $upstream
+    downstream: $downstream
   ) {
     ok
     error
@@ -611,8 +611,8 @@ mutation createKubernetesResource(
   $securityPolicyId: ID!
   $groupIds: [ID!]
   $isVisible: Boolean!
-  $upstreamPort: Int
-  $downstreamPort: Int
+  $upstream: KubernetesUpstreamInput
+  $downstream: KubernetesDownstreamInput
 ) {
   kubernetesResourceCreate(
     name: $name
@@ -622,8 +622,8 @@ mutation createKubernetesResource(
     securityPolicyId: $securityPolicyId
     groupIds: $groupIds
     isVisible: $isVisible
-    upstreamPort: $upstreamPort
-    downstreamPort: $downstreamPort
+    upstream: $upstream
+    downstream: $downstream
   ) {
     ok
     error
@@ -643,16 +643,16 @@ mutation updateKubernetesResource(
   $name: String
   $address: String
   $gatewayId: ID
-  $upstreamPort: Int
-  $downstreamPort: Int
+  $upstream: KubernetesUpstreamInput
+  $downstream: KubernetesDownstreamInput
 ) {
   kubernetesResourceUpdate(
     id: $id
     name: $name
     address: $address
     gatewayId: $gatewayId
-    upstreamPort: $upstreamPort
-    downstreamPort: $downstreamPort
+    upstream: $upstream
+    downstream: $downstream
   ) {
     ok
     error
@@ -674,8 +674,8 @@ mutation createWebAppResource(
   $securityPolicyId: ID!
   $groupIds: [ID!]
   $isVisible: Boolean!
-  $upstreamPort: Int
-  $downstreamPort: Int
+  $upstream: WebAppUpstreamInput
+  $downstream: WebAppDownstreamInput
 ) {
   webAppResourceCreate(
     name: $name
@@ -685,8 +685,8 @@ mutation createWebAppResource(
     securityPolicyId: $securityPolicyId
     groupIds: $groupIds
     isVisible: $isVisible
-    upstreamPort: $upstreamPort
-    downstreamPort: $downstreamPort
+    upstream: $upstream
+    downstream: $downstream
   ) {
     ok
     error
@@ -706,16 +706,16 @@ mutation updateWebAppResource(
   $name: String
   $address: String
   $gatewayId: ID
-  $upstreamPort: Int
-  $downstreamPort: Int
+  $upstream: WebAppUpstreamInput
+  $downstream: WebAppDownstreamInput
 ) {
   webAppResourceUpdate(
     id: $id
     name: $name
     address: $address
     gatewayId: $gatewayId
-    upstreamPort: $upstreamPort
-    downstreamPort: $downstreamPort
+    upstream: $upstream
+    downstream: $downstream
   ) {
     ok
     error

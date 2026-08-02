@@ -426,9 +426,9 @@ def resource_create_ssh(
         "groupIds": split_ids(groupids), "isVisible": visible_bool,
     }
     if upstream is not None:
-        variables["upstreamPort"] = upstream
+        variables["upstream"] = {"port": upstream}
     if downstream is not None:
-        variables["downstreamPort"] = downstream
+        variables["downstream"] = {"port": downstream}
     run_query(get_client(), q.CREATE_SSH_RESOURCE, variables,
               lambda d: t.get_typed_create_as_csv(d, "sshResourceCreate"))
 
@@ -451,9 +451,9 @@ def resource_update_ssh(
     if gatewayid:
         variables["gatewayId"] = gatewayid
     if upstream is not None:
-        variables["upstreamPort"] = upstream
+        variables["upstream"] = {"port": upstream}
     if downstream is not None:
-        variables["downstreamPort"] = downstream
+        variables["downstream"] = {"port": downstream}
     run_query(get_client(), q.UPDATE_SSH_RESOURCE, variables,
               lambda d: t.get_typed_update_as_csv(d, "sshResourceUpdate"))
 
@@ -478,9 +478,9 @@ def resource_create_k8s(
         "groupIds": split_ids(groupids), "isVisible": visible_bool,
     }
     if upstream is not None:
-        variables["upstreamPort"] = upstream
+        variables["upstream"] = {"port": upstream}
     if downstream is not None:
-        variables["downstreamPort"] = downstream
+        variables["downstream"] = {"port": downstream}
     run_query(get_client(), q.CREATE_KUBERNETES_RESOURCE, variables,
               lambda d: t.get_typed_create_as_csv(d, "kubernetesResourceCreate"))
 
@@ -503,9 +503,9 @@ def resource_update_k8s(
     if gatewayid:
         variables["gatewayId"] = gatewayid
     if upstream is not None:
-        variables["upstreamPort"] = upstream
+        variables["upstream"] = {"port": upstream}
     if downstream is not None:
-        variables["downstreamPort"] = downstream
+        variables["downstream"] = {"port": downstream}
     run_query(get_client(), q.UPDATE_KUBERNETES_RESOURCE, variables,
               lambda d: t.get_typed_update_as_csv(d, "kubernetesResourceUpdate"))
 
@@ -530,9 +530,9 @@ def resource_create_webapp(
         "groupIds": split_ids(groupids), "isVisible": visible_bool,
     }
     if upstream is not None:
-        variables["upstreamPort"] = upstream
+        variables["upstream"] = {"port": upstream}
     if downstream is not None:
-        variables["downstreamPort"] = downstream
+        variables["downstream"] = {"port": downstream}
     run_query(get_client(), q.CREATE_WEBAPP_RESOURCE, variables,
               lambda d: t.get_typed_create_as_csv(d, "webAppResourceCreate"))
 
@@ -555,9 +555,9 @@ def resource_update_webapp(
     if gatewayid:
         variables["gatewayId"] = gatewayid
     if upstream is not None:
-        variables["upstreamPort"] = upstream
+        variables["upstream"] = {"port": upstream}
     if downstream is not None:
-        variables["downstreamPort"] = downstream
+        variables["downstream"] = {"port": downstream}
     run_query(get_client(), q.UPDATE_WEBAPP_RESOURCE, variables,
               lambda d: t.get_typed_update_as_csv(d, "webAppResourceUpdate"))
 
