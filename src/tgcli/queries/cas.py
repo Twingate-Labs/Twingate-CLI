@@ -12,11 +12,15 @@ query listCertificateAuthorities($cursor: String!) {
     }
     edges {
       node {
-        id
-        name
-        type
-        createdAt
-        updatedAt
+        ... on SSHCertificateAuthority {
+          id
+          name
+          fingerprint
+        }
+        ... on X509CertificateAuthority {
+          id
+          name
+        }
       }
     }
   }
@@ -26,11 +30,15 @@ query listCertificateAuthorities($cursor: String!) {
 SHOW_CA = """
 query getCertificateAuthority($itemID: ID!) {
   certificateAuthority(id: $itemID) {
-    id
-    name
-    type
-    createdAt
-    updatedAt
+    ... on SSHCertificateAuthority {
+      id
+      name
+      fingerprint
+    }
+    ... on X509CertificateAuthority {
+      id
+      name
+    }
   }
 }
 """
@@ -43,7 +51,7 @@ mutation createSshCA($name: String!, $publicKey: String!) {
     entity {
       id
       name
-      type
+      fingerprint
     }
   }
 }
@@ -66,7 +74,6 @@ mutation createX509CA($name: String!, $certificate: String!) {
     entity {
       id
       name
-      type
     }
   }
 }

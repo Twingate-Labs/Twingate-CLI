@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 LIST_POLICIES = """
-query listPolicies($cursor: String!, $filter: SecurityPolicyFilterInput) {
+query listPolicies($cursor: String!, $filter: SecurityPolicyFilterField) {
   securityPolicies(after: $cursor, first: null, filter: $filter) {
     totalCount
     pageInfo {

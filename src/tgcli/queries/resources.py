@@ -28,16 +28,16 @@ query listResources($cursor: String!) {
           routingMode
         }
         ... on SSHResource {
-          upstreamPort
-          downstreamPort
+          upstream { port }
+          downstream { port }
         }
         ... on KubernetesResource {
-          upstreamPort
-          downstreamPort
+          upstream { port }
+          downstream { port }
         }
         ... on WebAppResource {
-          upstreamPort
-          downstreamPort
+          upstream { port }
+          downstream { port }
         }
         tags {
           key
@@ -122,16 +122,16 @@ query getResource($itemID: ID!) {
       routingMode
     }
     ... on SSHResource {
-      upstreamPort
-      downstreamPort
+      upstream { port }
+      downstream { port }
     }
     ... on KubernetesResource {
-      upstreamPort
-      downstreamPort
+      upstream { port }
+      downstream { port }
     }
     ... on WebAppResource {
-      upstreamPort
-      downstreamPort
+      upstream { port }
+      downstream { port }
     }
     remoteNetwork {
       name

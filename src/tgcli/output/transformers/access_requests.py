@@ -8,12 +8,12 @@ from tgcli.output.transformers import generic
 
 
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
-    columns = ["id", "status", "requestor.email", "resource.name", "createdAt", "updatedAt"]
+    columns = ["id", "status", "reason", "requestedAt", "user.email", "resource.name"]
     return generic.get_list_as_csv(json_results, columns)
 
 
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["id", "status", "requestor.email", "resource.name", "createdAt", "updatedAt"]
+    columns = ["id", "status", "reason", "requestedAt", "user.email", "resource.name"]
     return generic.get_show_as_csv_no_nesting(json_results, "accessRequest", columns)
 
 

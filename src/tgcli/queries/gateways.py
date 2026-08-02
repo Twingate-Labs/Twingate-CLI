@@ -13,11 +13,16 @@ query listGateways($cursor: String!) {
     edges {
       node {
         id
-        name
         address
-        createdAt
-        updatedAt
         remoteNetwork {
+          id
+          name
+        }
+        sshCA {
+          id
+          name
+        }
+        x509CA {
           id
           name
         }
@@ -31,11 +36,16 @@ SHOW_GATEWAY = """
 query getGateway($itemID: ID!) {
   gateway(id: $itemID) {
     id
-    name
     address
-    createdAt
-    updatedAt
     remoteNetwork {
+      id
+      name
+    }
+    sshCA {
+      id
+      name
+    }
+    x509CA {
       id
       name
     }
@@ -50,7 +60,6 @@ mutation createGateway($address: String!, $remoteNetworkId: ID!, $sshCAId: ID, $
     error
     entity {
       id
-      name
       address
       remoteNetwork {
         id
@@ -77,7 +86,6 @@ mutation updateGateway($id: ID!, $address: String, $remoteNetworkId: ID, $sshCAI
     error
     entity {
       id
-      name
       address
       remoteNetwork {
         id

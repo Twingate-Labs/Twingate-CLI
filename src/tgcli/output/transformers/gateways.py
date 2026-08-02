@@ -8,17 +8,17 @@ from tgcli.output.transformers import generic
 
 
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
-    columns = ["id", "name", "address", "remoteNetwork.id", "remoteNetwork.name"]
+    columns = ["id", "address", "remoteNetwork.id", "remoteNetwork.name"]
     return generic.get_list_as_csv(json_results, columns)
 
 
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["id", "name", "address", "remoteNetwork.id", "remoteNetwork.name"]
+    columns = ["id", "address", "remoteNetwork.id", "remoteNetwork.name"]
     return generic.get_show_as_csv_no_nesting(json_results, "gateway", columns)
 
 
 def get_create_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["ok", "error", "id", "name", "address"]
+    columns = ["ok", "error", "id", "address"]
     return generic.get_update_as_csv_no_nesting(json_results, "gatewayCreate", columns)
 
 
@@ -28,5 +28,5 @@ def get_delete_as_csv(json_results: dict) -> pd.DataFrame:
 
 
 def get_update_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["ok", "error", "id", "name", "address"]
+    columns = ["ok", "error", "id", "address"]
     return generic.get_update_as_csv_no_nesting(json_results, "gatewayUpdate", columns)

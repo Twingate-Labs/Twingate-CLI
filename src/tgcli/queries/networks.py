@@ -39,7 +39,6 @@ query listNetworks($cursor: String!) {
           edges {
             node {
               id
-              name
             }
           }
         }
@@ -79,7 +78,6 @@ query getObj($itemID: ID!) {
       edges {
         node {
           id
-          name
         }
       }
     }
@@ -178,7 +176,6 @@ query getNetworkByName($name: String!) {
       edges {
         node {
           id
-          name
         }
       }
     }

@@ -14,9 +14,9 @@ query listAccessRequests($cursor: String!) {
       node {
         id
         status
-        createdAt
-        updatedAt
-        requestor {
+        reason
+        requestedAt
+        user {
           id
           email
         }
@@ -35,9 +35,9 @@ query getAccessRequest($itemID: ID!) {
   accessRequest(id: $itemID) {
     id
     status
-    createdAt
-    updatedAt
-    requestor {
+    reason
+    requestedAt
+    user {
       id
       email
     }
