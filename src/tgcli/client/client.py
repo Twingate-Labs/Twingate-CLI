@@ -48,6 +48,7 @@ class TwingateClient:
         self.session = session
         self._token: str | None = None
         self._url: str | None = None
+        self._http = requests.Session()
 
     # ------------------------------------------------------------------
     # Credential resolution (lazy — avoids keyring call if not needed)
@@ -144,7 +145,7 @@ class TwingateClient:
         logger.debug("POST %s  variables=%s", self.url, variables)
 
         try:
-            response = requests.post(
+            response = self._http.post(
                 self.url,
                 json=payload,
                 headers=self._headers(),

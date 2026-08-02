@@ -42,6 +42,14 @@ def connector_create(
     )
 
 
+@app.command("delete")
+def connector_delete(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
+) -> None:
+    """Permanently delete a Connector."""
+    run_query(get_client(), q.DELETE_CONNECTOR, {"id": itemid}, t.get_update_as_csv)
+
+
 @app.command("rename")
 def connector_rename(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),

@@ -5,6 +5,7 @@ from __future__ import annotations
 LIST_CONNECTORS = """
 query listObj($cursor: String!) {
   connectors(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -96,6 +97,15 @@ mutation ObjUpd($id: ID!, $hasStatusNotificationsEnabled: Boolean!) {
       name
       hasStatusNotificationsEnabled
     }
+  }
+}
+"""
+
+DELETE_CONNECTOR = """
+mutation connectorDelete($id: ID!) {
+  connectorDelete(id: $id) {
+    ok
+    error
   }
 }
 """

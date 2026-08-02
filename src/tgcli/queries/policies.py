@@ -5,6 +5,7 @@ from __future__ import annotations
 LIST_POLICIES = """
 query listObj($cursor: String!) {
   securityPolicies(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage

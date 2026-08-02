@@ -6,6 +6,7 @@ LIST_DEVICES = """
 query listGroup($cursor: String!)
 {
   devices(after: $cursor, first:null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -132,6 +133,7 @@ mutation updateDevice($deviceID: ID!) {
 LIST_SERIAL_NUMBERS = """
 query PM_GetListOfSerialNumbers($cursor: String!) {
   serialNumbers(after: $cursor) {
+    totalCount
     edges {
       node {
         id

@@ -5,6 +5,7 @@ from __future__ import annotations
 LIST_NETWORKS = """
 query listGroup($cursor: String!) {
   remoteNetworks(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage

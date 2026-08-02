@@ -5,6 +5,7 @@ from __future__ import annotations
 LIST_GROUPS = """
 query listGroup($cursor: String!) {
   groups(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage

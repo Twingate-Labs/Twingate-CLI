@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 LIST_ACCOUNTS = """
-{
-  serviceAccounts(after: null, first: null) {
+query listServiceAccounts($cursor: String!) {
+  serviceAccounts(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
