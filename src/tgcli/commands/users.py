@@ -96,3 +96,18 @@ def user_reset_mfa(
 ) -> None:
     """Reset MFA for a User."""
     run_query(get_client(), q.RESET_USER_MFA, {"itemid": itemid}, t.get_reset_mfa_as_csv)
+
+
+@app.command("updateName")
+def user_update_name(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="User ID."),
+    firstname: str = typer.Option("", "-f", "--firstname", help="New first name."),
+    lastname: str = typer.Option("", "-l", "--lastname", help="New last name."),
+) -> None:
+    """Update a User's first and/or last name."""
+    variables: dict = {"userID": itemid}
+    if firstname:
+        variables["firstName"] = firstname
+    if lastname:
+        variables["lastName"] = lastname
+    run_query(get_client(), q.UPDATE_USER_NAME, variables, t.get_update_name_as_csv)

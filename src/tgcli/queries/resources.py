@@ -20,7 +20,10 @@ query listResources($cursor: String!) {
         updatedAt
         isVisible
         isBrowserShortcutEnabled
-        usageBasedAutolockDurationDays
+        accessPolicy {
+          mode
+          durationSeconds
+        }
         ... on NetworkResource {
           routingMode
         }
@@ -90,7 +93,10 @@ query getResource($itemID: ID!) {
     updatedAt
     isVisible
     isBrowserShortcutEnabled
-    usageBasedAutolockDurationDays
+    accessPolicy {
+      mode
+      durationSeconds
+    }
     isActive
     ... on NetworkResource {
       routingMode
@@ -120,12 +126,34 @@ query getResource($itemID: ID!) {
         }
       }
     }
+    tags {
+      key
+      value
+    }
+    access {
+      edges {
+        node {
+          ... on Group {
+            id
+            name
+          }
+          ... on ServiceAccount {
+            id
+            name
+          }
+        }
+        securityPolicy {
+          id
+          name
+        }
+      }
+    }
   }
 }
 """
 
 CREATE_RESOURCE = """
-mutation ObjCreate(
+mutation createResource(
   $address: String!
   $alias: String
   $name: String!
@@ -135,6 +163,7 @@ mutation ObjCreate(
   $securityPolicyId: ID!
   $isVisible: Boolean!
   $routingMode: RoutingMode
+  $tags: [TagInput!]
 ) {
   resourceCreate(
     protocols: $protocols
@@ -146,6 +175,7 @@ mutation ObjCreate(
     securityPolicyId: $securityPolicyId
     isVisible: $isVisible
     routingMode: $routingMode
+    tags: $tags
   ) {
     ok
     error
@@ -163,7 +193,7 @@ mutation ObjCreate(
 """
 
 DELETE_RESOURCE = """
-mutation ObjDelete($id: ID!) {
+mutation deleteResource($id: ID!) {
   resourceDelete(id: $id) {
     ok
     error
@@ -172,7 +202,7 @@ mutation ObjDelete($id: ID!) {
 """
 
 ASSIGN_NETWORK_TO_RESOURCE = """
-mutation ObjUpdate($itemid: ID!, $networkid: ID!) {
+mutation assignNetworkToResource($itemid: ID!, $networkid: ID!) {
   resourceUpdate(id: $itemid, remoteNetworkId: $networkid) {
     ok
     error
@@ -194,7 +224,7 @@ mutation ObjUpdate($itemid: ID!, $networkid: ID!) {
 """
 
 TOGGLE_RESOURCE_VISIBILITY = """
-mutation ObjUpdate($itemid: ID!, $visibility: Boolean!) {
+mutation toggleResourceVisibility($itemid: ID!, $visibility: Boolean!) {
   resourceUpdate(id: $itemid, isVisible: $visibility) {
     ok
     error
@@ -209,7 +239,7 @@ mutation ObjUpdate($itemid: ID!, $visibility: Boolean!) {
 """
 
 UPDATE_RESOURCE_ADDRESS = """
-mutation ObjUpdate($itemid: ID!, $address: String!) {
+mutation updateResourceAddress($itemid: ID!, $address: String!) {
   resourceUpdate(id: $itemid, address: $address) {
     ok
     error
@@ -217,7 +247,10 @@ mutation ObjUpdate($itemid: ID!, $address: String!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       address {
         type
         value
@@ -232,7 +265,7 @@ mutation ObjUpdate($itemid: ID!, $address: String!) {
 """
 
 UPDATE_RESOURCE_ALIAS = """
-mutation ObjUpdate($itemid: ID!, $alias: String!) {
+mutation updateResourceAlias($itemid: ID!, $alias: String!) {
   resourceUpdate(id: $itemid, alias: $alias) {
     ok
     error
@@ -240,7 +273,10 @@ mutation ObjUpdate($itemid: ID!, $alias: String!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       address {
         type
         value
@@ -255,7 +291,7 @@ mutation ObjUpdate($itemid: ID!, $alias: String!) {
 """
 
 UPDATE_RESOURCE_POLICY = """
-mutation ObjUpdate($itemid: ID!, $securityPolicyId: ID!) {
+mutation updateResourcePolicy($itemid: ID!, $securityPolicyId: ID!) {
   resourceUpdate(id: $itemid, securityPolicyId: $securityPolicyId) {
     ok
     error
@@ -263,7 +299,10 @@ mutation ObjUpdate($itemid: ID!, $securityPolicyId: ID!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       securityPolicy {
         id
       }
@@ -273,15 +312,17 @@ mutation ObjUpdate($itemid: ID!, $securityPolicyId: ID!) {
 """
 
 UPDATE_RESOURCE_AUTOLOCK = """
-mutation ObjUpdate($itemid: ID!, $autolock: Int, $autoapprovemode: AccessApprovalMode!) {
-  resourceUpdate(id: $itemid, usageBasedAutolockDurationDays: $autolock, approvalMode: $autoapprovemode) {
+mutation updateResourceAccessPolicy($itemid: ID!, $accessPolicy: AccessPolicyInput!, $autoapprovemode: AccessApprovalMode!) {
+  resourceUpdate(id: $itemid, accessPolicy: $accessPolicy, approvalMode: $autoapprovemode) {
     ok
     error
     entity {
       id
       name
-      alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       approvalMode
       address {
         type
@@ -297,7 +338,7 @@ mutation ObjUpdate($itemid: ID!, $autolock: Int, $autoapprovemode: AccessApprova
 """
 
 UPDATE_RESOURCE_AUTOAPPROVE = """
-mutation ObjUpdate($itemid: ID!, $autoapprovemode: AccessApprovalMode!) {
+mutation updateResourceAutoApprove($itemid: ID!, $autoapprovemode: AccessApprovalMode!) {
   resourceUpdate(id: $itemid, approvalMode: $autoapprovemode) {
     ok
     error
@@ -305,7 +346,10 @@ mutation ObjUpdate($itemid: ID!, $autoapprovemode: AccessApprovalMode!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       approvalMode
       address {
         type
@@ -321,7 +365,7 @@ mutation ObjUpdate($itemid: ID!, $autoapprovemode: AccessApprovalMode!) {
 """
 
 RESOURCE_ACCESS_SET = """
-mutation ObjUpdate($accessids: [AccessInput!]!, $itemid: ID!) {
+mutation setResourceAccess($accessids: [AccessInput!]!, $itemid: ID!) {
   resourceAccessSet(access: $accessids, resourceId: $itemid) {
     ok
     error
@@ -336,7 +380,7 @@ mutation ObjUpdate($accessids: [AccessInput!]!, $itemid: ID!) {
 """
 
 RESOURCE_ACCESS_ADD = """
-mutation ObjUpdate($accessids: [AccessInput!]!, $itemid: ID!) {
+mutation addResourceAccess($accessids: [AccessInput!]!, $itemid: ID!) {
   resourceAccessAdd(access: $accessids, resourceId: $itemid) {
     ok
     error
@@ -351,7 +395,7 @@ mutation ObjUpdate($accessids: [AccessInput!]!, $itemid: ID!) {
 """
 
 RESOURCE_ACCESS_REMOVE = """
-mutation ObjUpdate($itemid: ID!, $groupid: [ID!]!) {
+mutation removeResourceAccess($itemid: ID!, $groupid: [ID!]!) {
   resourceAccessRemove(principalIds: $groupid, resourceId: $itemid) {
     ok
     error
@@ -363,7 +407,7 @@ mutation ObjUpdate($itemid: ID!, $groupid: [ID!]!) {
 """
 
 UPDATE_RESOURCE_ROUTING_MODE = """
-mutation ObjUpdate($itemid: ID!, $routingMode: RoutingMode!) {
+mutation updateResourceRoutingMode($itemid: ID!, $routingMode: RoutingMode!) {
   resourceUpdate(id: $itemid, routingMode: $routingMode) {
     ok
     error
@@ -377,7 +421,7 @@ mutation ObjUpdate($itemid: ID!, $routingMode: RoutingMode!) {
 """
 
 DISABLE_RESOURCE = """
-mutation ObjUpdate($itemid: ID!) {
+mutation disableResource($itemid: ID!) {
   resourceUpdate(id: $itemid, isActive: false) {
     ok
     error
@@ -391,7 +435,7 @@ mutation ObjUpdate($itemid: ID!) {
 """
 
 ENABLE_RESOURCE = """
-mutation ObjUpdate($itemid: ID!) {
+mutation enableResource($itemid: ID!) {
   resourceUpdate(id: $itemid, isActive: true) {
     ok
     error
@@ -399,6 +443,57 @@ mutation ObjUpdate($itemid: ID!) {
       id
       name
       isActive
+    }
+  }
+}
+"""
+
+RENAME_RESOURCE = """
+mutation renameResource($itemid: ID!, $name: String!) {
+  resourceUpdate(id: $itemid, name: $name) {
+    ok
+    error
+    entity {
+      id
+      name
+    }
+  }
+}
+"""
+
+UPDATE_RESOURCE_PROTOCOLS = """
+mutation updateResourceProtocols($itemid: ID!, $protocols: ProtocolsInput!) {
+  resourceUpdate(id: $itemid, protocols: $protocols) {
+    ok
+    error
+    entity {
+      id
+      name
+      protocols {
+        allowIcmp
+        tcp {
+          policy
+          ports { start end }
+        }
+        udp {
+          policy
+          ports { start end }
+        }
+      }
+    }
+  }
+}
+"""
+
+UPDATE_RESOURCE_BROWSER_SHORTCUT = """
+mutation updateResourceBrowserShortcut($itemid: ID!, $isBrowserShortcutEnabled: Boolean!) {
+  resourceUpdate(id: $itemid, isBrowserShortcutEnabled: $isBrowserShortcutEnabled) {
+    ok
+    error
+    entity {
+      id
+      name
+      isBrowserShortcutEnabled
     }
   }
 }

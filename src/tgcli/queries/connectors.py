@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 LIST_CONNECTORS = """
-query listObj($cursor: String!) {
-  connectors(after: $cursor, first: null) {
+query listConnectors($cursor: String!, $filter: ConnectorFilterInput) {
+  connectors(after: $cursor, first: null, filter: $filter) {
     totalCount
     pageInfo {
       endCursor
@@ -74,7 +74,7 @@ mutation connectorCreate($connName: String!, $remoteNetworkID: ID!, $statNotific
 """
 
 RENAME_CONNECTOR = """
-mutation ObjRename($id: ID!, $name: String!) {
+mutation renameConnector($id: ID!, $name: String!) {
   connectorUpdate(id: $id, name: $name) {
     ok
     error
@@ -88,7 +88,7 @@ mutation ObjRename($id: ID!, $name: String!) {
 """
 
 UPDATE_CONNECTOR_NOTIFICATIONS = """
-mutation ObjUpd($id: ID!, $hasStatusNotificationsEnabled: Boolean!) {
+mutation updateConnectorNotifications($id: ID!, $hasStatusNotificationsEnabled: Boolean!) {
   connectorUpdate(id: $id, hasStatusNotificationsEnabled: $hasStatusNotificationsEnabled) {
     ok
     error

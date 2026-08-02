@@ -8,12 +8,12 @@ from tgcli.output.transformers import generic
 
 
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
-    columns = ["id", "firstName", "lastName", "email", "role", "state", "groups"]
+    columns = ["id", "firstName", "lastName", "email", "role", "state", "type", "groups"]
     return generic.get_list_as_csv(json_results, columns)
 
 
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["id", "firstName", "lastName", "email", "role", "state", "groups"]
+    columns = ["id", "firstName", "lastName", "email", "role", "state", "type", "groups"]
     return generic.get_show_as_csv_no_nesting(json_results, "user", columns)
 
 
@@ -40,3 +40,8 @@ def get_delete_as_csv(json_results: dict) -> pd.DataFrame:
 def get_reset_mfa_as_csv(json_results: dict) -> pd.DataFrame:
     columns = ["ok", "error"]
     return generic.get_update_as_csv_no_nesting(json_results, "userResetMfa", columns)
+
+
+def get_update_name_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "firstName", "lastName", "email", "role", "state"]
+    return generic.get_update_as_csv_no_nesting(json_results, "userDetailsUpdate", columns)

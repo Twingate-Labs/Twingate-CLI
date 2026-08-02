@@ -81,7 +81,7 @@ def get_posture_as_csv(json_results: dict) -> pd.DataFrame:
     os_data = posture.get("osVersion") or {}
     data.append(["osVersion", os_data.get("isSatisfied"), os_data.get("version")])
 
-    for check in ["crowdstrike", "jamf", "kandji", "inTune", "sentinelOne", "onePassword"]:
+    for check in ["crowdstrike", "jamf", "iru", "inTune", "sentinelOne", "onePassword"]:
         d = posture.get(check) or {}
         if d:
             detail = d.get("failureReason") or d.get("failureDetails") or d.get("expiredAt") or ""

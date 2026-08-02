@@ -18,6 +18,12 @@ query listGroup($cursor: String!) {
         updatedAt
         isActive
         type
+        originId
+        securityPolicy {
+          id
+          name
+          policyType
+        }
         users {
           edges {
             node {
@@ -56,6 +62,12 @@ query getObj($itemID: ID!) {
     updatedAt
     isActive
     type
+    originId
+    securityPolicy {
+      id
+      name
+      policyType
+    }
     users {
       edges {
         node {
@@ -293,6 +305,36 @@ mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {
           }
         }
       }
+    }
+  }
+}
+"""
+
+RENAME_GROUP = """
+mutation renameGroup($groupID: ID!, $name: String!) {
+  groupUpdate(id: $groupID, name: $name) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+      type
+    }
+  }
+}
+"""
+
+UPDATE_GROUP_STATE = """
+mutation updateGroupState($groupID: ID!, $isActive: Boolean!) {
+  groupUpdate(id: $groupID, isActive: $isActive) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+      type
     }
   }
 }

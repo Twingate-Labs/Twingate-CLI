@@ -21,7 +21,7 @@ query getSAK($itemID: ID!) {
 """
 
 CREATE_KEY = """
-mutation ObjCreate($name: String!, $serviceAccountId: ID!, $expirationTime: Int!) {
+mutation createServiceAccountKey($name: String!, $serviceAccountId: ID!, $expirationTime: Int!) {
   serviceAccountKeyCreate(
     name: $name
     serviceAccountId: $serviceAccountId
@@ -60,7 +60,7 @@ mutation revokeServiceAccountKey($id: ID!) {
 """
 
 RENAME_KEY = """
-mutation ObjRename($id: ID!, $name: String!) {
+mutation renameServiceAccountKey($id: ID!, $name: String!) {
   serviceAccountKeyUpdate(id: $id, name: $name) {
     ok
     error

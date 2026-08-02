@@ -42,11 +42,11 @@ class TestParseBoolString:
 
 
 class TestValidateUserRole:
-    @pytest.mark.parametrize("role", ["ADMIN", "DEVOPS", "SUPPORT", "MEMBER"])
+    @pytest.mark.parametrize("role", ["ADMIN", "DEVOPS", "SUPPORT", "MEMBER", "ACCESS_REVIEWER", "BILLING"])
     def test_valid_role_uppercase(self, role):
         assert validate_user_role(role) == role
 
-    @pytest.mark.parametrize("role", ["admin", "devops", "support", "member"])
+    @pytest.mark.parametrize("role", ["admin", "devops", "support", "member", "access_reviewer", "billing"])
     def test_valid_role_lowercase_normalised(self, role):
         assert validate_user_role(role) == role.upper()
 

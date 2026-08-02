@@ -72,17 +72,20 @@ def global_callback(
 
 def _register_commands() -> None:
     from tgcli.commands import (
+        access_requests,
+        accounts,
         auth,
+        cas,
         connectors,
         devices,
         dnssec,
+        gateways,
         groups,
         keys,
         mappings,
         networks,
         policies,
         resources,
-        accounts,
         users,
     )
 
@@ -98,6 +101,9 @@ def _register_commands() -> None:
     app.add_typer(policies.app, name="policy")
     app.add_typer(dnssec.app, name="dnssec")
     app.add_typer(mappings.app, name="mappings")
+    app.add_typer(cas.app, name="ca")
+    app.add_typer(gateways.app, name="gateway")
+    app.add_typer(access_requests.app, name="access-request")
 
 
 _register_commands()

@@ -30,3 +30,8 @@ def get_delete_as_csv(json_results: dict) -> pd.DataFrame:
 def get_add_remove_resources_as_csv(json_results: dict) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name", "resources"]
     return generic.get_update_as_csv_no_nesting(json_results, "serviceAccountUpdate", columns)
+
+
+def get_rename_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "serviceAccountUpdate", columns)

@@ -16,6 +16,7 @@ query listUsers($cursor: String!) {
         state
         email
         role
+        type
         lastName
         firstName
         createdAt
@@ -40,6 +41,7 @@ query getObj($itemID: ID!) {
     state
     email
     role
+    type
     lastName
     firstName
     createdAt
@@ -146,6 +148,25 @@ mutation userResetMfa($itemid: ID!) {
   userResetMfa(id: $itemid) {
     ok
     error
+  }
+}
+"""
+
+UPDATE_USER_NAME = """
+mutation updateUserName($userID: ID!, $firstName: String, $lastName: String) {
+  userDetailsUpdate(id: $userID, firstName: $firstName, lastName: $lastName) {
+    ok
+    error
+    entity {
+      id
+      state
+      email
+      role
+      lastName
+      firstName
+      createdAt
+      updatedAt
+    }
   }
 }
 """

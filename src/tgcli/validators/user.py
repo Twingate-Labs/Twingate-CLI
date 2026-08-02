@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-VALID_ROLES = ("ADMIN", "DEVOPS", "SUPPORT", "MEMBER")
+VALID_ROLES = ("ADMIN", "DEVOPS", "SUPPORT", "MEMBER", "ACCESS_REVIEWER", "BILLING")
 VALID_STATES = ("DISABLED", "ACTIVE")
 
 

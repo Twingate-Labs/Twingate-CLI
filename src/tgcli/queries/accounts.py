@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 LIST_ACCOUNTS = """
-query listServiceAccounts($cursor: String!) {
-  serviceAccounts(after: $cursor, first: null) {
+query listServiceAccounts($cursor: String!, $filter: ServiceAccountFilterInput) {
+  serviceAccounts(after: $cursor, first: null, filter: $filter) {
     totalCount
     pageInfo {
       endCursor
@@ -76,7 +76,7 @@ query getObj($itemID: ID!) {
 """
 
 CREATE_ACCOUNT = """
-mutation ObjCreate($name: String!, $resourceIds: [ID!]) {
+mutation createServiceAccount($name: String!, $resourceIds: [ID!]) {
   serviceAccountCreate(name: $name, resourceIds: $resourceIds) {
     ok
     error
@@ -138,6 +138,19 @@ mutation removeResToSAccount($id: ID!, $resourceIDS: [ID!]) {
           }
         }
       }
+    }
+  }
+}
+"""
+
+RENAME_ACCOUNT = """
+mutation renameServiceAccount($id: ID!, $name: String!) {
+  serviceAccountUpdate(id: $id, name: $name) {
+    ok
+    error
+    entity {
+      id
+      name
     }
   }
 }

@@ -8,12 +8,12 @@ from tgcli.output.transformers import generic
 
 
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
-    columns = ["id", "name", "isActive", "type", "users", "resources"]
+    columns = ["id", "name", "isActive", "type", "originId", "securityPolicy.name", "users", "resources"]
     return generic.get_list_as_csv(json_results, columns)
 
 
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["id", "name", "isActive", "type", "users", "resources"]
+    columns = ["id", "name", "isActive", "type", "originId", "securityPolicy.name", "users", "resources"]
     return generic.get_show_as_csv_no_nesting(json_results, "group", columns)
 
 
@@ -42,4 +42,14 @@ def get_assign_policy_as_csv(json_results: dict) -> pd.DataFrame:
         "ok", "error", "id", "name",
         "securityPolicy.id", "securityPolicy.name", "securityPolicy.policyType",
     ]
+    return generic.get_update_as_csv_no_nesting(json_results, "groupUpdate", columns)
+
+
+def get_rename_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "isActive", "type"]
+    return generic.get_update_as_csv_no_nesting(json_results, "groupUpdate", columns)
+
+
+def get_update_state_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "isActive", "type"]
     return generic.get_update_as_csv_no_nesting(json_results, "groupUpdate", columns)

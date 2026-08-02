@@ -115,6 +115,36 @@ def group_remove_resources(
     )
 
 
+@app.command("rename")
+def group_rename(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    name: str = typer.Option(..., "-n", "--name", help="New Group name."),
+) -> None:
+    """Rename a Group."""
+    run_query(
+        get_client(),
+        q.RENAME_GROUP,
+        {"groupID": groupid, "name": name},
+        t.get_rename_as_csv,
+    )
+
+
+@app.command("setState")
+def group_set_state(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    active: str = typer.Option(..., "-a", "--active", help="Active state: true or false."),
+) -> None:
+    """Activate or deactivate a Group."""
+    from tgcli.validators.generic import parse_bool_string
+    active_bool = parse_bool_string(active)
+    run_query(
+        get_client(),
+        q.UPDATE_GROUP_STATE,
+        {"groupID": groupid, "isActive": active_bool},
+        t.get_update_state_as_csv,
+    )
+
+
 @app.command("migrate")
 def group_migrate(
     execute: bool = typer.Option(False, "--execute", help="Apply changes. Without this flag, only a dry run is performed."),

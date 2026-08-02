@@ -44,10 +44,10 @@ logger = logging.getLogger(__name__)
 class TwingateClient:
     """HTTP client for the Twingate Admin GraphQL API."""
 
-    def __init__(self, session: str) -> None:
+    def __init__(self, session: str, token: str | None = None, url: str | None = None) -> None:
         self.session = session
-        self._token: str | None = None
-        self._url: str | None = None
+        self._token: str | None = token
+        self._url: str | None = url
         self._http = requests.Session()
 
     # ------------------------------------------------------------------
@@ -71,6 +71,21 @@ class TwingateClient:
             "X-API-KEY": self.token,
             "User-agent": USER_AGENT,
         }
+
+    # ------------------------------------------------------------------
+    # Public single-shot execute (no throttle retry)
+    # ------------------------------------------------------------------
+
+    def execute_once(
+        self,
+        query: str,
+        variables: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Execute a single GraphQL call without throttle retry.
+
+        Useful when the caller manages its own retry/progress logic.
+        """
+        return self._execute_once(query, variables)
 
     # ------------------------------------------------------------------
     # Core execute — throttle retry wrapper around the single-shot call

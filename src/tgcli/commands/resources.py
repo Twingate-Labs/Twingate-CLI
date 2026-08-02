@@ -35,8 +35,7 @@ def _build_access_array(
     if serviceid:
         for sid in split_ids(serviceid):
             entry: dict = {"principalId": sid, "securityPolicyId": None}
-            if autolockdays:
-                entry["usageBasedAutolockDurationDays"] = autolockdays
+
             if expiresat:
                 entry["expiresAt"] = expiresat
             access_array.append(entry)
@@ -54,8 +53,7 @@ def _build_access_array(
         for idx, gid in enumerate(gids):
             pol = pols[idx] if len(pols) > 1 else pols[0]
             entry = {"principalId": gid, "securityPolicyId": pol or None}
-            if autolockdays:
-                entry["usageBasedAutolockDurationDays"] = autolockdays
+
             if expiresat:
                 entry["expiresAt"] = expiresat
             access_array.append(entry)
@@ -109,6 +107,7 @@ def resource_create(
             "(traffic bypasses Twingate and connects directly)."
         ),
     ),
+    tags: str = typer.Option("", "--tags", help="Comma-separated key=value tags, e.g. env=prod,team=backend."),
 ) -> None:
     """Create a new Resource."""
     visible_bool = parse_bool_string(isvisible)
@@ -119,6 +118,12 @@ def resource_create(
     validate_range_with_policy(tcp_ports, tcp_policy)
     validate_range_with_policy(udp_ports, udp_policy)
     routing_mode = validate_routing_mode(routingmode)
+
+    tag_list = []
+    if tags:
+        for pair in tags.split(","):
+            k, v = pair.split("=", 1)
+            tag_list.append({"key": k.strip(), "value": v.strip()})
 
     variables = {
         "address": address,
@@ -134,6 +139,7 @@ def resource_create(
             "tcp": {"policy": tcp_policy, "ports": tcp_ports},
             "udp": {"policy": udp_policy, "ports": udp_ports},
         },
+        "tags": tag_list or None,
     }
     run_query(get_client(), q.CREATE_RESOURCE, variables, t.get_create_as_csv)
 
@@ -244,16 +250,18 @@ def resource_routing(
 def resource_autolock(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     autolock: int = typer.Option(..., "-a", "--autolock", help="Autolock duration in days (1–365, or -1 to disable)."),
+    mode: str = typer.Option("AUTO_LOCK", "-m", "--mode", help="Access policy mode: MANUAL, AUTO_LOCK, or ACCESS_REQUEST."),
     autoapprove: str = typer.Option("False", "-r", "--autoapprove", help="Auto-approve mode: true (AUTOMATIC) or false (MANUAL)."),
 ) -> None:
-    """Update usage-based autolock duration for a Resource."""
+    """Update access policy for a Resource."""
     approve_bool = parse_bool_string(autoapprove)
     approve_mode = "AUTOMATIC" if approve_bool else "MANUAL"
-    autolock_val = None if autolock == -1 else autolock
+    duration_seconds = autolock * 86400 if autolock != -1 else None
+    access_policy = {"mode": mode, "durationSeconds": duration_seconds}
     run_query(
         get_client(),
         q.UPDATE_RESOURCE_AUTOLOCK,
-        {"itemid": itemid, "autolock": autolock_val, "autoapprovemode": approve_mode},
+        {"itemid": itemid, "accessPolicy": access_policy, "autoapprovemode": approve_mode},
         t.get_autolock_update_as_csv,
     )
 
@@ -271,6 +279,61 @@ def resource_autoapprove(
         q.UPDATE_RESOURCE_AUTOAPPROVE,
         {"itemid": itemid, "autoapprovemode": approve_mode},
         t.get_autolock_update_as_csv,
+    )
+
+
+@app.command("rename")
+def resource_rename(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    name: str = typer.Option(..., "-n", "--name", help="New Resource name."),
+) -> None:
+    """Rename a Resource."""
+    run_query(get_client(), q.RENAME_RESOURCE, {"itemid": itemid, "name": name}, t.get_rename_as_csv)
+
+
+@app.command("protocols")
+def resource_protocols(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    tcppolicy: str = typer.Option("ALLOW_ALL", "-t", "--tcppolicy", help="TCP policy: ALLOW_ALL or RESTRICTED."),
+    tcprange: str = typer.Option("[]", "-c", "--tcprange", help="TCP port ranges e.g. [[22,22],[443,446]]."),
+    udppolicy: str = typer.Option("ALLOW_ALL", "-u", "--udppolicy", help="UDP policy: ALLOW_ALL or RESTRICTED."),
+    udprange: str = typer.Option("[]", "-d", "--udprange", help="UDP port ranges e.g. [[53,53]]."),
+    icmp: bool = typer.Option(False, "--no-icmp", help="Disallow ICMP protocol."),
+) -> None:
+    """Update protocol restrictions for a Resource."""
+    tcp_policy = validate_protocol_policy(tcppolicy)
+    udp_policy = validate_protocol_policy(udppolicy)
+    tcp_ports = validate_port_range(tcprange)
+    udp_ports = validate_port_range(udprange)
+    validate_range_with_policy(tcp_ports, tcp_policy)
+    validate_range_with_policy(udp_ports, udp_policy)
+    run_query(
+        get_client(),
+        q.UPDATE_RESOURCE_PROTOCOLS,
+        {
+            "itemid": itemid,
+            "protocols": {
+                "allowIcmp": not icmp,
+                "tcp": {"policy": tcp_policy, "ports": tcp_ports},
+                "udp": {"policy": udp_policy, "ports": udp_ports},
+            },
+        },
+        t.get_protocols_update_as_csv,
+    )
+
+
+@app.command("browserShortcut")
+def resource_browser_shortcut(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    enabled: str = typer.Option(..., "-e", "--enabled", help="Enable browser shortcut: true or false."),
+) -> None:
+    """Toggle the browser shortcut for a Resource."""
+    enabled_bool = parse_bool_string(enabled)
+    run_query(
+        get_client(),
+        q.UPDATE_RESOURCE_BROWSER_SHORTCUT,
+        {"itemid": itemid, "isBrowserShortcutEnabled": enabled_bool},
+        t.get_browser_shortcut_update_as_csv,
     )
 
 

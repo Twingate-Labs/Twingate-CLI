@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 LIST_DEVICES = """
-query listDevices($cursor: String!)
+query listDevices($cursor: String!, $filter: DeviceFilterInput)
 {
-  devices(after: $cursor, first:null) {
+  devices(after: $cursor, first:null, filter: $filter) {
     totalCount
     pageInfo {
       endCursor
@@ -206,7 +206,7 @@ query getDevicePosture($deviceID: ID!) {
       osVersion           { isSatisfied version  }
       crowdstrike   { isVerified failureReason expiredAt failureDetails }
       jamf          { isVerified failureReason expiredAt failureDetails }
-      kandji        { isVerified failureReason expiredAt failureDetails }
+      iru           { isVerified failureReason expiredAt failureDetails }
       inTune        { isVerified failureReason expiredAt failureDetails }
       sentinelOne   { isVerified failureReason expiredAt failureDetails }
       onePassword   { isVerified failureReason expiredAt failureDetails }

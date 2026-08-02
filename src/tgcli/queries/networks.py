@@ -17,6 +17,7 @@ query listNetworks($cursor: String!) {
         updatedAt
         createdAt
         isActive
+        networkType
         connectors {
           edges {
             node {
@@ -26,6 +27,14 @@ query listNetworks($cursor: String!) {
           }
         }
         resources {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+        gateways {
           edges {
             node {
               id
@@ -47,6 +56,7 @@ query getObj($itemID: ID!) {
     updatedAt
     createdAt
     isActive
+    networkType
     connectors {
       edges {
         node {
@@ -63,12 +73,20 @@ query getObj($itemID: ID!) {
         }
       }
     }
+    gateways {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
   }
 }
 """
 
 CREATE_NETWORK = """
-mutation ObjCreate($name: String!, $location: RemoteNetworkLocation!, $isactive: Boolean!) {
+mutation createRemoteNetwork($name: String!, $location: RemoteNetworkLocation!, $isactive: Boolean!) {
   remoteNetworkCreate(name: $name, location: $location, isActive: $isactive) {
     ok
     error
@@ -81,7 +99,7 @@ mutation ObjCreate($name: String!, $location: RemoteNetworkLocation!, $isactive:
 """
 
 DELETE_NETWORK = """
-mutation ObjDelete($id: ID!) {
+mutation deleteRemoteNetwork($id: ID!) {
   remoteNetworkDelete(id: $id) {
     ok
     error
@@ -123,6 +141,43 @@ mutation PM_UpdateRemoteNetwork($rnID: ID!, $location: RemoteNetworkLocation!) {
     entity {
       id
       name
+    }
+  }
+}
+"""
+
+SHOW_NETWORK_BY_NAME = """
+query getNetworkByName($name: String!) {
+  remoteNetwork(name: $name) {
+    id
+    name
+    updatedAt
+    createdAt
+    isActive
+    networkType
+    connectors {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    resources {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    gateways {
+      edges {
+        node {
+          id
+          name
+        }
+      }
     }
   }
 }
