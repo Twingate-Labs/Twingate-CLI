@@ -31,7 +31,6 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [ca (certificate authorities)](#ca)
   - [gateway](#gateway)
   - [access-request](#access-request)
-  - [dlp (data loss prevention)](#dlp)
   - [webhook](#webhook)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
@@ -665,20 +664,6 @@ tgcli access-request approve -i "QVI6MQ=="
 
 # Reject an access request
 tgcli access-request reject -i "QVI6MQ=="
-```
-
----
-
-### dlp
-
-Manage Data Loss Prevention Policies (read-only).
-
-```bash
-# List all DLP policies
-tgcli dlp list
-
-# Show a specific DLP policy
-tgcli dlp show -i "RExQOjE="
 ```
 
 ---

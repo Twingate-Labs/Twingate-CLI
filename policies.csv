@@ -1,0 +1,6 @@
+id,name,policyType
+U2VjdXJpdHlQb2xpY3k6MjM2NTUx,Default Policy,DEFAULT_RESOURCE
+U2VjdXJpdHlQb2xpY3k6MTAxNDMyMQ==,Salestino Policy,RESOURCE
+U2VjdXJpdHlQb2xpY3k6MTA3NDczOA==,Non-prod resources (do not use with dev),RESOURCE
+U2VjdXJpdHlQb2xpY3k6MTEzNDM3OA==,30d,RESOURCE
+

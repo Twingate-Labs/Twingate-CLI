@@ -78,7 +78,6 @@ def _register_commands() -> None:
         cas,
         connectors,
         devices,
-        dlp,
         dnssec,
         gateways,
         groups,
@@ -106,7 +105,6 @@ def _register_commands() -> None:
     app.add_typer(cas.app, name="ca")
     app.add_typer(gateways.app, name="gateway")
     app.add_typer(access_requests.app, name="access-request")
-    app.add_typer(dlp.app, name="dlp")
     app.add_typer(webhooks.app, name="webhook")
 
 

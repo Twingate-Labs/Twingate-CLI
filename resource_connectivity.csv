@@ -1,0 +1,161 @@
+resource.id,resource.name,resource.isActive,remoteNetwork.id,remoteNetwork.name,connectorCount,liveConnectorCount,isReachable
+UmVzb3VyY2U6MjM0ODczNQ==,Admin Web Interface,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM0ODc3NA==,Notion Labs VPC,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM1ODg2Mg==,Snowflake Computing,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM1ODg2OA==,Snowflake App,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM1OTgxMw==,AWS Internal by Hostname,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM2MzU0Mg==,[HZ] cflt-pl-stg-kafka-1,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM2MzU0Mw==,[HZ] cflt-pl-dev-kafka1,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM2MzU0NA==,[HZ] Zone for dev-lb.notion.co,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM2MzU0NQ==,[HZ] Internal DNS,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM2MzU0Ng==,[HZ] Unmanged Elasticsearch Clusters,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjM2MzU0Nw==,[HZ] Notion Internal Engineering,False,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjQxMzYxNQ==,Confluent Private Link,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjQ0ODYwNg==,Pinecone,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjQ1ODc5MQ==,dev.notion.com,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjQ1ODc5Mg==,stg.notion.com,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjQ2NDM3OQ==,Playground VPC,False,UmVtb3RlTmV0d29yazoxMDQ3OTI=,Playground VPC,2,1,True
+UmVzb3VyY2U6MjQ3MTQxOQ==,Confluent Private Link 2,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjQ4NDI2Nw==,Flowdash VPC,True,UmVtb3RlTmV0d29yazoxMTAwOTM=,Flowdash VPC,1,1,True
+UmVzb3VyY2U6MjQ4NDU2OA==,Teleskope Prod VPC,True,UmVtb3RlTmV0d29yazoxMTAxNjY=,Teleskope Prod VPC,1,1,True
+UmVzb3VyY2U6MjQ4NDU3NA==,Teleskope Prod App,True,UmVtb3RlTmV0d29yazoxMTAxNjY=,Teleskope Prod VPC,1,1,True
+UmVzb3VyY2U6MjQ5MTI5OQ==,dev-flowdash,True,UmVtb3RlTmV0d29yazoxMTAwOTM=,Flowdash VPC,1,1,True
+UmVzb3VyY2U6MjUxNjA5OQ==,[HZ] dom2xp8nopd.eu-central-1.aws.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUyMTA5MQ==,Tooling Prod VPC,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MjUyMTQ3OQ==,Artemis Prod,False,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MjUyMjA2OQ==,dev.notion.com,False,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUyMjE0OQ==,[HZ] dev.notion.internal,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUyMjE1MA==,[HZ] dev.global.notion.internal,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUyMzkxNw==,elasticsearch.notion.engineering,False,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUyNDA0OQ==,elasticsearch.notion.engineering,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MjUyNzkyMA==,Legacy Staging,True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk3OA==,All Staging (10.252.0.0/16),True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk3OQ==,Calendar Staging,True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk4Mw==,Calendar Dev,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk4NA==,All Dev (10.253.0.0/16),True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk4NQ==,Legacy Dev,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk4Nw==,All Prod (10.128.0.0/11),True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk4OA==,Legacy Prod,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk4OQ==,Calendar Prod,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk5MA==,All Prod (10.96.0.0/11),True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzMzk5MQ==,All Prod (10.160.0.0/11),True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzNTU1NA==,[HZ] prod.global.notion.internal,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjUzNTU1OQ==,[HZ] stg.global.notion.internal,True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjU0Njg4OQ==,StarTree Dev Usw2,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjU1MTk3NA==,JIT Dev VPC,True,UmVtb3RlTmV0d29yazoxMjczNTc=,JIT Dev VPC,1,1,True
+UmVzb3VyY2U6MjU1NDQyNg==,JIT Prod,True,UmVtb3RlTmV0d29yazoxMjc5NTk=,JIT Prod VPC,1,1,True
+UmVzb3VyY2U6MjYyNzcxMA==,[HZ] domzpy0382g.eu-central-1.aws.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjYyNzcxMQ==,[HZ] dom8w1j7kmw.eu-central-1.aws.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MjcyMzk1NA==,Anyscale VPC,True,UmVtb3RlTmV0d29yazoxNjY2ODY=,Anyscale VPC,1,1,True
+UmVzb3VyY2U6Mjc1NzU0Mw==,Anyscale EUC1 VPC,True,UmVtb3RlTmV0d29yazoxNzc0MTk=,Anyscale EUC1 VPC,1,1,True
+UmVzb3VyY2U6Mjc2MjU4MQ==,[HZ] notion-playground.internal,True,UmVtb3RlTmV0d29yazoxMDQ3OTI=,Playground VPC,2,1,True
+UmVzb3VyY2U6Mjc3MjAyNg==,StarTree Prod US,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6Mjc4MTQ2Mg==,k8 Load Balancer,True,UmVtb3RlTmV0d29yazoxODM0NDA=,Turbopuffer VPC,1,1,True
+UmVzb3VyY2U6Mjg2MjE0Mw==,StarTree Prod Euc1,True,UmVtb3RlTmV0d29yazoxOTc3MjA=,Prod Portal EUC1 VPC,2,2,True
+UmVzb3VyY2U6MjkzNDc4Mg==,Salestino VPC,True,UmVtb3RlTmV0d29yazoyMDY3MTk=,Salestino VPC,1,1,True
+UmVzb3VyY2U6Mjk3NTQ1Ng==,OneHouse VPC,True,UmVtb3RlTmV0d29yazoyMTEwNjE=,OneHouse VPC,1,1,True
+UmVzb3VyY2U6Mjk4MDIyNA==,Salestino Domain,True,UmVtb3RlTmV0d29yazoyMDY3MTk=,Salestino VPC,1,1,True
+UmVzb3VyY2U6MzAzMzgwNA==,Infra Console Prod,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzA3MzQ3Mg==,[HZ] us-west-2.aws.private.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzI1MDI4MA==,Snowflake `.app` TLD,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzI3ODgwNg==,[HZ] *.playground.notion.windowstesting.internal,True,UmVtb3RlTmV0d29yazoyNzE5NjU=,Playground (ap-northeast-1),1,0,False
+UmVzb3VyY2U6MzMwMjkzMw==,Load Simulator Management,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzMwNDI5Mg==,Load Simulator Worker,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzMwNDcwOA==,Teleskope EKS Cluster,True,UmVtb3RlTmV0d29yazoxMTAxNjY=,Teleskope Prod VPC,1,1,True
+UmVzb3VyY2U6MzMyMDkxOQ==,Snowflake Computing App,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzMyOTM0Nw==,Turbopuffer Managed Prod US,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzMzMDAwNA==,Turbopuffer Managed Prod Euc1,True,UmVtb3RlTmV0d29yazoxOTc3MjA=,Prod Portal EUC1 VPC,2,2,True
+UmVzb3VyY2U6MzM0NDA1OQ==,Onehouse EUC1 VPC,True,UmVtb3RlTmV0d29yazoyODQ4NjI=,Onehouse EUC1 VPC,1,1,True
+UmVzb3VyY2U6MzM5MDEwMg==,AI Enablement Prod USW2 VPC,True,UmVtb3RlTmV0d29yazoyOTE5ODA=,AI Enablement Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzM5NTEzMA==,Data Internal,True,UmVtb3RlTmV0d29yazoyOTE5ODA=,AI Enablement Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzQwMzc4MQ==,Apps,False,UmVtb3RlTmV0d29yazoyOTE5ODA=,AI Enablement Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzQyNzgwMA==,Octopus Deploy Staging,True,UmVtb3RlTmV0d29yazoyOTgzNTM=,CD Staging USW2 VPC,1,1,True
+UmVzb3VyY2U6MzQ0MTIwNw==,BBOGAERT.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDA5MzI=,BBOGAERT.WINDOWS.DEV.REMOTE.NETWORK,1,0,False
+UmVzb3VyY2U6MzQ0NDcyMw==,ABHAY.WINDOWS.DEV.RESOURCE,False,UmVtb3RlTmV0d29yazozMDE1OTE=,ABHAY.WINDOWS.DEV.REMOTE.NETWORK,2,0,False
+UmVzb3VyY2U6MzQ0NDcyNg==,JSCHEIRER.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDE1ODk=,JSCHEIRER.WINDOWS.DEV.REMOTE.NETWORK,2,0,False
+UmVzb3VyY2U6MzQ0NDgyMA==,Anyscale APNE2 VPC,True,UmVtb3RlTmV0d29yazozMDE2MDA=,Anyscale APNE2 VPC,1,1,True
+UmVzb3VyY2U6MzQ0NzUwMg==,[HZ] ap-northeast-2.aws.private.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ0ODg3NQ==,DEV apne2 Legacyreplica,True,UmVtb3RlTmV0d29yazozMDA3MDQ=,Dev Portal APNE2 VPC,2,2,True
+UmVzb3VyY2U6MzQ2NzI0OQ==,Dev Portal USW2,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ2NzI2OA==,Prod Portal USW2,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ2NzM0Ng==,Stg Portal USW2,True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ2NzM3NQ==,[HZ] ap4p5091.us-west-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ2OTcxMg==,JMORRIS.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDI1NTY=,JMORRIS.WINDOWS.DEV.REMOTE.NETWORK,2,0,False
+UmVzb3VyY2U6MzQ3OTY3Ng==,es.notion.engineering,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ3OTg1NQ==,[HZ] ap4936mq.us-west-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ3OTg1Ng==,[HZ] ap4jnl09.us-west-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ3OTg1Nw==,[HZ] ap83nel9.ap-northeast-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ3OTg1OA==,[HZ] ap8on197.eu-central-1.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4MDAxNA==,[HZ] ap4em6nq.eu-central-1.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4MDAxNQ==,[HZ] ap4p5091.us-west-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4MTk4Mw==,[HZ] ap4l9ywo.ap-northeast-1.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAwNg==,JMORRIS.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDI1NTY=,JMORRIS.WINDOWS.DEV.REMOTE.NETWORK,2,0,False
+UmVzb3VyY2U6MzQ4NDAwNw==,ABHAY.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDE1OTE=,ABHAY.WINDOWS.DEV.REMOTE.NETWORK,2,0,False
+UmVzb3VyY2U6MzQ4NDAwOA==,BBOGAERT.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDA5MzI=,BBOGAERT.WINDOWS.DEV.REMOTE.NETWORK,1,0,False
+UmVzb3VyY2U6MzQ4NDAwOQ==,Prod Portal USW2,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAxMA==,[HZ] *.playground.notion.windowstesting.internal,True,UmVtb3RlTmV0d29yazoyNzE5NjU=,Playground (ap-northeast-1),1,0,False
+UmVzb3VyY2U6MzQ4NDAxMQ==,JSCHEIRER.WINDOWS.DEV.RESOURCE,True,UmVtb3RlTmV0d29yazozMDE1ODk=,JSCHEIRER.WINDOWS.DEV.REMOTE.NETWORK,2,0,False
+UmVzb3VyY2U6MzQ4NDAxMg==,Teleskope Prod VPC,True,UmVtb3RlTmV0d29yazoxMTAxNjY=,Teleskope Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAxMw==,Load Simulator Management,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAxNA==,Pinecone,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAxNQ==,AWS Internal by Hostname,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAxNg==,Teleskope EKS Cluster,True,UmVtb3RlTmV0d29yazoxMTAxNjY=,Teleskope Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAxNw==,Playground VPC,True,UmVtb3RlTmV0d29yazoxMDQ3OTI=,Playground VPC,2,1,True
+UmVzb3VyY2U6MzQ4NDAxOA==,[HZ] ap4p5091.us-west-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAxOQ==,Tooling Prod VPC,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAyMA==,Data Internal,True,UmVtb3RlTmV0d29yazoyOTE5ODA=,AI Enablement Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAyMQ==,Load Simulator Worker,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAyMg==,Snowflake Computing,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAyMw==,Stg Portal USW2,True,UmVtb3RlTmV0d29yazoxMjE4NjA=,Stg Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAyNA==,Dev Portal USW2,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAyNQ==,dev-flowdash,True,UmVtb3RlTmV0d29yazoxMTAwOTM=,Flowdash VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAyNg==,JIT Prod,True,UmVtb3RlTmV0d29yazoxMjc5NTk=,JIT Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAyOA==,JIT Dev VPC,True,UmVtb3RlTmV0d29yazoxMjczNTc=,JIT Dev VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAyOQ==,Flowdash VPC,True,UmVtb3RlTmV0d29yazoxMTAwOTM=,Flowdash VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAzMA==,elasticsearch.notion.engineering,False,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAzMQ==,[HZ] cflt-pl-dev-kafka1,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAzMw==,dev.notion.com,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAzNA==,Artemis Prod,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAzNQ==,Snowflake `.app` TLD,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAzNg==,Teleskope Prod App,True,UmVtb3RlTmV0d29yazoxMTAxNjY=,Teleskope Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDAzNw==,Admin Web Interface,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDAzOA==,[HZ] notion-playground.internal,True,UmVtb3RlTmV0d29yazoxMDQ3OTI=,Playground VPC,2,1,True
+UmVzb3VyY2U6MzQ4NDAzOQ==,Apps,True,UmVtb3RlTmV0d29yazoyOTE5ODA=,AI Enablement Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDA0MA==,Infra Console Prod,True,UmVtb3RlTmV0d29yazoxMjAzNjk=,Tooling Prod VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDA0MQ==,Snowflake Computing App,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA0Mg==,Salestino VPC,True,UmVtb3RlTmV0d29yazoyMDY3MTk=,Salestino VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDA0Mw==,[HZ] Notion Internal Engineering,False,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA0NA==,[HZ] Internal DNS,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA0NQ==,Confluent Private Link 2,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA0Ng==,Salestino Domain,True,UmVtb3RlTmV0d29yazoyMDY3MTk=,Salestino VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDA0Nw==,es.notion.engineering,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA0OA==,[HZ] Unmanged Elasticsearch Clusters,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA0OQ==,stg.notion.com,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA1MA==,k8 Load Balancer,True,UmVtb3RlTmV0d29yazoxODM0NDA=,Turbopuffer VPC,1,1,True
+UmVzb3VyY2U6MzQ4NDA1MQ==,elasticsearch.notion.engineering,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA1Mg==,[HZ] Zone for dev-lb.notion.co,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA1Mw==,[HZ] cflt-pl-stg-kafka-1,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA1NA==,Snowflake App,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA1NQ==,Confluent Private Link,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ4NDA1Ng==,Notion Labs VPC,True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzQ5MTczMg==,Anyscale APNE1 VPC,True,UmVtb3RlTmV0d29yazozMDQ5OTc=,Anyscale APNE1 VPC,1,1,True
+UmVzb3VyY2U6MzQ5MzYyNg==,[HZ] ap4jnp0j.ap-northeast-1.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ5MzYyNw==,[HZ] apdk2w0r.ap-northeast-2.aws.accesspoint.confluent.cloud,True,UmVtb3RlTmV0d29yazoxMjEzODE=,Prod Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzQ5NDEwMQ==,DEV apne1 Legacyreplica,True,UmVtb3RlTmV0d29yazozMDUyMjE=,Dev Portal APNE1 VPC,2,2,True
+UmVzb3VyY2U6MzQ5NDU2Nw==,PROD apne2 Legacyreplica,True,UmVtb3RlTmV0d29yazozMDUyNTk=,Prod Portal APNE2 VPC,2,2,True
+UmVzb3VyY2U6MzQ5NDkwOQ==,PROD apne1 Legacyreplica,True,UmVtb3RlTmV0d29yazozMDUyNzk=,Prod Portal APNE1 VPC,2,2,True
+UmVzb3VyY2U6MzUwMDE4MA==,StarTree Prod Apne2,True,UmVtb3RlTmV0d29yazozMDUyNTk=,Prod Portal APNE2 VPC,2,2,True
+UmVzb3VyY2U6MzUwMDE4Ng==,StarTree Prod Apne1,True,UmVtb3RlTmV0d29yazozMDUyNzk=,Prod Portal APNE1 VPC,2,2,True
+UmVzb3VyY2U6MzUxODc4Mw==,Coop Prod USW2 VPC,True,UmVtb3RlTmV0d29yazozMDcxOTE=,Coop Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzU1NzE0MQ==,AI Eval Prod USW2 VPC,True,UmVtb3RlTmV0d29yazozMTQxODI=,AI Eval Prod USW2 VPC,1,1,True
+UmVzb3VyY2U6MzU3NDgzNA==,Boxy VPC,True,UmVtb3RlTmV0d29yazozMTY2MDQ=,Boxy,1,1,True
+UmVzb3VyY2U6MzU3NDgzNQ==,Boxy,True,UmVtb3RlTmV0d29yazozMTY2MDQ=,Boxy,1,1,True
+UmVzb3VyY2U6MzU3NjY3MA==,Boxy Previews,True,UmVtb3RlTmV0d29yazozMTY2MDQ=,Boxy,1,1,True
+UmVzb3VyY2U6MzU3OTc2NQ==,Boxy EKS Controller,True,UmVtb3RlTmV0d29yazozMTY2MDQ=,Boxy,1,1,True
+UmVzb3VyY2U6MzU4NTg3MA==,Boxy API,True,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzYwMzIxOQ==,Dev Applecart,False,UmVtb3RlTmV0d29yazoxMTg4OTI=,Dev Portal USW2 VPC,2,2,True
+UmVzb3VyY2U6MzYwNzU2MA==,Octopus Deploy Production,True,UmVtb3RlTmV0d29yazozMjExNjc=,CD Production USW2 VPC,1,1,True
+UmVzb3VyY2U6MzYzMTA4MQ==,Calendar Testing (.so -> .com),True,UmVtb3RlTmV0d29yazo3MTgzMQ==,Gateway VPC,2,2,True
+UmVzb3VyY2U6MzY0MjQwMw==,Security VLAN,True,UmVtb3RlTmV0d29yazozMjUyNDU=,Security VLAN,1,1,True
+UmVzb3VyY2U6MzY0MjQwNA==,Genetec Security Center,True,UmVtb3RlTmV0d29yazozMjUyNDU=,Security VLAN,1,1,True
+
