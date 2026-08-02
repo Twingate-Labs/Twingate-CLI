@@ -71,3 +71,33 @@ def dnssec_delete(
     client = get_client()
     pid = profileid or _get_profile_id(client)
     run_query(client, q.DELETE_DNS_PROFILE, {"id": pid}, t.get_delete_as_csv)
+
+
+@app.command("update")
+def dnssec_update(
+    profileid: str = typer.Option("", "-i", "--profileid", help="DNS profile ID (auto-detected if omitted)."),
+    name: str = typer.Option("", "-n", "--name", help="New profile name."),
+    priority: float = typer.Option(None, "--priority", help="Profile priority."),
+    fallback: str = typer.Option("", "--fallback", help="Fallback method: AUTO or STRICT."),
+    groups: str = typer.Option("", "-g", "--groups", help="Comma-separated Group IDs to assign."),
+    allowed: str = typer.Option("", "--allowed", help="Comma-separated allowed domains."),
+    denied: str = typer.Option("", "--denied", help="Comma-separated denied domains."),
+) -> None:
+    """Update a DNS filtering profile (full update including categories and groups)."""
+    from tgcli.commands._common import split_ids
+    client = get_client()
+    pid = profileid or _get_profile_id(client)
+    variables: dict = {"id": pid}
+    if name:
+        variables["name"] = name
+    if priority is not None:
+        variables["priority"] = priority
+    if fallback:
+        variables["fallbackMethod"] = fallback.upper()
+    if groups:
+        variables["groups"] = split_ids(groups)
+    if allowed:
+        variables["allowedDomains"] = [d.strip() for d in allowed.split(",") if d.strip()]
+    if denied:
+        variables["deniedDomains"] = [d.strip() for d in denied.split(",") if d.strip()]
+    run_query(client, q.UPDATE_DNS_PROFILE_FULL, variables, t.get_update_allow_as_csv)

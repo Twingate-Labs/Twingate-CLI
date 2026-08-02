@@ -12,9 +12,12 @@ app = typer.Typer(help="Manage Twingate Service Accounts.")
 
 
 @app.command("list")
-def account_list() -> None:
+def account_list(
+    filter_name: str = typer.Option("", "--filter-name", help="Filter by service account name (contains)."),
+) -> None:
     """List all service accounts."""
-    run_paginated(get_client(), q.LIST_ACCOUNTS, "serviceAccounts", t.get_list_as_csv)
+    extra = {"filter": {"name": {"contains": filter_name}}} if filter_name else None
+    run_paginated(get_client(), q.LIST_ACCOUNTS, "serviceAccounts", t.get_list_as_csv, extra_vars=extra)
 
 
 @app.command("show")

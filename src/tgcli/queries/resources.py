@@ -27,6 +27,18 @@ query listResources($cursor: String!) {
         ... on NetworkResource {
           routingMode
         }
+        ... on SSHResource {
+          upstreamPort
+          downstreamPort
+        }
+        ... on KubernetesResource {
+          upstreamPort
+          downstreamPort
+        }
+        ... on WebAppResource {
+          upstreamPort
+          downstreamPort
+        }
         tags {
           key
           value
@@ -108,6 +120,18 @@ query getResource($itemID: ID!) {
     isActive
     ... on NetworkResource {
       routingMode
+    }
+    ... on SSHResource {
+      upstreamPort
+      downstreamPort
+    }
+    ... on KubernetesResource {
+      upstreamPort
+      downstreamPort
+    }
+    ... on WebAppResource {
+      upstreamPort
+      downstreamPort
     }
     remoteNetwork {
       name

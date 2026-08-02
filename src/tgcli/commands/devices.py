@@ -17,14 +17,16 @@ app = typer.Typer(help="Manage Twingate Devices.")
 @app.command("list")
 def device_list(
     fileofids: str = typer.Option("", "-l", "--fileofids", help="Path to file of known IDs (for diff)."),
-    idsonly: bool = typer.Option(False, "-i", "--idsonly", help="Print IDs only."),
+    idsonly: bool = typer.Option(False, "--idsonly", help="Print IDs only."),
+    filter_name: str = typer.Option("", "--filter-name", help="Filter by device name (contains)."),
 ) -> None:
     """List all devices."""
     if fileofids and idsonly:
         typer.echo("Error: Cannot use --fileofids and --idsonly together.", err=True)
         raise typer.Exit(1)
     client = get_client()
-    run_paginated(client, q.LIST_DEVICES, "devices", t.get_list_as_csv)
+    extra = {"filter": {"name": {"contains": filter_name}}} if filter_name else None
+    run_paginated(client, q.LIST_DEVICES, "devices", t.get_list_as_csv, extra_vars=extra)
 
 
 @app.command("show")

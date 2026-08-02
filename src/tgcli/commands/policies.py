@@ -12,9 +12,18 @@ app = typer.Typer(help="Manage Twingate Resource policies.")
 
 
 @app.command("list")
-def policy_list() -> None:
+def policy_list(
+    filter_type: str = typer.Option("", "--filter-type", help="Filter by policy type (e.g. DEFAULT, CUSTOM)."),
+    filter_name: str = typer.Option("", "--filter-name", help="Filter by policy name (contains)."),
+) -> None:
     """List all Resource policies."""
-    run_paginated(get_client(), q.LIST_POLICIES, "securityPolicies", t.get_list_as_csv)
+    filt: dict = {}
+    if filter_type:
+        filt["policyType"] = {"in": [filter_type.upper()]}
+    if filter_name:
+        filt["name"] = {"contains": filter_name}
+    extra = {"filter": filt} if filt else None
+    run_paginated(get_client(), q.LIST_POLICIES, "securityPolicies", t.get_list_as_csv, extra_vars=extra)
 
 
 @app.command("show")

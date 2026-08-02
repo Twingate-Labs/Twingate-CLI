@@ -13,9 +13,12 @@ app = typer.Typer(help="Manage Twingate Connectors.")
 
 
 @app.command("list")
-def connector_list() -> None:
+def connector_list(
+    filter_name: str = typer.Option("", "--filter-name", help="Filter by connector name (contains)."),
+) -> None:
     """List all Connectors."""
-    run_paginated(get_client(), q.LIST_CONNECTORS, "connectors", t.get_list_as_csv)
+    extra = {"filter": {"name": {"contains": filter_name}}} if filter_name else None
+    run_paginated(get_client(), q.LIST_CONNECTORS, "connectors", t.get_list_as_csv, extra_vars=extra)
 
 
 @app.command("show")
@@ -47,7 +50,7 @@ def connector_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
 ) -> None:
     """Permanently delete a Connector."""
-    run_query(get_client(), q.DELETE_CONNECTOR, {"id": itemid}, t.get_update_as_csv)
+    run_query(get_client(), q.DELETE_CONNECTOR, {"id": itemid}, t.get_delete_as_csv)
 
 
 @app.command("rename")
