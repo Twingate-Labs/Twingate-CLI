@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 LIST_DEVICES = """
-query listGroup($cursor: String!)
+query listDevices($cursor: String!)
 {
   devices(after: $cursor, first:null) {
     totalCount
@@ -118,6 +118,21 @@ mutation updateDevice($deviceID: ID!) {
 ARCHIVE_DEVICE = """
 mutation updateDevice($deviceID: ID!) {
   deviceArchive(id: $deviceID) {
+    ok
+    error
+    entity {
+      id
+      name
+      isTrusted
+      activeState
+    }
+  }
+}
+"""
+
+UNARCHIVE_DEVICE = """
+mutation updateDevice($deviceID: ID!) {
+  deviceUnarchive(id: $deviceID) {
     ok
     error
     entity {

@@ -42,7 +42,7 @@ mutation ObjCreate($name: String!, $serviceAccountId: ID!, $expirationTime: Int!
 """
 
 DELETE_KEY = """
-mutation ObjCreate($id: ID!) {
+mutation deleteServiceAccountKey($id: ID!) {
   serviceAccountKeyDelete(id: $id) {
     ok
     error
@@ -51,7 +51,7 @@ mutation ObjCreate($id: ID!) {
 """
 
 REVOKE_KEY = """
-mutation ObjCreate($id: ID!) {
+mutation revokeServiceAccountKey($id: ID!) {
   serviceAccountKeyRevoke(id: $id) {
     ok
     error

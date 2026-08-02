@@ -85,6 +85,14 @@ def device_archive(
     run_query(get_client(), q.ARCHIVE_DEVICE, {"deviceID": itemid}, t.get_archive_as_csv)
 
 
+@app.command("unarchive")
+def device_unarchive(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Device ID."),
+) -> None:
+    """Unarchive a device."""
+    run_query(get_client(), q.UNARCHIVE_DEVICE, {"deviceID": itemid}, t.get_unarchive_as_csv)
+
+
 @app.command("posture")
 def device_posture(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Device ID."),

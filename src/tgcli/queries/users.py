@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 LIST_USERS = """
-query listGroup($cursor: String!) {
+query listUsers($cursor: String!) {
   users(after: $cursor, first: null) {
     totalCount
     pageInfo {

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 LIST_RESOURCES = """
-query listGroup($cursor: String!) {
+query listResources($cursor: String!) {
   resources(after: $cursor, first: null) {
     totalCount
     pageInfo {

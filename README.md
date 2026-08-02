@@ -173,10 +173,11 @@ tgcli device updateTrust -i "RGV2aWNlOjE5MzI2OQ==" -t False
 # Update trust for multiple devices at once
 tgcli device updateTrust -l "RGV2aWNlOjE5MzI2OQ==,RGV2aWNlOjE5MzI3MA==" -t True
 
-# Block / unblock / archive a device
-tgcli device block   -i "RGV2aWNlOjE5MzI2OQ=="
-tgcli device unblock -i "RGV2aWNlOjE5MzI2OQ=="
-tgcli device archive -i "RGV2aWNlOjE5MzI2OQ=="
+# Block / unblock / archive / unarchive a device
+tgcli device block     -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device unblock   -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device archive   -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device unarchive -i "RGV2aWNlOjE5MzI2OQ=="
 
 # --- Serial number allowlist ---
 tgcli device snumber list

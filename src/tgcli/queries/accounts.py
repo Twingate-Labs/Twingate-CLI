@@ -89,7 +89,7 @@ mutation ObjCreate($name: String!, $resourceIds: [ID!]) {
 """
 
 DELETE_ACCOUNT = """
-mutation ObjCreate($id: ID!) {
+mutation deleteServiceAccount($id: ID!) {
   serviceAccountDelete(id: $id) {
     ok
     error

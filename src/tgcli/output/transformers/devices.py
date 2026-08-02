@@ -48,6 +48,11 @@ def get_archive_as_csv(json_results: dict) -> pd.DataFrame:
     return generic.get_update_as_csv_no_nesting(json_results, "deviceArchive", columns)
 
 
+def get_unarchive_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "isTrusted", "activeState"]
+    return generic.get_update_as_csv_no_nesting(json_results, "deviceUnarchive", columns)
+
+
 def get_sn_list_as_csv(json_results: list) -> pd.DataFrame:
     columns = ["id", "serialNumber", "createdAt", "matchedDevices"]
     return generic.get_list_as_csv(json_results, columns)
