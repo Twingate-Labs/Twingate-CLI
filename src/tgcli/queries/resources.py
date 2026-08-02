@@ -32,10 +32,12 @@ query listResources($cursor: String!) {
           downstream { port }
         }
         ... on KubernetesResource {
+          clusterRef
           upstream { port }
           downstream { port }
         }
         ... on WebAppResource {
+          requestHeaderRewrites { key value }
           upstream { port }
           downstream { port }
         }
@@ -126,10 +128,12 @@ query getResource($itemID: ID!) {
       downstream { port }
     }
     ... on KubernetesResource {
+      clusterRef
       upstream { port }
       downstream { port }
     }
     ... on WebAppResource {
+      requestHeaderRewrites { key value }
       upstream { port }
       downstream { port }
     }
