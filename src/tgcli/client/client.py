@@ -223,8 +223,8 @@ class TwingateClient:
         reads_per_min: int = 60,
         max_concurrent: int = 10,
         page_size: int = 50,
-        on_progress: Callable[[int, int, int], None] | None = None,
-        on_throttle: Callable[[int, int], None] | None = None,
+        on_progress: Callable[..., None] | None = None,
+        on_throttle: Callable[..., None] | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch all pages concurrently using offset-based cursors.
 
@@ -240,8 +240,8 @@ class TwingateClient:
             reads_per_min:  Max API reads per 60-second window.
             max_concurrent: Max parallel requests in a single batch.
             page_size:      Items per page (API max is typically 50).
-            on_progress:    Optional callback(items_so_far, total, batch_num).
-            on_throttle:    Optional callback(failed_count, retry_after_seconds).
+            on_progress:    Optional callback(items_so_far, total, batch_num, batch_size, total_pages).
+            on_throttle:    Optional callback(failed_count, retry_after, items_so_far, total).
 
         Returns:
             Flat list of node dicts (deduplicated by ``id``).
@@ -261,7 +261,7 @@ class TwingateClient:
                     if attempt >= THROTTLE_MAX_RETRIES:
                         return None
                     if on_throttle:
-                        on_throttle(1, exc.retry_after)
+                        on_throttle(1, exc.retry_after, len(all_nodes), total_count if 'total_count' in dir() else 0)
                     _time.sleep(exc.retry_after)
             return None
 
@@ -284,13 +284,15 @@ class TwingateClient:
             raise TwingateAPIError("Failed to fetch first page.")
         _collect(first)
         total_count = first["data"][data_key].get("totalCount") or len(all_nodes)
-        if on_progress:
-            on_progress(len(all_nodes), total_count, 1)
 
         # Phase 2: remaining pages in parallel batches
         cursors = [_make_cursor(i) for i in range(page_size - 1, total_count, page_size)]
+        total_pages = len(cursors) + 1
         budget = reads_per_min - 1
         batch_num = 1
+
+        if on_progress:
+            on_progress(len(all_nodes), total_count, 1, 1, total_pages)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent) as pool:
             while cursors:
@@ -309,7 +311,7 @@ class TwingateClient:
 
                 if failed:
                     if on_throttle:
-                        on_throttle(len(failed), 30)
+                        on_throttle(len(failed), 30, len(all_nodes), total_count)
                     _time.sleep(30)
                     for cur in failed:
                         retry = _fetch(cur)
@@ -320,7 +322,7 @@ class TwingateClient:
                 batch_num += 1
                 budget -= batch_size
                 if on_progress:
-                    on_progress(len(all_nodes), total_count, batch_num)
+                    on_progress(len(all_nodes), total_count, batch_num, len(batch), total_pages)
 
                 if budget <= 0 and cursors:
                     _time.sleep(60)
