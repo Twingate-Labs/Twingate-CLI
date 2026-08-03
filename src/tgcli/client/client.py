@@ -288,11 +288,12 @@ class TwingateClient:
         # Phase 2: remaining pages in parallel batches
         cursors = [_make_cursor(i) for i in range(page_size - 1, total_count, page_size)]
         total_pages = len(cursors) + 1
+        total_batches = 1 + (len(cursors) + max_concurrent - 1) // max_concurrent if cursors else 1
         budget = reads_per_min - 1
         batch_num = 1
 
         if on_progress:
-            on_progress(len(all_nodes), total_count, 1, 1, total_pages)
+            on_progress(len(all_nodes), total_count, 1, max_concurrent, total_batches)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent) as pool:
             while cursors:
@@ -322,7 +323,7 @@ class TwingateClient:
                 batch_num += 1
                 budget -= batch_size
                 if on_progress:
-                    on_progress(len(all_nodes), total_count, batch_num, len(batch), total_pages)
+                    on_progress(len(all_nodes), total_count, batch_num, len(batch), total_batches)
 
                 if budget <= 0 and cursors:
                     _time.sleep(60)
