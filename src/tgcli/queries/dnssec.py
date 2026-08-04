@@ -16,8 +16,45 @@ query CLI_GetDNSFilteringProfile($id: ID!) {
   dnsFilteringProfile(id: $id) {
     id
     name
+    priority
+    fallbackMethod
     allowedDomains
     deniedDomains
+    groups {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    contentCategoryConfig {
+      blockGambling
+      blockDating
+      blockAdultContent
+      blockSocialMedia
+      blockGames
+      blockStreaming
+      blockPiracy
+      enableYoutubeRestrictedMode
+      enableSafeSearch
+    }
+    securityCategoryConfig {
+      enableThreatIntelligenceFeeds
+      enableGoogleSafeBrowsing
+      blockCryptojacking
+      blockIdnHomographs
+      blockTyposquatting
+      blockDnsRebinding
+      blockNewlyRegisteredDomains
+      blockDomainGenerationAlgorithms
+      blockParkedDomains
+    }
+    privacyCategoryConfig {
+      blockAffiliate
+      blockDisguisedTrackers
+      blockAdsAndTrackers
+    }
   }
 }
 """

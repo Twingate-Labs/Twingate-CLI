@@ -812,6 +812,10 @@ mutation setApproverGroups($itemid: ID!, $approverGroupIds: [ID!]!) {
 }
 """
 
+HEALTH_RESOURCES = """
+{ resources(first: 1, after: "0") { totalCount } }
+"""
+
 # Aliases used by commands/resources.py
 UPDATE_RESOURCE_VISIBILITY = TOGGLE_RESOURCE_VISIBILITY
 UPDATE_RESOURCE_NETWORK = ASSIGN_NETWORK_TO_RESOURCE

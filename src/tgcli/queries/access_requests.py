@@ -66,3 +66,7 @@ mutation rejectAccessRequest($id: ID!) {
   }
 }
 """
+
+HEALTH_ACCESS_REQUESTS = """
+{ accessRequests(first: null, after: "0") { totalCount edges { node { id status } } } }
+"""

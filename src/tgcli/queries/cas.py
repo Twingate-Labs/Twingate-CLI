@@ -87,3 +87,7 @@ mutation deleteX509CA($id: ID!) {
   }
 }
 """
+
+HEALTH_CAS = """
+{ certificateAuthorities(first: null, after: "0") { totalCount edges { node { ... on SSHCertificateAuthority { id } ... on X509CertificateAuthority { id } } } } }
+"""

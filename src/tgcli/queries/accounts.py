@@ -176,3 +176,7 @@ mutation setServiceAccountResources($id: ID!, $resourceIDS: [ID!]!) {
   }
 }
 """
+
+HEALTH_ACCOUNTS = """
+{ serviceAccounts(first: null, after: "0") { totalCount edges { node { id keys { edges { node { id status } } } } } } }
+"""

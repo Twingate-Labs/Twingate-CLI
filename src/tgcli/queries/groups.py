@@ -381,3 +381,7 @@ mutation setGroupResources($groupID: ID!, $resourceIDS: [ID!]!) {
   }
 }
 """
+
+HEALTH_GROUPS = """
+{ groups(first: null, after: "0") { totalCount edges { node { id type users { edges { node { id } } } } } } }
+"""

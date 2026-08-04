@@ -95,3 +95,7 @@ mutation updateGateway($id: ID!, $address: String, $remoteNetworkId: ID, $sshCAI
   }
 }
 """
+
+HEALTH_GATEWAYS = """
+{ gateways(first: null, after: "0") { totalCount edges { node { id sshCA { id } x509CA { id } } } } }
+"""

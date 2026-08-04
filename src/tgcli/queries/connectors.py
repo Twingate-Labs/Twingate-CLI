@@ -122,3 +122,7 @@ mutation GetConnTokens($id: ID!) {
   }
 }
 """
+
+HEALTH_CONNECTORS = """
+{ connectors(first: null, after: "0") { totalCount edges { node { id state remoteNetwork { id } } } } }
+"""

@@ -188,3 +188,7 @@ mutation updateUserName($userID: ID!, $firstName: String, $lastName: String) {
   }
 }
 """
+
+HEALTH_USERS = """
+{ users(first: null, after: "0") { totalCount edges { node { id type } } } }
+"""

@@ -182,3 +182,7 @@ query getNetworkByName($name: String!) {
   }
 }
 """
+
+HEALTH_NETWORKS = """
+{ remoteNetworks(first: null, after: "0") { totalCount edges { node { id } } } }
+"""

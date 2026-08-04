@@ -211,7 +211,15 @@ query getDevicePosture($deviceID: ID!) {
       sentinelOne   { isVerified failureReason expiredAt failureDetails }
       onePassword   { isVerified failureReason expiredAt failureDetails }
       manualVerification { isVerified value }
-    
+
   }
 }
+"""
+
+HEALTH_DEVICES = """
+{ devices(first: null, after: "0") { totalCount edges { node { id osName } } } }
+"""
+
+HEALTH_SERIAL_NUMBERS = """
+{ serialNumbers(first: null, after: "0") { totalCount edges { node { id matchedDevices { id } } } } }
 """

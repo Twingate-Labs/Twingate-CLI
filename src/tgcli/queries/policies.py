@@ -106,3 +106,7 @@ mutation removeGroupsFromPolicy($id: ID!, $removedGroupIds: [ID!]!) {
   }
 }
 """
+
+HEALTH_POLICIES = """
+{ securityPolicies(first: null, after: "0") { totalCount } }
+"""
