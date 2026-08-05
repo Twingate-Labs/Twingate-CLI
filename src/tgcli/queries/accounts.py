@@ -156,6 +156,27 @@ mutation renameServiceAccount($id: ID!, $name: String!) {
 }
 """
 
+LIST_ACCOUNT_KEYS = """
+query getObj($itemID: ID!) {
+  serviceAccount(id: $itemID) {
+    id
+    name
+    keys {
+      edges {
+        node {
+          id
+          name
+          status
+          createdAt
+          expiresAt
+          revokedAt
+        }
+      }
+    }
+  }
+}
+"""
+
 SET_ACCOUNT_RESOURCES = """
 mutation setServiceAccountResources($id: ID!, $resourceIDS: [ID!]!) {
   serviceAccountUpdate(id: $id, resourceIds: $resourceIDS) {
