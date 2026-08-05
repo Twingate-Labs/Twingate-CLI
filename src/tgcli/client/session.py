@@ -49,6 +49,8 @@ class SessionManager:
         keyring.set_password(SERVICE_NAME, f"{session}:tenant", tenant)
         if staging:
             keyring.set_password(SERVICE_NAME, f"{session}:staging", "true")
+            if hostname == "twingate.com":
+                hostname = "stg.opstg.com"
         if hostname and hostname != "twingate.com":
             keyring.set_password(SERVICE_NAME, f"{session}:hostname", hostname)
         SessionManager._add_to_index(session)
@@ -96,10 +98,8 @@ class SessionManager:
                 f"Session '{session}' has no tenant configured. "
                 "Run 'tgcli auth login' first."
             )
-        staging = keyring.get_password(SERVICE_NAME, f"{session}:staging")
-        if staging == "true":
-            return f"https://{tenant}.stg.opstg.com/api/graphql/"
-        return f"https://{tenant}.twingate.com/api/graphql/"
+        hostname = SessionManager.get_hostname(session)
+        return f"https://{tenant}.{hostname}/api/graphql/"
 
     @staticmethod
     def list_sessions() -> list[str]:

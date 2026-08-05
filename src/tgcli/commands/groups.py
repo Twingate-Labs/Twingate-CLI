@@ -226,8 +226,8 @@ def group_migrate(
         new_name = f"{g['name']}{name_suffix}"
         typer.echo(f"\n=== {g['name']} ({g['id']}) -> {new_name} ===")
 
-        users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["group", "users"])
-        resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["group", "resources"])
+        users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["data", "group", "users"])
+        resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["data", "group", "resources"])
         typer.echo(f"  members: {len(users)}   resources: {len(resources)}")
 
         row = {

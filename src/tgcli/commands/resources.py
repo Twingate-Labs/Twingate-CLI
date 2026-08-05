@@ -7,8 +7,6 @@ from typing import Optional
 import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
-from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
-from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import resources as t
 from tgcli.queries import resources as q
 from tgcli.validators.generic import parse_bool_string, validate_routing_mode
@@ -17,7 +15,6 @@ from tgcli.validators.protocol import (
     validate_protocol_policy,
     validate_range_with_policy,
 )
-from tgcli.main import state
 
 app = typer.Typer(help="Manage Twingate Resources.")
 
@@ -26,7 +23,6 @@ def _build_access_array(
     groupid: str,
     serviceid: str,
     policyid: str,
-    autolockdays: Optional[int],
     expiresat: str,
 ) -> list[dict]:
     """Build the AccessInput array for resourceAccessSet/Add mutations."""
@@ -347,7 +343,7 @@ def resource_access_set(
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601, e.g. 2024-03-14T20:20:32-07:00)."),
 ) -> None:
     """Set Resource access (replaces all existing Group/Service Account relationships)."""
-    access_array = _build_access_array(groupid, serviceid, policyid, autolockdays, expiresat)
+    access_array = _build_access_array(groupid, serviceid, policyid, expiresat)
     run_query(
         get_client(),
         q.RESOURCE_ACCESS_SET,
@@ -366,7 +362,7 @@ def resource_access_add(
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601)."),
 ) -> None:
     """Add Group/Service Account access to a Resource (non-destructive)."""
-    access_array = _build_access_array(groupid, serviceid, policyid, autolockdays, expiresat)
+    access_array = _build_access_array(groupid, serviceid, policyid, expiresat)
     run_query(
         get_client(),
         q.RESOURCE_ACCESS_ADD,

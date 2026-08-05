@@ -318,15 +318,24 @@ class TwingateClient:
                     if on_throttle:
                         on_throttle(len(failed), 30, len(all_nodes), total_count)
                     _time.sleep(30)
+                    still_failed = []
                     for cur in failed:
                         retry = _fetch(cur)
                         if retry:
                             _collect(retry)
+                        else:
+                            still_failed.append(cur)
                         requests_made += 1
                         budget -= 1
+                    if still_failed:
+                        logger.warning(
+                            "paginate_parallel: %d cursor(s) failed after retry — "
+                            "results may be incomplete (%d/%d items fetched)",
+                            len(still_failed), len(all_nodes), total_count,
+                        )
 
                 batch_num += 1
-                budget -= batch_size
+                budget -= (batch_size - len(failed))
                 if on_progress:
                     on_progress(len(all_nodes), total_count, batch_num, len(batch), total_batches, requests_made)
 
