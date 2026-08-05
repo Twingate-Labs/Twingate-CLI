@@ -382,6 +382,24 @@ mutation setGroupResources($groupID: ID!, $resourceIDS: [ID!]!) {
 }
 """
 
+UPDATE_GROUP = """
+mutation updateGroup($groupID: ID!, $name: String, $isActive: Boolean, $securityPolicyId: ID) {
+  groupUpdate(id: $groupID, name: $name, isActive: $isActive, securityPolicyId: $securityPolicyId) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+      securityPolicy {
+        id
+        name
+      }
+    }
+  }
+}
+"""
+
 HEALTH_GROUPS = """
 { groups(first: null, after: "0") { totalCount edges { node { id type users { edges { node { id } } } } } } }
 """

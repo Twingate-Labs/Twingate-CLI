@@ -177,6 +177,19 @@ mutation setServiceAccountResources($id: ID!, $resourceIDS: [ID!]!) {
 }
 """
 
+UPDATE_ACCOUNT = """
+mutation updateServiceAccount($id: ID!, $name: String, $resourceIds: [ID!]) {
+  serviceAccountUpdate(id: $id, name: $name, resourceIds: $resourceIds) {
+    ok
+    error
+    entity {
+      id
+      name
+    }
+  }
+}
+"""
+
 HEALTH_ACCOUNTS = """
 { serviceAccounts(first: null, after: "0") { totalCount edges { node { id keys { edges { node { id status } } } } } } }
 """

@@ -123,6 +123,20 @@ mutation GetConnTokens($id: ID!) {
 }
 """
 
+UPDATE_CONNECTOR = """
+mutation updateConnector($id: ID!, $name: String, $hasStatusNotificationsEnabled: Boolean) {
+  connectorUpdate(id: $id, name: $name, hasStatusNotificationsEnabled: $hasStatusNotificationsEnabled) {
+    ok
+    error
+    entity {
+      id
+      name
+      hasStatusNotificationsEnabled
+    }
+  }
+}
+"""
+
 HEALTH_CONNECTORS = """
 { connectors(first: null, after: "0") { totalCount edges { node { id state remoteNetwork { id } } } } }
 """

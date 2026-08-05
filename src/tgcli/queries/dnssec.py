@@ -103,13 +103,13 @@ mutation updateDnsProfileFull(
   $id: ID!
   $name: String
   $priority: Float
-  $fallbackMethod: DnsFilteringFallbackMethod
-  $groups: [ID!]
+  $fallbackMethod: DohFallbackMethod
+  $groups: [String!]
   $allowedDomains: [String!]
   $deniedDomains: [String!]
-  $contentCategoryConfig: DnsFilteringContentCategoryConfigInput
-  $securityCategoryConfig: DnsFilteringSecurityCategoryConfigInput
-  $privacyCategoryConfig: DnsFilteringPrivacyCategoryConfigInput
+  $contentCategoryConfig: ContentCategoryConfigInput
+  $securityCategoryConfig: SecurityCategoryConfigInput
+  $privacyCategoryConfig: PrivacyCategoryConfigInput
 ) {
   dnsFilteringProfileUpdate(
     id: $id

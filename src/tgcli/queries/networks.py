@@ -146,6 +146,21 @@ mutation PM_UpdateRemoteNetwork($rnID: ID!, $location: RemoteNetworkLocation!) {
 }
 """
 
+UPDATE_NETWORK = """
+mutation updateNetwork($rnID: ID!, $name: String, $location: RemoteNetworkLocation, $isActive: Boolean) {
+  remoteNetworkUpdate(id: $rnID, name: $name, location: $location, isActive: $isActive) {
+    ok
+    error
+    entity {
+      id
+      name
+      location
+      isActive
+    }
+  }
+}
+"""
+
 SHOW_NETWORK_BY_NAME = """
 query getNetworkByName($name: String!) {
   remoteNetwork(name: $name) {

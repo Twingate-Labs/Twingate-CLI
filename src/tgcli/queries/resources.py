@@ -812,6 +812,43 @@ mutation setApproverGroups($itemid: ID!, $approverGroupIds: [ID!]!) {
 }
 """
 
+UPDATE_RESOURCE = """
+mutation updateResource(
+  $itemid: ID!
+  $name: String
+  $address: String
+  $alias: String
+  $isVisible: Boolean
+  $protocols: ProtocolsInput
+  $routingMode: RoutingMode
+  $securityPolicyId: ID
+  $isBrowserShortcutEnabled: Boolean
+  $tags: [TagInput!]
+  $isActive: Boolean
+) {
+  resourceUpdate(
+    id: $itemid
+    name: $name
+    address: $address
+    alias: $alias
+    isVisible: $isVisible
+    protocols: $protocols
+    routingMode: $routingMode
+    securityPolicyId: $securityPolicyId
+    isBrowserShortcutEnabled: $isBrowserShortcutEnabled
+    tags: $tags
+    isActive: $isActive
+  ) {
+    ok
+    error
+    entity {
+      id
+      name
+    }
+  }
+}
+"""
+
 HEALTH_RESOURCES = """
 { resources(first: 1, after: "0") { totalCount } }
 """

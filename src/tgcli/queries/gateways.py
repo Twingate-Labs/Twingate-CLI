@@ -54,7 +54,7 @@ query getGateway($itemID: ID!) {
 """
 
 CREATE_GATEWAY = """
-mutation createGateway($address: String!, $remoteNetworkId: ID!, $sshCAId: ID, $x509CAId: ID) {
+mutation createGateway($address: String!, $remoteNetworkId: ID!, $sshCAId: ID, $x509CAId: ID!) {
   gatewayCreate(address: $address, remoteNetworkId: $remoteNetworkId, sshCAId: $sshCAId, x509CAId: $x509CAId) {
     ok
     error
