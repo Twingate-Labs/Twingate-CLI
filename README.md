@@ -5,6 +5,8 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+> **Prefer a browser?** See [tgcli-web-py](https://github.com/Twingate-Labs/tgcli-web-py) — a web console built on this CLI with export/import, diff review, and a health dashboard.
+
 ---
 
 ## Table of Contents
