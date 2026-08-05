@@ -256,7 +256,7 @@ def group_migrate(
                         "userIDS": [],
                         "resourceIDS": [],
                         "securityPolicyId": sec_policy_id,
-                    })["groupCreate"]
+                    })["data"]["groupCreate"]
                     if not result["ok"]:
                         raise RuntimeError(f"groupCreate failed: {result['error']}")
                     new_id = result["entity"]["id"]
@@ -265,12 +265,12 @@ def group_migrate(
                 row["target_group_id"] = new_id
 
                 for chunk in chunked([u["id"] for u in users], BATCH_SIZE):
-                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["groupUpdate"]
+                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding users failed: {res['error']}")
 
                 for chunk in chunked([r["id"] for r in resources], BATCH_SIZE):
-                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["groupUpdate"]
+                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding resources failed: {res['error']}")
 

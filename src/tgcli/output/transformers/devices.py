@@ -72,7 +72,6 @@ def get_posture_as_csv(json_results: dict) -> pd.DataFrame:
     posture = json_results.get("data", {}).get("devicePosture") or {}
     columns = ["check", "status", "detail"]
     data = []
-    rows = []
 
     for check in ["hardDriveEncryption", "screenLockPasscode", "firewall", "biometric", "antivirus"]:
         d = posture.get(check) or {}

@@ -33,11 +33,11 @@ class TestParseBoolString:
         assert parse_bool_string("FALSE") is False
 
     def test_invalid_raises(self):
-        with pytest.raises(ValueError, match="(?i)invalid"):
+        with pytest.raises(typer.BadParameter, match="(?i)invalid"):
             parse_bool_string("yes")
 
     def test_empty_raises(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(typer.BadParameter):
             parse_bool_string("")
 
 

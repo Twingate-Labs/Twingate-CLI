@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 @app.command("user-network")
 def user_network() -> None:
-    """Show all Asers and the Remote Networks + Resources they can access."""
+    """Show all Users and the Remote Networks + Resources they can access."""
     client = get_client()
     cursor = "0"
     has_next = True

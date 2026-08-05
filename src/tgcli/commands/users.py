@@ -32,7 +32,7 @@ def user_create(
     email: str = typer.Option(..., "-e", "--email", help="User email address."),
     firstname: str = typer.Option("", "-f", "--firstname", help="First name."),
     lastname: str = typer.Option(..., "-l", "--lastname", help="Last name."),
-    role: str = typer.Option(..., "-r", "--role", help="Role: ADMIN, DEVOPS, SUPPORT, or MEMBER."),
+    role: str = typer.Option(..., "-r", "--role", help="Role: ADMIN, DEVOPS, SUPPORT, MEMBER, ACCESS_REVIEWER, or BILLING."),
     sendinvite: str = typer.Option("True", "-s", "--sendinvite", help="Send email invitation: true or false."),
 ) -> None:
     """Create a new User."""
@@ -63,7 +63,7 @@ def user_delete(
 @app.command("role")
 def user_role(
     itemid: str = typer.Option(..., "-i", "--itemid", help="User ID."),
-    role: str = typer.Option(..., "-r", "--role", help="New role: ADMIN, DEVOPS, SUPPORT, or MEMBER."),
+    role: str = typer.Option(..., "-r", "--role", help="New role: ADMIN, DEVOPS, SUPPORT, MEMBER, ACCESS_REVIEWER, or BILLING."),
 ) -> None:
     """Update a User's role."""
     role_val = validate_user_role(role)

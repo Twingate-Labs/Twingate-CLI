@@ -15,7 +15,7 @@ def parse_bool_string(value: str) -> bool:
         return True
     if value.lower() == "false":
         return False
-    raise ValueError(
+    raise typer.BadParameter(
         f"Invalid boolean value '{value}'. Expected 'true' or 'false'."
     )
 

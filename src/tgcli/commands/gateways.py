@@ -30,7 +30,7 @@ def gateway_create(
     address: str = typer.Option(..., "-a", "--address", help="Gateway address."),
     networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
     sshcaid: str = typer.Option("", "--ssh-ca-id", help="SSH Certificate Authority ID."),
-    x509caid: str = typer.Option("", "--x509-ca-id", help="X509 Certificate Authority ID."),
+    x509caid: str = typer.Option(..., "--x509-ca-id", help="X509 Certificate Authority ID (required)."),
 ) -> None:
     """Create a new Gateway."""
     run_query(
@@ -40,7 +40,7 @@ def gateway_create(
             "address": address,
             "remoteNetworkId": networkid,
             "sshCAId": sshcaid or None,
-            "x509CAId": x509caid or None,
+            "x509CAId": x509caid,
         },
         t.get_create_as_csv,
     )

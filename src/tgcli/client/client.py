@@ -250,6 +250,8 @@ class TwingateClient:
         import concurrent.futures
         import time as _time
 
+        _state = {"total_count": 0}
+
         def _make_cursor(last_index: int) -> str:
             return base64.b64encode(f"arrayconnection:{last_index}".encode()).decode()
 
@@ -261,7 +263,7 @@ class TwingateClient:
                     if attempt >= THROTTLE_MAX_RETRIES:
                         return None
                     if on_throttle:
-                        on_throttle(1, exc.retry_after, len(all_nodes), total_count if 'total_count' in dir() else 0)
+                        on_throttle(1, exc.retry_after, len(all_nodes), _state["total_count"])
                     _time.sleep(exc.retry_after)
             return None
 
@@ -284,6 +286,7 @@ class TwingateClient:
             raise TwingateAPIError("Failed to fetch first page.")
         _collect(first)
         total_count = first["data"][data_key].get("totalCount") or len(all_nodes)
+        _state["total_count"] = total_count
 
         # Phase 2: remaining pages in parallel batches
         cursors = [_make_cursor(i) for i in range(page_size - 1, total_count, page_size)]
