@@ -100,3 +100,7 @@ query ListKeys($cursor: String) {
   }
 }
 """
+
+HEALTH_KEYS = """
+{ serviceAccounts(first: null, after: "0") { totalCount edges { node { id keys { edges { node { id status } } } } } } }
+"""
