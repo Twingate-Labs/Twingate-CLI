@@ -115,6 +115,64 @@ def group_remove_resources(
     )
 
 
+@app.command("rename")
+def group_rename(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    name: str = typer.Option(..., "-n", "--name", help="New Group name."),
+) -> None:
+    """Rename a Group."""
+    run_query(
+        get_client(),
+        q.RENAME_GROUP,
+        {"groupID": groupid, "name": name},
+        t.get_rename_as_csv,
+    )
+
+
+@app.command("setState")
+def group_set_state(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    active: str = typer.Option(..., "-a", "--active", help="Active state: true or false."),
+) -> None:
+    """Activate or deactivate a Group."""
+    from tgcli.validators.generic import parse_bool_string
+    active_bool = parse_bool_string(active)
+    run_query(
+        get_client(),
+        q.UPDATE_GROUP_STATE,
+        {"groupID": groupid, "isActive": active_bool},
+        t.get_update_state_as_csv,
+    )
+
+
+@app.command("setUsers")
+def group_set_users(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    userids: str = typer.Option(..., "-u", "--userids", help="Comma-separated User IDs (replaces all)."),
+) -> None:
+    """Replace all users in a Group (full-replace)."""
+    run_query(
+        get_client(),
+        q.SET_GROUP_USERS,
+        {"groupID": groupid, "userIDS": split_ids(userids)},
+        t.get_set_users_as_csv,
+    )
+
+
+@app.command("setResources")
+def group_set_resources(
+    groupid: str = typer.Option(..., "-g", "--groupid", help="Group ID."),
+    resourceids: str = typer.Option(..., "-r", "--resourceids", help="Comma-separated Resource IDs (replaces all)."),
+) -> None:
+    """Replace all resources in a Group (full-replace)."""
+    run_query(
+        get_client(),
+        q.SET_GROUP_RESOURCES,
+        {"groupID": groupid, "resourceIDS": split_ids(resourceids)},
+        t.get_set_resources_as_csv,
+    )
+
+
 @app.command("migrate")
 def group_migrate(
     execute: bool = typer.Option(False, "--execute", help="Apply changes. Without this flag, only a dry run is performed."),
@@ -168,8 +226,8 @@ def group_migrate(
         new_name = f"{g['name']}{name_suffix}"
         typer.echo(f"\n=== {g['name']} ({g['id']}) -> {new_name} ===")
 
-        users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["group", "users"])
-        resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["group", "resources"])
+        users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["data", "group", "users"])
+        resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["data", "group", "resources"])
         typer.echo(f"  members: {len(users)}   resources: {len(resources)}")
 
         row = {
@@ -198,7 +256,7 @@ def group_migrate(
                         "userIDS": [],
                         "resourceIDS": [],
                         "securityPolicyId": sec_policy_id,
-                    })["groupCreate"]
+                    })["data"]["groupCreate"]
                     if not result["ok"]:
                         raise RuntimeError(f"groupCreate failed: {result['error']}")
                     new_id = result["entity"]["id"]
@@ -207,12 +265,12 @@ def group_migrate(
                 row["target_group_id"] = new_id
 
                 for chunk in chunked([u["id"] for u in users], BATCH_SIZE):
-                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["groupUpdate"]
+                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding users failed: {res['error']}")
 
                 for chunk in chunked([r["id"] for r in resources], BATCH_SIZE):
-                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["groupUpdate"]
+                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding resources failed: {res['error']}")
 

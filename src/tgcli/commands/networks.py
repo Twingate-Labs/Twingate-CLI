@@ -21,10 +21,17 @@ def network_list() -> None:
 
 @app.command("show")
 def network_show(
-    itemid: str = typer.Option(..., "-i", "--itemid", help="Remote Network ID."),
+    itemid: str = typer.Option("", "-i", "--itemid", help="Remote Network ID."),
+    name: str = typer.Option("", "-n", "--name", help="Remote Network name (alternative to --itemid)."),
 ) -> None:
     """Show details for a specific Remote Network."""
-    run_query(get_client(), q.SHOW_NETWORK, {"itemID": itemid}, t.get_show_as_csv)
+    if name:
+        run_query(get_client(), q.SHOW_NETWORK_BY_NAME, {"name": name}, t.get_show_as_csv)
+    elif itemid:
+        run_query(get_client(), q.SHOW_NETWORK, {"itemID": itemid}, t.get_show_as_csv)
+    else:
+        typer.echo("Error: Provide either --itemid or --name.", err=True)
+        raise typer.Exit(1)
 
 
 @app.command("create")

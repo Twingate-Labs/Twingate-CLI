@@ -5,6 +5,8 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+> **Prefer a browser?** See [tgcli-web-py](https://github.com/Twingate-Labs/tgcli-web-py) — a web console built on this CLI with export/import, diff review, and a health dashboard.
+
 ---
 
 ## Table of Contents
@@ -28,6 +30,10 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [policy](#policy)
   - [dnssec](#dnssec)
   - [mappings](#mappings)
+  - [ca (certificate authorities)](#ca)
+  - [gateway](#gateway)
+  - [access-request](#access-request)
+  - [webhook](#webhook)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
 
@@ -173,10 +179,11 @@ tgcli device updateTrust -i "RGV2aWNlOjE5MzI2OQ==" -t False
 # Update trust for multiple devices at once
 tgcli device updateTrust -l "RGV2aWNlOjE5MzI2OQ==,RGV2aWNlOjE5MzI3MA==" -t True
 
-# Block / unblock / archive a device
-tgcli device block   -i "RGV2aWNlOjE5MzI2OQ=="
-tgcli device unblock -i "RGV2aWNlOjE5MzI2OQ=="
-tgcli device archive -i "RGV2aWNlOjE5MzI2OQ=="
+# Block / unblock / archive / unarchive a device
+tgcli device block     -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device unblock   -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device archive   -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device unarchive -i "RGV2aWNlOjE5MzI2OQ=="
 
 # --- Serial number allowlist ---
 tgcli device snumber list
@@ -282,6 +289,25 @@ tgcli resource access_add -i "UmVzb3VyY2U6MQ==" \
 
 # Remove access for a group or service account
 tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
+
+# --- Rename, tags, protocols, browser shortcut ---
+tgcli resource rename -i "UmVzb3VyY2U6MQ==" -n "New Name"
+tgcli resource updateTags -i "UmVzb3VyY2U6MQ==" --tags "env=prod,team=backend"
+tgcli resource protocols -i "UmVzb3VyY2U6MQ==" -t RESTRICTED -c "[[443,443]]"
+tgcli resource browserShortcut -i "UmVzb3VyY2U6MQ==" -e true
+
+# --- Approver groups ---
+tgcli resource addApproverGroups -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
+tgcli resource removeApproverGroups -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
+tgcli resource setApproverGroups -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ==,R3JvdXA6Mg=="
+
+# --- Typed resources (SSH, Kubernetes, Web App) ---
+tgcli resource createSSH -n "SSH Server" -a "10.0.0.5" -r "UmVtb3RlTmV0d29yazox" --gateway-id "R2F0ZXdheTox" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+tgcli resource createK8s -n "K8s Cluster" -a "k8s.internal" -r "UmVtb3RlTmV0d29yazox" --gateway-id "R2F0ZXdheTox" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+tgcli resource createWebApp -n "Web App" -a "app.internal" -r "UmVtb3RlTmV0d29yazox" --gateway-id "R2F0ZXdheTox" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+tgcli resource updateSSH -i "UmVzb3VyY2U6MQ==" --upstream-port 2222
+tgcli resource updateK8s -i "UmVzb3VyY2U6MQ==" --upstream-port 6443
+tgcli resource updateWebApp -i "UmVzb3VyY2U6MQ==" --upstream-port 8443
 ```
 
 **Protocol flags for `resource create`:**
@@ -348,6 +374,15 @@ tgcli group delete -i "R3JvdXA6MQ=="
 tgcli group addUsers    -g "R3JvdXA6MQ==" -u "VXNlcjox,VXNlcjoy"
 tgcli group removeUsers -g "R3JvdXA6MQ==" -u "VXNlcjox"
 
+# Rename / activate / deactivate
+tgcli group rename   -g "R3JvdXA6MQ==" -n "New Group Name"
+tgcli group setState -g "R3JvdXA6MQ==" -a false
+tgcli group setState -g "R3JvdXA6MQ==" -a true
+
+# Full-replace users / resources (replaces all existing)
+tgcli group setUsers     -g "R3JvdXA6MQ==" -u "VXNlcjox,VXNlcjoy"
+tgcli group setResources -g "R3JvdXA6MQ==" -r "UmVzb3VyY2U6MQ=="
+
 # Add / remove resources
 tgcli group addResources    -g "R3JvdXA6MQ==" -r "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg=="
 tgcli group removeResources -g "R3JvdXA6MQ==" -r "UmVzb3VyY2U6MQ=="
@@ -389,8 +424,11 @@ tgcli user create \
 # Create without sending the invitation
 tgcli user create -e bob@example.com -l Jones -r DEVOPS -s False
 
-# Update role (ADMIN | DEVOPS | SUPPORT | MEMBER)
+# Update role (ADMIN | DEVOPS | SUPPORT | MEMBER | ACCESS_REVIEWER | BILLING)
 tgcli user role -i "VXNlcjox" -r ADMIN
+
+# Update first/last name
+tgcli user updateName -i "VXNlcjox" -f "Alice" -l "Johnson"
 
 # Enable or disable a user
 tgcli user state -i "VXNlcjox" -s ACTIVE
@@ -413,6 +451,7 @@ Manage Twingate remote networks.
 # List / show
 tgcli network list
 tgcli network show -i "UmVtb3RlTmV0d29yazox"
+tgcli network show -n "AWS US-East"            # lookup by name
 
 # Create a remote network
 tgcli network create -n "AWS US-East" -a true -l AWS
@@ -449,9 +488,15 @@ tgcli account show -i "U2VydmljZUFjY291bnQ6MQ=="
 tgcli account create -n "CI/CD Bot"
 tgcli account create -n "Monitoring" -r "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg=="
 
+# Rename
+tgcli account rename -i "U2VydmljZUFjY291bnQ6MQ==" -n "New Bot Name"
+
 # Add / remove resources
 tgcli account addResources    -i "U2VydmljZUFjY291bnQ6MQ==" -r "UmVzb3VyY2U6Mw=="
 tgcli account removeResources -i "U2VydmljZUFjY291bnQ6MQ==" -r "UmVzb3VyY2U6Mw=="
+
+# Full-replace resources (replaces all existing)
+tgcli account setResources -i "U2VydmljZUFjY291bnQ6MQ==" -r "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg=="
 
 # Delete a service account
 tgcli account delete -i "U2VydmljZUFjY291bnQ6MQ=="
@@ -485,14 +530,21 @@ tgcli key delete -i "S2V5OjE="
 
 ### policy
 
-Manage Twingate security policies (read-only via API).
+Manage Twingate security policies.
 
 ```bash
-# List all security policies
+# List all security policies (with optional filters)
 tgcli policy list
+tgcli policy list --filter-type DEFAULT
+tgcli policy list --filter-name "My Policy"
 
-# Show a specific policy
+# Show a specific policy (by ID or name)
 tgcli policy show -i "U2VjdXJpdHlQb2xpY3k6MQ=="
+tgcli policy show -n "Default Policy"
+
+# Add / remove groups from a policy
+tgcli policy addGroups    -i "U2VjdXJpdHlQb2xpY3k6MQ==" -g "R3JvdXA6MQ==,R3JvdXA6Mg=="
+tgcli policy removeGroups -i "U2VjdXJpdHlQb2xpY3k6MQ==" -g "R3JvdXA6MQ=="
 ```
 
 ---
@@ -510,6 +562,13 @@ tgcli dnssec setAllowList -d "example.com,internal.corp"
 
 # Set the DNS deny list (replaces existing)
 tgcli dnssec setDenyList -d "ads.example.com,tracking.io"
+
+# Create / delete a DNS filtering profile
+tgcli dnssec create -n "Custom Profile"
+tgcli dnssec delete -i "RG5zUHJvZmlsZTox"
+
+# Full profile update (name, fallback, groups, categories)
+tgcli dnssec update --name "Renamed" --fallback STRICT --groups "R3JvdXA6MQ=="
 ```
 
 ---
@@ -535,6 +594,101 @@ tgcli -f CSV mappings user-resource -e alice@example.com
 # nothing in the API links a Resource directly to a Connector)
 tgcli mappings resource-connectivity
 tgcli mappings resource-connectivity --offline-only
+```
+
+---
+
+### ca
+
+Manage Twingate Certificate Authorities (SSH and X509).
+
+```bash
+# List all certificate authorities
+tgcli ca list
+
+# Show a specific CA
+tgcli ca show -i "Q0E6MQ=="
+
+# Create an SSH Certificate Authority
+tgcli ca createSSH -n "My SSH CA" -k "ssh-rsa AAAA..."
+
+# Delete an SSH Certificate Authority
+tgcli ca deleteSSH -i "Q0E6MQ=="
+
+# Create an X509 Certificate Authority
+tgcli ca createX509 -n "My X509 CA" -c "-----BEGIN CERTIFICATE-----..."
+
+# Delete an X509 Certificate Authority
+tgcli ca deleteX509 -i "Q0E6Mg=="
+```
+
+---
+
+### gateway
+
+Manage Twingate Gateways (Access Nodes).
+
+```bash
+# List all gateways
+tgcli gateway list
+
+# Show a specific gateway
+tgcli gateway show -i "R2F0ZXdheTox"
+
+# Create a gateway
+tgcli gateway create \
+  -a "host.example.com:8443" \
+  -r "UmVtb3RlTmV0d29yazox" \
+  --x509-ca-id "Q0E6MQ=="
+
+# Update a gateway
+tgcli gateway update -i "R2F0ZXdheTox" -a "new-host:8443"
+
+# Delete a gateway
+tgcli gateway delete -i "R2F0ZXdheTox"
+```
+
+---
+
+### access-request
+
+Manage Twingate Access Requests (approve/reject workflows).
+
+```bash
+# List all access requests
+tgcli access-request list
+
+# Show a specific access request
+tgcli access-request show -i "QVI6MQ=="
+
+# Approve an access request
+tgcli access-request approve -i "QVI6MQ=="
+
+# Reject an access request
+tgcli access-request reject -i "QVI6MQ=="
+```
+
+---
+
+### webhook
+
+Manage Twingate Webhooks.
+
+```bash
+# List all webhooks
+tgcli webhook list
+
+# Show a specific webhook
+tgcli webhook show -i "V0g6MQ=="
+
+# Create a webhook
+tgcli webhook create -n "My Webhook" -u "https://example.com/hook"
+
+# Update a webhook
+tgcli webhook update -i "V0g6MQ==" -n "New Name" -u "https://new-url.com/hook"
+
+# Delete a webhook
+tgcli webhook delete -i "V0g6MQ=="
 ```
 
 ---

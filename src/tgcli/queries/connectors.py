@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 LIST_CONNECTORS = """
-query listObj($cursor: String!) {
-  connectors(after: $cursor, first: null) {
+query listConnectors($cursor: String!, $filter: ConnectorFilterInput) {
+  connectors(after: $cursor, first: null, filter: $filter) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -73,7 +74,7 @@ mutation connectorCreate($connName: String!, $remoteNetworkID: ID!, $statNotific
 """
 
 RENAME_CONNECTOR = """
-mutation ObjRename($id: ID!, $name: String!) {
+mutation renameConnector($id: ID!, $name: String!) {
   connectorUpdate(id: $id, name: $name) {
     ok
     error
@@ -87,7 +88,7 @@ mutation ObjRename($id: ID!, $name: String!) {
 """
 
 UPDATE_CONNECTOR_NOTIFICATIONS = """
-mutation ObjUpd($id: ID!, $hasStatusNotificationsEnabled: Boolean!) {
+mutation updateConnectorNotifications($id: ID!, $hasStatusNotificationsEnabled: Boolean!) {
   connectorUpdate(id: $id, hasStatusNotificationsEnabled: $hasStatusNotificationsEnabled) {
     ok
     error
@@ -96,6 +97,15 @@ mutation ObjUpd($id: ID!, $hasStatusNotificationsEnabled: Boolean!) {
       name
       hasStatusNotificationsEnabled
     }
+  }
+}
+"""
+
+DELETE_CONNECTOR = """
+mutation connectorDelete($id: ID!) {
+  connectorDelete(id: $id) {
+    ok
+    error
   }
 }
 """
@@ -111,4 +121,22 @@ mutation GetConnTokens($id: ID!) {
     }
   }
 }
+"""
+
+UPDATE_CONNECTOR = """
+mutation updateConnector($id: ID!, $name: String, $hasStatusNotificationsEnabled: Boolean) {
+  connectorUpdate(id: $id, name: $name, hasStatusNotificationsEnabled: $hasStatusNotificationsEnabled) {
+    ok
+    error
+    entity {
+      id
+      name
+      hasStatusNotificationsEnabled
+    }
+  }
+}
+"""
+
+HEALTH_CONNECTORS = """
+{ connectors(first: null, after: "0") { totalCount edges { node { id state remoteNetwork { id } } } } }
 """

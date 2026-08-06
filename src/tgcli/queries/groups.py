@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 LIST_GROUPS = """
-query listGroup($cursor: String!) {
+query listGroups($cursor: String!) {
   groups(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -17,6 +18,12 @@ query listGroup($cursor: String!) {
         updatedAt
         isActive
         type
+        originId
+        securityPolicy {
+          id
+          name
+          policyType
+        }
         users {
           edges {
             node {
@@ -55,6 +62,12 @@ query getObj($itemID: ID!) {
     updatedAt
     isActive
     type
+    originId
+    securityPolicy {
+      id
+      name
+      policyType
+    }
     users {
       edges {
         node {
@@ -295,4 +308,98 @@ mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {
     }
   }
 }
+"""
+
+RENAME_GROUP = """
+mutation renameGroup($groupID: ID!, $name: String!) {
+  groupUpdate(id: $groupID, name: $name) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+      type
+    }
+  }
+}
+"""
+
+UPDATE_GROUP_STATE = """
+mutation updateGroupState($groupID: ID!, $isActive: Boolean!) {
+  groupUpdate(id: $groupID, isActive: $isActive) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+      type
+    }
+  }
+}
+"""
+
+SET_GROUP_USERS = """
+mutation setGroupUsers($groupID: ID!, $userIDS: [ID!]!) {
+  groupUpdate(id: $groupID, userIds: $userIDS) {
+    ok
+    error
+    entity {
+      id
+      name
+      users {
+        edges {
+          node {
+            id
+            email
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+SET_GROUP_RESOURCES = """
+mutation setGroupResources($groupID: ID!, $resourceIDS: [ID!]!) {
+  groupUpdate(id: $groupID, resourceIds: $resourceIDS) {
+    ok
+    error
+    entity {
+      id
+      name
+      resources {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+UPDATE_GROUP = """
+mutation updateGroup($groupID: ID!, $name: String, $isActive: Boolean, $securityPolicyId: ID) {
+  groupUpdate(id: $groupID, name: $name, isActive: $isActive, securityPolicyId: $securityPolicyId) {
+    ok
+    error
+    entity {
+      id
+      name
+      isActive
+      securityPolicy {
+        id
+        name
+      }
+    }
+  }
+}
+"""
+
+HEALTH_GROUPS = """
+{ groups(first: null, after: "0") { totalCount edges { node { id type users { edges { node { id } } } } } } }
 """

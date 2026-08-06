@@ -19,14 +19,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _resolve_col(node: dict[str, Any], col: str) -> Any:
-    """Resolve a column path (possibly dotted) from a node dict."""
+    """Resolve a column path (possibly multi-level dotted) from a node dict."""
     if "." in col:
         parts = col.split(".", 1)
         parent = node.get(parts[0])
         if parent is None:
             logger.debug("Could not find attribute '%s' in node.", parts[0])
             return None
-        return parent.get(parts[1]) if isinstance(parent, dict) else None
+        if not isinstance(parent, dict):
+            return None
+        return _resolve_col(parent, parts[1])
     return node.get(col)
 
 

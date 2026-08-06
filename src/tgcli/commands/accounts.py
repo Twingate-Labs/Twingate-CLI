@@ -12,9 +12,12 @@ app = typer.Typer(help="Manage Twingate Service Accounts.")
 
 
 @app.command("list")
-def account_list() -> None:
+def account_list(
+    filter_name: str = typer.Option("", "--filter-name", help="Filter by service account name (contains)."),
+) -> None:
     """List all service accounts."""
-    run_paginated(get_client(), q.LIST_ACCOUNTS, "serviceAccounts", t.get_list_as_csv)
+    extra = {"filter": {"name": {"contains": filter_name}}} if filter_name else None
+    run_paginated(get_client(), q.LIST_ACCOUNTS, "serviceAccounts", t.get_list_as_csv, extra_vars=extra)
 
 
 @app.command("show")
@@ -80,6 +83,27 @@ def account_rename(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
     name: str = typer.Option(..., "-n", "--name", help="New Service Account name."),
 ) -> None:
+    """Rename a service account."""
+    run_query(
+        get_client(),
+        q.RENAME_ACCOUNT,
+        {"id": itemid, "name": name},
+        t.get_rename_as_csv,
+    )
+
+
+@app.command("setResources")
+def account_set_resources(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
+    resourceids: str = typer.Option(..., "-r", "--resourceids", help="Comma-separated Resource IDs (replaces all)."),
+) -> None:
+    """Replace all resources on a Service Account (full-replace)."""
+    run_query(
+        get_client(),
+        q.SET_ACCOUNT_RESOURCES,
+        {"id": itemid, "resourceIDS": split_ids(resourceids)},
+        t.get_set_resources_as_csv,
+    )
     """Rename a Service Account."""
     run_query(get_client(), q.RENAME_ACCOUNT, {"id": itemid, "name": name}, t.get_rename_as_csv)
 

@@ -16,7 +16,7 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
 
 
 def get_create_as_csv(json_results: dict) -> pd.DataFrame:
-    columns = ["ok", "error", "token", "id", "name", "expiresAt", "status"]
+    columns = ["ok", "error", "id", "name", "expiresAt", "status", "token"]
     return generic.get_update_as_csv_no_nesting(json_results, "serviceAccountKeyCreate", columns)
 
 

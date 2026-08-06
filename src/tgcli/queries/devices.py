@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 LIST_DEVICES = """
-query listGroup($cursor: String!)
+query listDevices($cursor: String!, $filter: DeviceFilterInput)
 {
-  devices(after: $cursor, first:null) {
+  devices(after: $cursor, first:null, filter: $filter) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -129,9 +130,25 @@ mutation updateDevice($deviceID: ID!) {
 }
 """
 
+UNARCHIVE_DEVICE = """
+mutation updateDevice($deviceID: ID!) {
+  deviceUnarchive(id: $deviceID) {
+    ok
+    error
+    entity {
+      id
+      name
+      isTrusted
+      activeState
+    }
+  }
+}
+"""
+
 LIST_SERIAL_NUMBERS = """
 query PM_GetListOfSerialNumbers($cursor: String!) {
   serialNumbers(after: $cursor) {
+    totalCount
     edges {
       node {
         id
@@ -189,12 +206,20 @@ query getDevicePosture($deviceID: ID!) {
       osVersion           { isSatisfied version  }
       crowdstrike   { isVerified failureReason expiredAt failureDetails }
       jamf          { isVerified failureReason expiredAt failureDetails }
-      kandji        { isVerified failureReason expiredAt failureDetails }
+      iru           { isVerified failureReason expiredAt failureDetails }
       inTune        { isVerified failureReason expiredAt failureDetails }
       sentinelOne   { isVerified failureReason expiredAt failureDetails }
       onePassword   { isVerified failureReason expiredAt failureDetails }
       manualVerification { isVerified value }
-    
+
   }
 }
+"""
+
+HEALTH_DEVICES = """
+{ devices(first: null, after: "0") { totalCount edges { node { id osName } } } }
+"""
+
+HEALTH_SERIAL_NUMBERS = """
+{ serialNumbers(first: null, after: "0") { totalCount edges { node { id matchedDevices { id } } } } }
 """
