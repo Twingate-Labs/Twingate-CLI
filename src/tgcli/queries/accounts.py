@@ -141,3 +141,37 @@ mutation removeResToSAccount($id: ID!, $resourceIDS: [ID!]) {
   }
 }
 """
+
+RENAME_ACCOUNT = """
+mutation ObjRename($id: ID!, $name: String!) {
+  serviceAccountUpdate(id: $id, name: $name) {
+    ok
+    error
+    entity {
+      id
+      name
+    }
+  }
+}
+"""
+
+LIST_ACCOUNT_KEYS = """
+query getObj($itemID: ID!) {
+  serviceAccount(id: $itemID) {
+    id
+    name
+    keys {
+      edges {
+        node {
+          id
+          name
+          status
+          createdAt
+          expiresAt
+          revokedAt
+        }
+      }
+    }
+  }
+}
+"""

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+from typing import Optional
 
 import pandas as pd
 import typer
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
-from tgcli.commands._common import get_client, run_query
+from tgcli.commands._common import get_client, run_paginated, run_query
 from tgcli.main import state
 from tgcli.output.transformers import keys as t
 from tgcli.queries import keys as q
@@ -64,6 +65,41 @@ def key_rename(
 ) -> None:
     """Rename a Service Account Key."""
     run_query(get_client(), q.RENAME_KEY, {"id": itemid, "name": name}, t.get_rename_as_csv)
+
+
+@app.command("list")
+def key_list(
+    status: Optional[str] = typer.Option(
+        None, "-s", "--status",
+        help="Filter by status: ACTIVE, REVOKED, or EXPIRED.",
+    ),
+) -> None:
+    """List all Service Account Keys across all Service Accounts."""
+    status_upper = status.upper() if status else None
+    valid_statuses = {"ACTIVE", "REVOKED", "EXPIRED"}
+    if status_upper and status_upper not in valid_statuses:
+        typer.echo(f"Error: --status must be one of {sorted(valid_statuses)}.", err=True)
+        raise typer.Exit(1)
+
+    def transformer(json_results: list) -> pd.DataFrame:
+        return t.get_list_as_csv(json_results, status_filter=status_upper)
+
+    run_paginated(get_client(), q.LIST_KEYS, "serviceAccounts", transformer)
+
+
+@app.command("expiring")
+def key_expiring(
+    days: int = typer.Option(30, "-d", "--days", help="Warn for keys expiring within this many days."),
+) -> None:
+    """List active keys expiring within a given number of days."""
+    if days < 0:
+        typer.echo("Error: --days must be a non-negative integer.", err=True)
+        raise typer.Exit(1)
+
+    def transformer(json_results: list) -> pd.DataFrame:
+        return t.get_list_as_csv(json_results, status_filter="ACTIVE", expiring_days=days)
+
+    run_paginated(get_client(), q.LIST_KEYS, "serviceAccounts", transformer)
 
 
 @app.command("rotate")

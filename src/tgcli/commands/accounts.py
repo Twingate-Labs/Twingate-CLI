@@ -73,3 +73,20 @@ def account_remove_resources(
         {"id": itemid, "resourceIDS": split_ids(resourceids)},
         t.get_add_remove_resources_as_csv,
     )
+
+
+@app.command("rename")
+def account_rename(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
+    name: str = typer.Option(..., "-n", "--name", help="New Service Account name."),
+) -> None:
+    """Rename a Service Account."""
+    run_query(get_client(), q.RENAME_ACCOUNT, {"id": itemid, "name": name}, t.get_rename_as_csv)
+
+
+@app.command("listKeys")
+def account_list_keys(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
+) -> None:
+    """List all keys for a specific Service Account."""
+    run_query(get_client(), q.LIST_ACCOUNT_KEYS, {"itemID": itemid}, t.get_list_keys_as_csv)
