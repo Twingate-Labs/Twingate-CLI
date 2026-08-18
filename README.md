@@ -479,7 +479,13 @@ tgcli key revoke -i "S2V5OjE="
 
 # Permanently delete a key
 tgcli key delete -i "S2V5OjE="
+
+# Rotate a key: creates a new key on the same Service Account, then revokes the old one
+tgcli key rotate -i "S2V5OjE="
+tgcli key rotate -i "S2V5OjE=" -e 90 -n "deploy-key-2026Q3"
 ```
+
+`key rotate` prints the new key's secret token — save it immediately, it can't be retrieved again. There's no native rotate mutation in the Twingate API; this orchestrates create-then-revoke. If creating the new key fails, the old key is left untouched. If the new key is created but revoking the old one fails, both stay active and the old key's ID is reported so you can revoke it manually.
 
 ---
 
