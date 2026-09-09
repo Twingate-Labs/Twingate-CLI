@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 LIST_ACCOUNTS = """
-{
-  serviceAccounts(after: null, first: null) {
+query listServiceAccounts($cursor: String!, $filter: ServiceAccountFilterInput) {
+  serviceAccounts(after: $cursor, first: null, filter: $filter) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -75,7 +76,7 @@ query getObj($itemID: ID!) {
 """
 
 CREATE_ACCOUNT = """
-mutation ObjCreate($name: String!, $resourceIds: [ID!]) {
+mutation createServiceAccount($name: String!, $resourceIds: [ID!]) {
   serviceAccountCreate(name: $name, resourceIds: $resourceIds) {
     ok
     error
@@ -88,7 +89,7 @@ mutation ObjCreate($name: String!, $resourceIds: [ID!]) {
 """
 
 DELETE_ACCOUNT = """
-mutation ObjCreate($id: ID!) {
+mutation deleteServiceAccount($id: ID!) {
   serviceAccountDelete(id: $id) {
     ok
     error
@@ -143,7 +144,7 @@ mutation removeResToSAccount($id: ID!, $resourceIDS: [ID!]) {
 """
 
 RENAME_ACCOUNT = """
-mutation ObjRename($id: ID!, $name: String!) {
+mutation renameServiceAccount($id: ID!, $name: String!) {
   serviceAccountUpdate(id: $id, name: $name) {
     ok
     error
@@ -174,4 +175,42 @@ query getObj($itemID: ID!) {
     }
   }
 }
+"""
+
+SET_ACCOUNT_RESOURCES = """
+mutation setServiceAccountResources($id: ID!, $resourceIDS: [ID!]!) {
+  serviceAccountUpdate(id: $id, resourceIds: $resourceIDS) {
+    ok
+    error
+    entity {
+      id
+      name
+      resources {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+UPDATE_ACCOUNT = """
+mutation updateServiceAccount($id: ID!, $name: String, $resourceIds: [ID!]) {
+  serviceAccountUpdate(id: $id, name: $name, resourceIds: $resourceIds) {
+    ok
+    error
+    entity {
+      id
+      name
+    }
+  }
+}
+"""
+
+HEALTH_ACCOUNTS = """
+{ serviceAccounts(first: null, after: "0") { totalCount edges { node { id keys { edges { node { id status } } } } } } }
 """

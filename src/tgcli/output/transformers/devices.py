@@ -48,6 +48,11 @@ def get_archive_as_csv(json_results: dict) -> pd.DataFrame:
     return generic.get_update_as_csv_no_nesting(json_results, "deviceArchive", columns)
 
 
+def get_unarchive_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "isTrusted", "activeState"]
+    return generic.get_update_as_csv_no_nesting(json_results, "deviceUnarchive", columns)
+
+
 def get_sn_list_as_csv(json_results: list) -> pd.DataFrame:
     columns = ["id", "serialNumber", "createdAt", "matchedDevices"]
     return generic.get_list_as_csv(json_results, columns)
@@ -67,7 +72,6 @@ def get_posture_as_csv(json_results: dict) -> pd.DataFrame:
     posture = json_results.get("data", {}).get("devicePosture") or {}
     columns = ["check", "status", "detail"]
     data = []
-    rows = []
 
     for check in ["hardDriveEncryption", "screenLockPasscode", "firewall", "biometric", "antivirus"]:
         d = posture.get(check) or {}
@@ -76,7 +80,7 @@ def get_posture_as_csv(json_results: dict) -> pd.DataFrame:
     os_data = posture.get("osVersion") or {}
     data.append(["osVersion", os_data.get("isSatisfied"), os_data.get("version")])
 
-    for check in ["crowdstrike", "jamf", "kandji", "inTune", "sentinelOne", "onePassword"]:
+    for check in ["crowdstrike", "jamf", "iru", "inTune", "sentinelOne", "onePassword"]:
         d = posture.get(check) or {}
         if d:
             detail = d.get("failureReason") or d.get("failureDetails") or d.get("expiredAt") or ""

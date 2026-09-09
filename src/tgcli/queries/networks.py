@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 LIST_NETWORKS = """
-query listGroup($cursor: String!) {
+query listNetworks($cursor: String!) {
   remoteNetworks(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -16,6 +17,8 @@ query listGroup($cursor: String!) {
         updatedAt
         createdAt
         isActive
+        networkType
+        location
         connectors {
           edges {
             node {
@@ -29,6 +32,13 @@ query listGroup($cursor: String!) {
             node {
               id
               name
+            }
+          }
+        }
+        gateways {
+          edges {
+            node {
+              id
             }
           }
         }
@@ -46,6 +56,8 @@ query getObj($itemID: ID!) {
     updatedAt
     createdAt
     isActive
+    networkType
+    location
     connectors {
       edges {
         node {
@@ -62,12 +74,19 @@ query getObj($itemID: ID!) {
         }
       }
     }
+    gateways {
+      edges {
+        node {
+          id
+        }
+      }
+    }
   }
 }
 """
 
 CREATE_NETWORK = """
-mutation ObjCreate($name: String!, $location: RemoteNetworkLocation!, $isactive: Boolean!) {
+mutation createRemoteNetwork($name: String!, $location: RemoteNetworkLocation!, $isactive: Boolean!) {
   remoteNetworkCreate(name: $name, location: $location, isActive: $isactive) {
     ok
     error
@@ -80,7 +99,7 @@ mutation ObjCreate($name: String!, $location: RemoteNetworkLocation!, $isactive:
 """
 
 DELETE_NETWORK = """
-mutation ObjDelete($id: ID!) {
+mutation deleteRemoteNetwork($id: ID!) {
   remoteNetworkDelete(id: $id) {
     ok
     error
@@ -125,4 +144,60 @@ mutation PM_UpdateRemoteNetwork($rnID: ID!, $location: RemoteNetworkLocation!) {
     }
   }
 }
+"""
+
+UPDATE_NETWORK = """
+mutation updateNetwork($rnID: ID!, $name: String, $location: RemoteNetworkLocation, $isActive: Boolean) {
+  remoteNetworkUpdate(id: $rnID, name: $name, location: $location, isActive: $isActive) {
+    ok
+    error
+    entity {
+      id
+      name
+      location
+      isActive
+    }
+  }
+}
+"""
+
+SHOW_NETWORK_BY_NAME = """
+query getNetworkByName($name: String!) {
+  remoteNetwork(name: $name) {
+    id
+    name
+    updatedAt
+    createdAt
+    isActive
+    networkType
+    location
+    connectors {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    resources {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    gateways {
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+}
+"""
+
+HEALTH_NETWORKS = """
+{ remoteNetworks(first: null, after: "0") { totalCount edges { node { id } } } }
 """

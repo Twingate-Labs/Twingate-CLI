@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 LIST_USERS = """
-query listGroup($cursor: String!) {
+query listUsers($cursor: String!) {
   users(after: $cursor, first: null) {
+    totalCount
     pageInfo {
       endCursor
       hasNextPage
@@ -15,6 +16,8 @@ query listGroup($cursor: String!) {
         state
         email
         role
+        type
+        avatarUrl
         lastName
         firstName
         createdAt
@@ -23,6 +26,14 @@ query listGroup($cursor: String!) {
           edges {
             node {
               id
+            }
+          }
+        }
+        devices {
+          edges {
+            node {
+              id
+              name
             }
           }
         }
@@ -39,11 +50,21 @@ query getObj($itemID: ID!) {
     state
     email
     role
+    type
+    avatarUrl
     lastName
     firstName
     createdAt
     updatedAt
     groups {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+    }
+    devices {
       edges {
         node {
           id
@@ -147,4 +168,27 @@ mutation userResetMfa($itemid: ID!) {
     error
   }
 }
+"""
+
+UPDATE_USER_NAME = """
+mutation updateUserName($userID: ID!, $firstName: String, $lastName: String) {
+  userDetailsUpdate(id: $userID, firstName: $firstName, lastName: $lastName) {
+    ok
+    error
+    entity {
+      id
+      state
+      email
+      role
+      lastName
+      firstName
+      createdAt
+      updatedAt
+    }
+  }
+}
+"""
+
+HEALTH_USERS = """
+{ users(first: null, after: "0") { totalCount edges { node { id type } } } }
 """

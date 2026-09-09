@@ -23,6 +23,7 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "address.type", "address.value",
         "protocols.allowIcmp", "protocols.tcp.policy", "protocols.udp.policy",
         "isVisible", "isBrowserShortcutEnabled", "routingMode",
+        "access.edges", "tags",
     ]
     return generic.get_show_as_csv_no_nesting(json_results, "resource", columns)
 
@@ -69,7 +70,7 @@ def get_routing_mode_update_as_csv(json_results: dict) -> pd.DataFrame:
 def get_autolock_update_as_csv(json_results: dict) -> pd.DataFrame:
     columns = [
         "ok", "error", "id", "name",
-        "usageBasedAutolockDurationDays", "approvalMode",
+        "accessPolicy.mode", "accessPolicy.durationSeconds", "approvalMode",
     ]
     return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
 
@@ -79,6 +80,41 @@ def get_active_update_as_csv(json_results: dict) -> pd.DataFrame:
     return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
 
 
+def get_rename_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
+def get_protocols_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
+def get_browser_shortcut_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "isBrowserShortcutEnabled"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
 def get_access_update_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name"]
     return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_typed_create_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_typed_update_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_tags_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
+
+
+def get_approver_groups_update_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name"]
+    return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)

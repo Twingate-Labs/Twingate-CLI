@@ -62,6 +62,21 @@ class TestGetToken:
             SessionManager.get_token("MySess")
 
 
+class TestGetHostname:
+    def test_default_hostname(self, mock_keyring):
+        SessionManager.store("MySess", "acme", "tok-123")
+        assert SessionManager.get_hostname("MySess") == "twingate.com"
+
+    def test_custom_hostname(self, mock_keyring):
+        SessionManager.store("MySess", "acme", "tok-123", hostname="stg.opstg.com")
+        assert SessionManager.get_hostname("MySess") == "stg.opstg.com"
+
+    def test_hostname_cleaned_on_delete(self, mock_keyring):
+        SessionManager.store("MySess", "acme", "tok-123", hostname="custom.host")
+        SessionManager.delete("MySess")
+        assert SessionManager.get_hostname("MySess") == "twingate.com"
+
+
 class TestGetUrl:
     def test_production_url(self, mock_keyring):
         SessionManager.store("MySess", "acme", "tok-123")

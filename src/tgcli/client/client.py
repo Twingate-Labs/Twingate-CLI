@@ -44,10 +44,11 @@ logger = logging.getLogger(__name__)
 class TwingateClient:
     """HTTP client for the Twingate Admin GraphQL API."""
 
-    def __init__(self, session: str) -> None:
+    def __init__(self, session: str, token: str | None = None, url: str | None = None) -> None:
         self.session = session
-        self._token: str | None = None
-        self._url: str | None = None
+        self._token: str | None = token
+        self._url: str | None = url
+        self._http = requests.Session()
 
     # ------------------------------------------------------------------
     # Credential resolution (lazy — avoids keyring call if not needed)
@@ -70,6 +71,21 @@ class TwingateClient:
             "X-API-KEY": self.token,
             "User-agent": USER_AGENT,
         }
+
+    # ------------------------------------------------------------------
+    # Public single-shot execute (no throttle retry)
+    # ------------------------------------------------------------------
+
+    def execute_once(
+        self,
+        query: str,
+        variables: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Execute a single GraphQL call without throttle retry.
+
+        Useful when the caller manages its own retry/progress logic.
+        """
+        return self._execute_once(query, variables)
 
     # ------------------------------------------------------------------
     # Core execute — throttle retry wrapper around the single-shot call
@@ -144,7 +160,7 @@ class TwingateClient:
         logger.debug("POST %s  variables=%s", self.url, variables)
 
         try:
-            response = requests.post(
+            response = self._http.post(
                 self.url,
                 json=payload,
                 headers=self._headers(),
@@ -199,6 +215,135 @@ class TwingateClient:
                 cursor = page_info["endCursor"]
 
         return all_pages
+
+    def paginate_parallel(
+        self,
+        query: str,
+        data_key: str,
+        reads_per_min: int = 60,
+        max_concurrent: int = 10,
+        page_size: int = 50,
+        on_progress: Callable[..., None] | None = None,
+        on_throttle: Callable[..., None] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch all pages concurrently using offset-based cursors.
+
+        Twingate's Relay cursors are ``base64("arrayconnection:N")`` where
+        N is the zero-based index of the last item on the page. This method
+        fetches page 1 to discover ``totalCount``, calculates all remaining
+        cursors, and fetches them in concurrent batches bounded by
+        *max_concurrent* and *reads_per_min*.
+
+        Args:
+            query:          GraphQL query string (must accept ``$cursor: String!``).
+            data_key:       Top-level key inside ``data`` (e.g. ``"resources"``).
+            reads_per_min:  Max API reads per 60-second window.
+            max_concurrent: Max parallel requests in a single batch.
+            page_size:      Items per page (API max is typically 50).
+            on_progress:    Optional callback(items_so_far, total, batch_num, batch_size, total_pages).
+            on_throttle:    Optional callback(failed_count, retry_after, items_so_far, total).
+
+        Returns:
+            Flat list of node dicts (deduplicated by ``id``).
+        """
+        import base64
+        import concurrent.futures
+        import time as _time
+
+        _state = {"total_count": 0}
+
+        def _make_cursor(last_index: int) -> str:
+            return base64.b64encode(f"arrayconnection:{last_index}".encode()).decode()
+
+        def _fetch(cursor: str) -> dict[str, Any] | None:
+            for attempt in range(THROTTLE_MAX_RETRIES + 1):
+                try:
+                    return self._execute_once(query, {"cursor": cursor})
+                except TwingateThrottleError as exc:
+                    if attempt >= THROTTLE_MAX_RETRIES:
+                        return None
+                    if on_throttle:
+                        on_throttle(1, exc.retry_after, len(all_nodes), _state["total_count"])
+                    _time.sleep(exc.retry_after)
+            return None
+
+        seen_ids: set[str] = set()
+        all_nodes: list[dict[str, Any]] = []
+
+        def _collect(result: dict[str, Any]) -> None:
+            for edge in result["data"][data_key].get("edges", []):
+                node = edge["node"]
+                nid = node.get("id")
+                if nid and nid in seen_ids:
+                    continue
+                if nid:
+                    seen_ids.add(nid)
+                all_nodes.append(node)
+
+        # Phase 1: first page
+        first = _fetch("0")
+        if first is None:
+            raise TwingateAPIError("Failed to fetch first page.")
+        _collect(first)
+        total_count = first["data"][data_key].get("totalCount") or len(all_nodes)
+        _state["total_count"] = total_count
+
+        # Phase 2: remaining pages in parallel batches
+        cursors = [_make_cursor(i) for i in range(page_size - 1, total_count, page_size)]
+        total_batches = 1 + (len(cursors) + max_concurrent - 1) // max_concurrent if cursors else 1
+        budget = reads_per_min - 1
+        batch_num = 1
+        requests_made = 1
+
+        if on_progress:
+            on_progress(len(all_nodes), total_count, 1, max_concurrent, total_batches, requests_made)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent) as pool:
+            while cursors:
+                batch_size = min(len(cursors), max_concurrent, max(1, budget))
+                batch = cursors[:batch_size]
+                cursors = cursors[batch_size:]
+
+                futures = {pool.submit(_fetch, cur): cur for cur in batch}
+                failed: list[str] = []
+                for fut in concurrent.futures.as_completed(futures):
+                    result = fut.result()
+                    if result is None:
+                        failed.append(futures[fut])
+                    else:
+                        _collect(result)
+                requests_made += len(batch)
+
+                if failed:
+                    if on_throttle:
+                        on_throttle(len(failed), 30, len(all_nodes), total_count)
+                    _time.sleep(30)
+                    still_failed = []
+                    for cur in failed:
+                        retry = _fetch(cur)
+                        if retry:
+                            _collect(retry)
+                        else:
+                            still_failed.append(cur)
+                        requests_made += 1
+                        budget -= 1
+                    if still_failed:
+                        logger.warning(
+                            "paginate_parallel: %d cursor(s) failed after retry — "
+                            "results may be incomplete (%d/%d items fetched)",
+                            len(still_failed), len(all_nodes), total_count,
+                        )
+
+                batch_num += 1
+                budget -= (batch_size - len(failed))
+                if on_progress:
+                    on_progress(len(all_nodes), total_count, batch_num, len(batch), total_batches, requests_made)
+
+                if budget <= 0 and cursors:
+                    _time.sleep(60)
+                    budget = reads_per_min
+
+        return all_nodes
 
     # ------------------------------------------------------------------
     # Internal validation helpers

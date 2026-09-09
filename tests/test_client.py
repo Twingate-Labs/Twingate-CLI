@@ -44,6 +44,11 @@ class TestCredentialResolution:
         with pytest.raises(TwingateAuthError):
             _ = bad_client.token
 
+    def test_constructor_kwargs_bypass_keyring(self, mock_keyring):
+        c = TwingateClient("", token="direct-tok", url="https://example.com/api/graphql/")
+        assert c.token == "direct-tok"
+        assert c.url == "https://example.com/api/graphql/"
+
 
 class TestExecute:
     @resp_lib.activate

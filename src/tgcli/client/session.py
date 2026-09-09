@@ -43,18 +43,22 @@ class SessionManager:
         return random.choice(COLORS) + random.choice(ANIMALS)
 
     @staticmethod
-    def store(session: str, tenant: str, token: str, staging: bool = False) -> None:
+    def store(session: str, tenant: str, token: str, staging: bool = False, hostname: str = "twingate.com") -> None:
         """Persist session credentials to the OS keychain."""
         keyring.set_password(SERVICE_NAME, f"{session}:token", token)
         keyring.set_password(SERVICE_NAME, f"{session}:tenant", tenant)
         if staging:
             keyring.set_password(SERVICE_NAME, f"{session}:staging", "true")
+            if hostname == "twingate.com":
+                hostname = "stg.opstg.com"
+        if hostname and hostname != "twingate.com":
+            keyring.set_password(SERVICE_NAME, f"{session}:hostname", hostname)
         SessionManager._add_to_index(session)
 
     @staticmethod
     def delete(session: str) -> None:
         """Remove a session's credentials from the OS keychain."""
-        for suffix in ("token", "tenant", "staging"):
+        for suffix in ("token", "tenant", "staging", "hostname"):
             try:
                 keyring.delete_password(SERVICE_NAME, f"{session}:{suffix}")
             except keyring.errors.PasswordDeleteError:
@@ -76,6 +80,12 @@ class SessionManager:
         return token
 
     @staticmethod
+    def get_hostname(session: str) -> str:
+        """Return the hostname for a session (defaults to 'twingate.com')."""
+        hostname = keyring.get_password(SERVICE_NAME, f"{session}:hostname")
+        return hostname or "twingate.com"
+
+    @staticmethod
     def get_url(session: str) -> str:
         """Build the GraphQL endpoint URL for a session.
 
@@ -88,10 +98,8 @@ class SessionManager:
                 f"Session '{session}' has no tenant configured. "
                 "Run 'tgcli auth login' first."
             )
-        staging = keyring.get_password(SERVICE_NAME, f"{session}:staging")
-        if staging == "true":
-            return f"https://{tenant}.stg.opstg.com/api/graphql/"
-        return f"https://{tenant}.twingate.com/api/graphql/"
+        hostname = SessionManager.get_hostname(session)
+        return f"https://{tenant}.{hostname}/api/graphql/"
 
     @staticmethod
     def list_sessions() -> list[str]:

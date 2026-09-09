@@ -98,3 +98,9 @@ query getGroup($cursor: String!, $groupID: ID!) {
   }
 }
 """
+
+GET_OIDC_PROVIDER_URL = """
+{
+  eventsSyncOidcProviderUrl
+}
+"""
