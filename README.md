@@ -27,6 +27,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [key](#key)
   - [policy](#policy)
   - [dnssec](#dnssec)
+  - [dns-profile](#dns-profile)
   - [mappings](#mappings)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
@@ -519,17 +520,35 @@ tgcli policy show -i "U2VjdXJpdHlQb2xpY3k6MQ=="
 
 ### dnssec
 
-Manage Twingate DNS security (filtering) settings.
+Manage a single DNS Filtering profile's allow/deny domain lists. Every
+profile is identified by ID now that Twingate supports multiple DNS
+Filtering profiles per tenant — use [dns-profile](#dns-profile) to find the
+ID.
 
 ```bash
-# Show current DNS filtering profile
-tgcli dnssec show
+# Show a profile's allow/deny lists
+tgcli dnssec show -i "RG5zRmlsdGVyaW5nUHJvZmlsZTpiZmIzMjM="
 
-# Set the DNS allow list (replaces existing)
-tgcli dnssec setAllowList -d "example.com,internal.corp"
+# Set a profile's DNS allow list (replaces existing)
+tgcli dnssec setAllowList -i "RG5zRmlsdGVyaW5nUHJvZmlsZTpiZmIzMjM=" -d "example.com,internal.corp"
 
-# Set the DNS deny list (replaces existing)
-tgcli dnssec setDenyList -d "ads.example.com,tracking.io"
+# Set a profile's DNS deny list (replaces existing)
+tgcli dnssec setDenyList -i "RG5zRmlsdGVyaW5nUHJvZmlsZTpiZmIzMjM=" -d "ads.example.com,tracking.io"
+```
+
+---
+
+### dns-profile
+
+List DNS Filtering profiles and see which Groups (and therefore users) each
+one is assigned to.
+
+```bash
+# List all DNS Filtering profiles
+tgcli dns-profile list
+
+# Show a specific profile, including its allow/deny lists and assigned groups
+tgcli dns-profile show -i "RG5zRmlsdGVyaW5nUHJvZmlsZTpiZmIzMjM="
 ```
 
 ---
