@@ -41,3 +41,25 @@ query getObj($itemID: ID!) {
   }
 }
 """
+
+UPDATE_POLICY_GROUPS = """
+mutation updatePolicyGroups($id: ID!, $groupIds: [ID], $addedGroupIds: [ID], $removedGroupIds: [ID]) {
+  securityPolicyUpdate(id: $id, groupIds: $groupIds, addedGroupIds: $addedGroupIds, removedGroupIds: $removedGroupIds) {
+    ok
+    error
+    entity {
+      id
+      name
+      policyType
+      groups {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+"""

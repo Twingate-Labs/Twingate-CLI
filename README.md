@@ -520,7 +520,7 @@ tgcli key expiring -d 7
 
 ### policy
 
-Manage Twingate security policies (read-only via API).
+Manage Twingate security policies. The API only lets you change which groups a policy is assigned to, not the policy's rules.
 
 ```bash
 # List all security policies
@@ -528,6 +528,13 @@ tgcli policy list
 
 # Show a specific policy
 tgcli policy show -i "U2VjdXJpdHlQb2xpY3k6MQ=="
+
+# Assign / unassign groups
+tgcli policy update -i "U2VjdXJpdHlQb2xpY3k6MQ==" --add-groups "R3JvdXA6MQ==,R3JvdXA6Mg=="
+tgcli policy update -i "U2VjdXJpdHlQb2xpY3k6MQ==" --remove-groups "R3JvdXA6Mw=="
+
+# Replace the policy's entire group assignment (cannot be combined with --add-groups/--remove-groups)
+tgcli policy update -i "U2VjdXJpdHlQb2xpY3k6MQ==" --set-groups "R3JvdXA6MQ=="
 ```
 
 ---
