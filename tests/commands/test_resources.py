@@ -258,11 +258,53 @@ class TestResourceShow:
         assert rows[0]["protocols.tcp.policy"] == "RESTRICTED"
         assert rows[0]["protocols.udp.policy"] == "ALLOW_ALL"
 
+    @pytest.mark.parametrize("typename", ["NetworkResource", "SSHResource", "WebAppResource", "KubernetesResource"])
+    def test_show_approval_mode_and_approver_groups_for_every_type(self, mock_keyring, typename):
+        resource = {
+            **SAMPLE_RESOURCE_EDGE["node"],
+            "__typename": typename,
+            "approvalMode": "AUTOMATIC",
+            "approverGroups": {"edges": [{"node": {"id": "g-1", "name": "Admins"}}, {"node": {"id": "g-2", "name": "Ops"}}]},
+        }
+        _, rows = self._show_rows(resource)
+        assert rows[0]["approvalMode"] == "AUTOMATIC"
+        assert rows[0]["approverGroups"] == "['g-1', 'g-2']"
+        assert rows[0]["approverGroupNames"] == "['Admins', 'Ops']"
+
+    def test_show_without_approver_groups_gives_empty_list(self, mock_keyring):
+        resource = {
+            **SAMPLE_RESOURCE_EDGE["node"], "__typename": "NetworkResource",
+            "approvalMode": "MANUAL", "approverGroups": {"edges": []},
+        }
+        _, rows = self._show_rows(resource)
+        assert rows[0]["approvalMode"] == "MANUAL" and rows[0]["approverGroups"] == "[]"
+        assert rows[0]["approverGroupNames"] == "[]"
+
+    def test_show_approver_group_names_stay_aligned_with_ids_and_survive_commas(self, mock_keyring):
+        resource = {
+            **SAMPLE_RESOURCE_EDGE["node"], "__typename": "NetworkResource", "approvalMode": "MANUAL",
+            "approverGroups": {"edges": [{"node": {"id": "g-1", "name": "Ops, EMEA"}}, {"node": {"id": "g-2", "name": "DBAs"}}]},
+        }
+        _, rows = self._show_rows(resource)
+        assert rows[0]["approverGroups"] == "['g-1', 'g-2']"
+        assert rows[0]["approverGroupNames"] == "['Ops, EMEA', 'DBAs']"
+
+    def test_show_approval_columns_are_appended_after_the_existing_ones(self, mock_keyring):
+        resource = {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource", "approvalMode": "MANUAL", "approverGroups": {"edges": []}}
+        output, _ = self._show_rows(resource)
+        header = output.splitlines()[0].split(",")
+        assert header[:13][-1] == "type" and header[-3:] == ["approvalMode", "approverGroups", "approverGroupNames"]
+
     def test_show_unknown_id_prints_blank_row_without_crashing(self, mock_keyring):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             MockClient.return_value.execute.return_value = {"data": {"resource": None}}
             result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "show", "-i", "res-1"])
         assert result.exit_code == 0
+        import csv
+        import io
+
+        (row,) = list(csv.DictReader(io.StringIO(result.output)))
+        assert row["approverGroupNames"] == "" and row["id"] == ""
 
 class TestResourceCreate:
     def test_create_exits_zero(self, mock_keyring):

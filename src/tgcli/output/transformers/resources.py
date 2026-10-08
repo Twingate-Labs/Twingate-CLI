@@ -21,6 +21,15 @@ def _label_type(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _approver_group_names(json_results: dict) -> list[str] | None:
+    """Approver group names in the same order as the approverGroups IDs, or None when the resource wasn't found."""
+    resource = (json_results.get("data") or {}).get("resource")
+    if resource is None:
+        return None
+    edges = (resource.get("approverGroups") or {}).get("edges") or []
+    return [edge["node"]["name"] for edge in edges]
+
+
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
     columns = [
         "id", "name", "isActive", "remoteNetwork.id",
@@ -44,8 +53,11 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "__typename", "accessPolicy.mode", "accessPolicy.durationSeconds",
         "gateway.id", "gateway.address", "clusterRef",
         "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode",
+        "approvalMode", "approverGroups",
     ]
-    return _label_type(generic.get_show_as_csv_no_nesting(json_results, "resource", columns + extra))
+    df = _label_type(generic.get_show_as_csv_no_nesting(json_results, "resource", columns + extra))
+    df["approverGroupNames"] = [_approver_group_names(json_results)]
+    return df
 
 
 def get_create_as_csv(json_results: dict) -> pd.DataFrame:

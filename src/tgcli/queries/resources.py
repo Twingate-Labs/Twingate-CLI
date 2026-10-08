@@ -99,11 +99,29 @@ query getResource($itemID: ID!) {
         mode
         durationSeconds
       }
+      approvalMode
+      approverGroups(first: null) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+      }
     }
     ... on SSHResource {
       accessPolicy {
         mode
         durationSeconds
+      }
+      approvalMode
+      approverGroups(first: null) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
       }
       gateway {
         id
@@ -120,6 +138,15 @@ query getResource($itemID: ID!) {
       accessPolicy {
         mode
         durationSeconds
+      }
+      approvalMode
+      approverGroups(first: null) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
       }
       gateway {
         id
@@ -138,6 +165,15 @@ query getResource($itemID: ID!) {
       accessPolicy {
         mode
         durationSeconds
+      }
+      approvalMode
+      approverGroups(first: null) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
       }
       gateway {
         id

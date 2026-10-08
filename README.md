@@ -217,8 +217,9 @@ Manage Twingate resources and their access controls.
 
 ```bash
 # List / show — both have a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES.
-# `show` also reports the access policy (mode, duration) and, for Gateway-backed types, the
-# gateway, upstream/downstream ports (plus TLS modes for web apps) and the cluster ref (Kubernetes).
+# `show` also reports the access policy (mode, duration), the approval mode and approver groups (IDs, plus names in the same order), and,
+# for Gateway-backed types, the gateway, upstream/downstream ports (plus TLS modes for web apps) and the
+# cluster ref (Kubernetes).
 tgcli resource list
 tgcli resource show -i "UmVzb3VyY2U6MQ=="
 
