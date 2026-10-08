@@ -38,3 +38,34 @@ query getDnsProfile($itemID: ID!) {
   }
 }
 """
+
+FIND_DNS_PROFILE = """
+query findDnsProfile($itemID: ID!) {
+  dnsFilteringProfile(id: $itemID) {
+    id
+  }
+}
+"""
+
+CREATE_DNS_PROFILE = """
+mutation createDnsProfile($name: String!) {
+  dnsFilteringProfileCreate(name: $name) {
+    ok
+    error
+    entity {
+      id
+      name
+      priority
+    }
+  }
+}
+"""
+
+DELETE_DNS_PROFILE = """
+mutation deleteDnsProfile($id: ID!) {
+  dnsFilteringProfileDelete(id: $id) {
+    ok
+    error
+  }
+}
+"""

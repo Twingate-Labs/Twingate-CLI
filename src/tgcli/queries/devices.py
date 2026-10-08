@@ -129,6 +129,21 @@ mutation updateDevice($deviceID: ID!) {
 }
 """
 
+UNARCHIVE_DEVICE = """
+mutation updateDevice($deviceID: ID!) {
+  deviceUnarchive(id: $deviceID) {
+    ok
+    error
+    entity {
+      id
+      name
+      isTrusted
+      activeState
+    }
+  }
+}
+"""
+
 LIST_SERIAL_NUMBERS = """
 query PM_GetListOfSerialNumbers($cursor: String!) {
   serialNumbers(after: $cursor) {

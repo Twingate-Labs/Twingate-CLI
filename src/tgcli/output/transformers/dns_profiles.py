@@ -27,3 +27,13 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "groups",
     ]
     return generic.get_show_as_csv_no_nesting(json_results, "dnsFilteringProfile", columns)
+
+
+def get_create_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error", "id", "name", "priority"]
+    return generic.get_update_as_csv_no_nesting(json_results, "dnsFilteringProfileCreate", columns)
+
+
+def get_delete_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error"]
+    return generic.get_update_as_csv_no_nesting(json_results, "dnsFilteringProfileDelete", columns)

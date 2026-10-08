@@ -188,10 +188,11 @@ tgcli device updateTrust -i "RGV2aWNlOjE5MzI2OQ==" -t False
 # Update trust for multiple devices at once
 tgcli device updateTrust -l "RGV2aWNlOjE5MzI2OQ==,RGV2aWNlOjE5MzI3MA==" -t True
 
-# Block / unblock / archive a device
+# Block / unblock / archive / unarchive a device
 tgcli device block   -i "RGV2aWNlOjE5MzI2OQ=="
 tgcli device unblock -i "RGV2aWNlOjE5MzI2OQ=="
 tgcli device archive -i "RGV2aWNlOjE5MzI2OQ=="
+tgcli device unarchive -i "RGV2aWNlOjE5MzI2OQ=="
 
 # --- Serial number allowlist ---
 tgcli device snumber list
@@ -661,7 +662,15 @@ tgcli dns-profile list
 
 # Show a specific profile, including its allow/deny lists and assigned groups
 tgcli dns-profile show -i "RG5zRmlsdGVyaW5nUHJvZmlsZTpiZmIzMjM="
+
+# Create a profile (name only; the API applies its default settings)
+tgcli dns-profile create -n "Contractors"
+
+# Delete a profile (errors if the ID doesn't exist; no confirmation prompt; groups on it lose its filtering)
+tgcli dns-profile delete -i "RG5zRmlsdGVyaW5nUHJvZmlsZTpiZmIzMjM="
 ```
+
+To change a profile's allow/deny lists, use [`dnssec`](#dnssec).
 
 ---
 

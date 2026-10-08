@@ -239,3 +239,26 @@ class TestDeviceBlock:
             mock_instance.execute.return_value = _make_mutation_response("deviceBlock")
             result = runner.invoke(app, ["-s", SESSION, "device", "block", "-i", "dev-1"])
         assert result.exit_code == 0
+
+
+class TestDeviceUnarchive:
+    def test_unarchive_sends_id_and_shows_result(self, mock_keyring):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            inst = MockClient.return_value
+            inst.execute.return_value = _make_mutation_response("deviceUnarchive")
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "device", "unarchive", "-i", "dev-1"])
+        assert result.exit_code == 0
+        query, variables = inst.execute.call_args.args
+        assert "deviceUnarchive(id: $deviceID)" in query and variables == {"deviceID": "dev-1"}
+        assert "dev-1" in result.output and "ACTIVE" in result.output
+
+    def test_unarchive_reports_api_error(self, mock_keyring):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.execute.return_value = {
+                "data": {"deviceUnarchive": {"ok": False, "error": "Device does not exist", "entity": None}}
+            }
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "device", "unarchive", "-i", "dev-1"])
+        assert "False" in result.output and "does not exist" in result.output
+
+    def test_unarchive_requires_id(self, mock_keyring):
+        assert runner.invoke(app, ["-s", SESSION, "device", "unarchive"]).exit_code != 0
