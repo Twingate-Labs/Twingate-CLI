@@ -85,6 +85,7 @@ def _register_commands() -> None:
         mappings,
         networks,
         policies,
+        resource_types,
         resources,
         accounts,
         users,
@@ -99,6 +100,9 @@ def _register_commands() -> None:
     app.add_typer(users.app, name="user")
     app.add_typer(groups.app, name="group")
     app.add_typer(resources.app, name="resource")
+    app.add_typer(resource_types.ssh_app, name="ssh-resource")
+    app.add_typer(resource_types.webapp_app, name="webapp-resource")
+    app.add_typer(resource_types.k8s_app, name="k8s-resource")
     app.add_typer(networks.app, name="network")
     app.add_typer(accounts.app, name="account")
     app.add_typer(keys.app, name="key")

@@ -19,6 +19,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [auth](#auth)
   - [device](#device)
   - [resource](#resource)
+  - [ssh-resource, webapp-resource, k8s-resource](#gateway-backed-resources)
   - [connector](#connector)
   - [group](#group)
   - [user](#user)
@@ -308,6 +309,35 @@ tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
 | `-d` | UDP port ranges JSON | `[]` |
 | `-i` | Disable ICMP | `false` |
 | `-m` | Routing mode: `THROUGH_TWINGATE` or `BYPASS_TWINGATE` | `THROUGH_TWINGATE` |
+
+---
+
+### Gateway-backed resources
+
+SSH, Web App and Kubernetes resources have their own `create`/`update` commands. List, show, delete and enable/disable them with the regular [`resource`](#resource) commands.
+
+```bash
+# SSH — a Gateway is required
+tgcli ssh-resource create -n "Bastion" -a "bastion.corp.internal" -r "<network-id>" -w "<gateway-id>" \
+  --upstream-port 22 --downstream-port 22
+tgcli ssh-resource update -i "<resource-id>" --active false
+
+# Web app — gateway and both ports are required; TLS modes and header rewrites are optional
+tgcli webapp-resource create -n "Grafana" -a "grafana.corp.internal" -r "<network-id>" -w "<gateway-id>" \
+  --upstream-port 3000 --upstream-tls NONE --downstream-port 443 --downstream-tls TLS13 \
+  --header "X-Forwarded-User=twingate"
+tgcli webapp-resource update -i "<resource-id>" --upstream-port 8443 --upstream-tls VERIFY_FULL
+
+# Kubernetes — gateway is optional
+tgcli k8s-resource create -n "prod-cluster" -a "k8s.corp.internal" -r "<network-id>" \
+  --clusterref prod --upstream-port 6443 --downstream-port 443
+```
+
+Shared options: `-l` alias, `-p` policy ID, `-g` group IDs, `-v` visible (true/false). On `update`, only the options you pass are changed, and these are also available: `-n` name, `-a` address, `-r` network, `-w` gateway, `--active true|false`, `--add-groups`, `--remove-groups`.
+
+- TLS: `--upstream-tls` is `VERIFY_FULL`, `VERIFY_CA`, `INSECURE` or `NONE`; `--downstream-tls` is `TLS13` or `NONE`. On `update`, a TLS option needs its matching `--...-port`.
+- On `webapp-resource update`, `--header` **replaces** the whole list of header rewrites.
+- Not exposed here: protocol/port restrictions, tags, access-policy modes and approver groups.
 
 ---
 
