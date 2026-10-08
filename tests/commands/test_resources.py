@@ -243,6 +243,21 @@ class TestResourceShow:
             "protocols.tcp.policy", "protocols.udp.policy", "isVisible", "isBrowserShortcutEnabled", "routingMode", "type",
         ]
 
+    def test_show_reports_tcp_and_udp_protocol_policies(self, mock_keyring):
+        resource = {
+            **SAMPLE_RESOURCE_EDGE["node"],
+            "__typename": "NetworkResource",
+            "protocols": {
+                "allowIcmp": False,
+                "tcp": {"policy": "RESTRICTED", "ports": [{"start": 22, "end": 22}]},
+                "udp": {"policy": "ALLOW_ALL", "ports": []},
+            },
+        }
+        _, rows = self._show_rows(resource)
+        assert rows[0]["protocols.allowIcmp"] == "False"
+        assert rows[0]["protocols.tcp.policy"] == "RESTRICTED"
+        assert rows[0]["protocols.udp.policy"] == "ALLOW_ALL"
+
     def test_show_unknown_id_prints_blank_row_without_crashing(self, mock_keyring):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             MockClient.return_value.execute.return_value = {"data": {"resource": None}}

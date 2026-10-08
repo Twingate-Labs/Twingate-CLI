@@ -7,6 +7,7 @@ import json
 import pandas as pd
 import pytest
 
+from tgcli.output.transformers import generic
 from tgcli.output.formatter import OutputFormatter
 
 
@@ -65,3 +66,47 @@ class TestFormatOutput:
         result = OutputFormatter.format_output(data, "UNKNOWN_FMT", _identity_transformer)
         parsed = json.loads(result)
         assert parsed["key"] == "value"
+
+
+class TestResolveCol:
+    NODE = {
+        "id": "x",
+        "flag": False,
+        "count": 0,
+        "empty": "",
+        "remoteNetwork": {"id": "rn-1", "name": "Net"},
+        "protocols": {"allowIcmp": True, "tcp": {"policy": "RESTRICTED", "ports": []}, "udp": None},
+        "nothing": None,
+    }
+
+    @pytest.mark.parametrize(
+        "col,expected",
+        [
+            ("id", "x"),
+            ("remoteNetwork.id", "rn-1"),
+            ("protocols.allowIcmp", True),
+            ("protocols.tcp.policy", "RESTRICTED"),
+            ("protocols.tcp.ports", []),
+        ],
+    )
+    def test_resolves_paths_at_any_depth(self, col, expected):
+        assert generic._resolve_col(self.NODE, col) == expected
+
+    @pytest.mark.parametrize("col,expected", [("flag", False), ("count", 0), ("empty", "")])
+    def test_falsy_values_are_kept(self, col, expected):
+        assert generic._resolve_col(self.NODE, col) == expected
+
+    @pytest.mark.parametrize(
+        "col",
+        [
+            "missing",
+            "nothing",
+            "nothing.deeper",
+            "protocols.udp.policy",
+            "protocols.missing.policy",
+            "id.deeper",
+            "protocols.tcp.policy.deeper",
+        ],
+    )
+    def test_missing_null_or_non_dict_parents_give_none(self, col):
+        assert generic._resolve_col(self.NODE, col) is None

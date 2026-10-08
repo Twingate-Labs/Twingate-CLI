@@ -1,7 +1,7 @@
 """Generic transformer utilities — port of the original GenericTransformers.py.
 
 All functions return a pandas DataFrame. Column paths support dot-notation
-for one level of nesting (e.g. "remoteNetwork.id").
+for nested fields at any depth (e.g. "remoteNetwork.id", "protocols.tcp.policy").
 """
 
 from __future__ import annotations
@@ -20,15 +20,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _resolve_col(node: dict[str, Any], col: str) -> Any:
-    """Resolve a column path (possibly dotted) from a node dict."""
-    if "." in col:
-        parts = col.split(".", 1)
-        parent = node.get(parts[0])
-        if parent is None:
-            logger.debug("Could not find attribute '%s' in node.", parts[0])
+    """Resolve a column path (possibly dotted, any depth) from a node dict."""
+    value: Any = node
+    for part in col.split("."):
+        if not isinstance(value, dict):
             return None
-        return parent.get(parts[1]) if isinstance(parent, dict) else None
-    return node.get(col)
+        value = value.get(part)
+        if value is None:
+            logger.debug("Could not find attribute '%s' in node.", part)
+            return None
+    return value
 
 
 def _normalise_edges(value: Any) -> Any:
