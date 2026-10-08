@@ -112,3 +112,12 @@ mutation GetConnTokens($id: ID!) {
   }
 }
 """
+
+DELETE_CONNECTOR = """
+mutation deleteConnector($id: ID!) {
+  connectorDelete(id: $id) {
+    ok
+    error
+  }
+}
+"""

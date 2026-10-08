@@ -333,6 +333,9 @@ tgcli connector generateTokens -i "Q29ubmVjdG9yOjE="
 # Enable/disable status email notifications
 tgcli connector updateNotifications -i "Q29ubmVjdG9yOjE=" -s true
 tgcli connector updateNotifications -i "Q29ubmVjdG9yOjE=" -s false
+
+# Delete a connector (a deployed connector stops working; no confirmation prompt)
+tgcli connector delete -i "Q29ubmVjdG9yOjE="
 ```
 
 ---

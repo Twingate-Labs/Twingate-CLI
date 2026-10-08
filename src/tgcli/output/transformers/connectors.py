@@ -38,3 +38,8 @@ def get_create_as_csv(json_results: dict) -> pd.DataFrame:
 def get_gen_tokens_as_csv(json_results: dict) -> pd.DataFrame:
     columns = ["ok", "error", "connectorTokens.accessToken", "connectorTokens.refreshToken"]
     return generic.get_show_as_csv_no_nesting(json_results, "connectorGenerateTokens", columns)
+
+
+def get_delete_as_csv(json_results: dict) -> pd.DataFrame:
+    columns = ["ok", "error"]
+    return generic.get_update_as_csv_no_nesting(json_results, "connectorDelete", columns)

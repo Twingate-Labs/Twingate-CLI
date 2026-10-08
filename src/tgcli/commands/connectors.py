@@ -51,6 +51,14 @@ def connector_rename(
     run_query(get_client(), q.RENAME_CONNECTOR, {"id": itemid, "name": itemname}, t.get_update_as_csv)
 
 
+@app.command("delete")
+def connector_delete(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
+) -> None:
+    """Delete a Connector. A deployed Connector stops working and cannot be restored."""
+    run_query(get_client(), q.DELETE_CONNECTOR, {"id": itemid}, t.get_delete_as_csv)
+
+
 @app.command("generateTokens")
 def connector_generate_tokens(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
