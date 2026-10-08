@@ -26,6 +26,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [account (service accounts)](#account)
   - [key](#key)
   - [policy](#policy)
+  - [access-request](#access-request)
   - [dnssec](#dnssec)
   - [dns-profile](#dns-profile)
   - [mappings](#mappings)
@@ -524,6 +525,26 @@ tgcli policy list
 
 # Show a specific policy
 tgcli policy show -i "U2VjdXJpdHlQb2xpY3k6MQ=="
+```
+
+---
+
+### access-request
+
+Review and resolve resource access requests.
+
+```bash
+# List requests (all statuses by default; the API itself only returns PENDING when unfiltered)
+tgcli access-request list
+tgcli access-request list --status PENDING             # --status: PENDING, APPROVED, REJECTED (repeatable)
+tgcli access-request list --user-id "VXNlcjoxMjM=" --resource-id "UmVzb3VyY2U6NDU2"
+
+# Show one request
+tgcli access-request show -i "QWNjZXNzUmVxdWVzdDox"
+
+# Approve / reject
+tgcli access-request approve -i "QWNjZXNzUmVxdWVzdDox"
+tgcli access-request reject  -i "QWNjZXNzUmVxdWVzdDox"
 ```
 
 ---
