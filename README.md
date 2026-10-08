@@ -27,6 +27,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [key](#key)
   - [policy](#policy)
   - [access-request](#access-request)
+  - [gateway](#gateway)
   - [dnssec](#dnssec)
   - [dns-profile](#dns-profile)
   - [mappings](#mappings)
@@ -555,6 +556,17 @@ tgcli access-request show -i "QWNjZXNzUmVxdWVzdDox"
 # Approve / reject
 tgcli access-request approve -i "QWNjZXNzUmVxdWVzdDox"
 tgcli access-request reject  -i "QWNjZXNzUmVxdWVzdDox"
+```
+
+---
+
+### gateway
+
+List Gateways (Layer 7 privileged-access proxies) with their remote network and certificate authorities.
+
+```bash
+tgcli gateway list
+tgcli -f CSV gateway list
 ```
 
 ---

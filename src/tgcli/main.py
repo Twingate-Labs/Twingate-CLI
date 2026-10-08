@@ -78,6 +78,7 @@ def _register_commands() -> None:
         devices,
         dns_profiles,
         dnssec,
+        gateways,
         groups,
         keys,
         mappings,
@@ -91,6 +92,7 @@ def _register_commands() -> None:
     app.add_typer(auth.app, name="auth")
     app.add_typer(access_requests.app, name="access-request")
     app.add_typer(devices.app, name="device")
+    app.add_typer(gateways.app, name="gateway")
     app.add_typer(connectors.app, name="connector")
     app.add_typer(users.app, name="user")
     app.add_typer(groups.app, name="group")
