@@ -7,6 +7,7 @@ for one level of nesting (e.g. "remoteNetwork.id").
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import pandas as pd
@@ -47,22 +48,19 @@ def get_ids(json_results: dict, object_name: str) -> list[str]:
     return [item["node"]["id"] for item in edges]
 
 
+def read_ids_file(path: str) -> set[str]:
+    """Read IDs from a file: comma-, whitespace- or newline-separated, optionally list-style."""
+    with open(path) as fh:
+        raw = fh.read()
+    return {i for i in re.split(r"""[\s,\[\]'"]+""", raw) if i}
+
+
 def get_ids_and_compare_to_file(
     json_results: dict, ids_file: str, object_name: str
 ) -> tuple[set[str], set[str]]:
     """Compare IDs in the API response against a file of known IDs."""
     current_ids = set(get_ids(json_results, object_name))
-    with open(ids_file) as fh:
-        raw = fh.read()
-    file_ids = set(
-        raw.replace("[", "")
-        .replace("]", "")
-        .replace("'", "")
-        .replace("\n", "")
-        .replace(" ", "")
-        .split(",")
-    )
-    file_ids.discard("")
+    file_ids = read_ids_file(ids_file)
     return current_ids - file_ids, file_ids - current_ids
 
 

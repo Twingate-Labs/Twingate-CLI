@@ -164,6 +164,16 @@ Manage Twingate devices and the serial-number allowlist.
 # List all devices
 tgcli device list
 
+# Filter server-side (filters combine with AND)
+tgcli device list --untrusted
+tgcli device list --trusted --state ACTIVE            # --state: ACTIVE, ARCHIVED, BLOCKED (repeatable)
+tgcli device list --serial-number "C02XYZ123"
+tgcli device list --user-id "VXNlcjoxMjM="            # repeatable
+
+# IDs only, and diff against a saved list of IDs
+tgcli -f CSV device list --idsonly
+tgcli device list --fileofids known_ids.txt           # prints IDs "new" to the tenant and "missing" from it
+
 # Show a specific device
 tgcli device show -i "RGV2aWNlOjE5MzI2OQ=="
 

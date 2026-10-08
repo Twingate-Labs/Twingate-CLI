@@ -49,19 +49,17 @@ def run_query(
     OutputFormatter.print_output(result, state.output_format, transformer)
 
 
-def run_paginated(
+def fetch_paginated(
     client: TwingateClient,
     query: str,
     data_key: str,
-    transformer: Callable[..., pd.DataFrame],
     extra_vars: dict | None = None,
     filter_fn: Callable[[dict], bool] | None = None,
-) -> None:
-    """Execute a paginated list query and print formatted output.
+) -> list[list[dict]]:
+    """Execute a paginated list query and return all pages of edges.
 
     If provided, ``filter_fn`` is applied to each item's ``node`` dict and
-    only nodes for which it returns True are kept — applied before output
-    formatting, so it affects JSON, CSV, and DF output alike.
+    only nodes for which it returns True are kept.
     """
     def make_vars(cursor: str) -> dict:
         v = {"cursor": cursor}
@@ -80,7 +78,23 @@ def run_paginated(
 
     if filter_fn is not None:
         pages = [[edge for edge in page if filter_fn(edge["node"])] for page in pages]
+    return pages
 
+
+def run_paginated(
+    client: TwingateClient,
+    query: str,
+    data_key: str,
+    transformer: Callable[..., pd.DataFrame],
+    extra_vars: dict | None = None,
+    filter_fn: Callable[[dict], bool] | None = None,
+) -> None:
+    """Execute a paginated list query and print formatted output.
+
+    ``filter_fn`` is applied before output formatting, so it affects JSON,
+    CSV, and DF output alike.
+    """
+    pages = fetch_paginated(client, query, data_key, extra_vars, filter_fn)
     OutputFormatter.print_output(pages, state.output_format, transformer)
 
 

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 LIST_DEVICES = """
-query listGroup($cursor: String!)
+query listDevices($cursor: String!, $filter: DeviceFilterInput)
 {
-  devices(after: $cursor, first:null) {
+  devices(after: $cursor, first:null, filter: $filter) {
     pageInfo {
       endCursor
       hasNextPage

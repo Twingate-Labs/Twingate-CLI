@@ -17,6 +17,21 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
     return generic.get_list_as_csv(json_results, columns)
 
 
+def get_ids_as_df(ids: list) -> pd.DataFrame:
+    pd.set_option("display.max_rows", None)
+    pd.set_option("display.max_colwidth", None)
+    pd.set_option("display.width", None)
+    return pd.DataFrame([[i] for i in ids], columns=["id"])
+
+
+def get_id_diff_as_df(diff: dict) -> pd.DataFrame:
+    data = [[i, "new"] for i in diff["new"]] + [[i, "missing"] for i in diff["missing"]]
+    pd.set_option("display.max_rows", None)
+    pd.set_option("display.max_colwidth", None)
+    pd.set_option("display.width", None)
+    return pd.DataFrame(data, columns=["id", "status"])
+
+
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
     columns = [
         "id", "name", "isTrusted", "osName", "deviceType",
