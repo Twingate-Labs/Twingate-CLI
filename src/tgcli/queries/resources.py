@@ -11,6 +11,7 @@ query listGroup($cursor: String!) {
     }
     edges {
       node {
+        __typename
         id
         isActive
         name

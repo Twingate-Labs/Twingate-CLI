@@ -93,6 +93,48 @@ class TestResourceList:
         assert "res-inactive" in result.output
         assert "res-active" not in result.output
 
+    def _csv_rows(self, edges, args=()):
+        import csv
+        import io
+
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.paginate.return_value = [edges]
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "list", *args])
+        assert result.exit_code == 0
+        return result.output, list(csv.DictReader(io.StringIO(result.output)))
+
+    @pytest.mark.parametrize(
+        "typename,label",
+        [
+            ("NetworkResource", "NETWORK"),
+            ("SSHResource", "SSH"),
+            ("WebAppResource", "WEB_APP"),
+            ("KubernetesResource", "KUBERNETES"),
+            ("SomeFutureResource", "SomeFutureResource"),
+        ],
+    )
+    def test_list_type_column_labels_each_resource_type(self, mock_keyring, typename, label):
+        edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": typename}}
+        _, rows = self._csv_rows([edge])
+        assert rows[0]["type"] == label
+
+    def test_list_type_column_is_last_so_existing_positions_are_unchanged(self, mock_keyring):
+        edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
+        output, _ = self._csv_rows([edge])
+        header = output.splitlines()[0].split(",")
+        assert header[0] == "id" and header[-2:] == ["tags", "type"]
+
+    def test_list_mixed_types_and_active_filter(self, mock_keyring):
+        node = SAMPLE_RESOURCE_EDGE["node"]
+        edges = [
+            {"node": {**node, "id": "n", "isActive": True, "__typename": "NetworkResource"}},
+            {"node": {**node, "id": "k", "isActive": False, "__typename": "KubernetesResource"}},
+        ]
+        _, rows = self._csv_rows(edges)
+        assert [(r["id"], r["type"]) for r in rows] == [("n", "NETWORK"), ("k", "KUBERNETES")]
+        _, inactive = self._csv_rows(edges, ["-a", "false"])
+        assert [(r["id"], r["type"]) for r in inactive] == [("k", "KUBERNETES")]
+
     def test_list_invalid_active_exits_nonzero(self, mock_keyring):
         result = runner.invoke(app, ["-s", SESSION, "resource", "list", "-a", "maybe"])
         assert result.exit_code != 0

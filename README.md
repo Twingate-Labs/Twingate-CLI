@@ -216,7 +216,7 @@ tgcli -f CSV device list                          # export all devices with that
 Manage Twingate resources and their access controls.
 
 ```bash
-# List / show
+# List / show — `list` ends with a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES
 tgcli resource list
 tgcli resource show -i "UmVzb3VyY2U6MQ=="
 

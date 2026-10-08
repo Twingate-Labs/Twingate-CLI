@@ -7,6 +7,14 @@ import pandas as pd
 from tgcli.output.transformers import generic
 
 
+TYPE_LABELS = {
+    "NetworkResource": "NETWORK",
+    "SSHResource": "SSH",
+    "WebAppResource": "WEB_APP",
+    "KubernetesResource": "KUBERNETES",
+}
+
+
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
     columns = [
         "id", "name", "isActive", "remoteNetwork.id",
@@ -14,7 +22,11 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
         "securityPolicy.id", "alias", "isVisible",
         "isBrowserShortcutEnabled", "routingMode", "tags",
     ]
-    return generic.get_list_as_csv(json_results, columns)
+    # "type" goes last so scripts reading the existing columns by position keep working.
+    df = generic.get_list_as_csv(json_results, columns + ["__typename"])
+    df = df.rename(columns={"__typename": "type"})
+    df["type"] = df["type"].map(lambda t: TYPE_LABELS.get(t, t))
+    return df
 
 
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
