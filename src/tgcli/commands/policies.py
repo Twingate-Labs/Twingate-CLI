@@ -43,14 +43,9 @@ def policy_update(
     if replaced and (added or removed):
         typer.echo("Error: --set-groups cannot be combined with --add-groups or --remove-groups.", err=True)
         raise typer.Exit(1)
-    run_query(
-        get_client(),
-        q.UPDATE_POLICY_GROUPS,
-        {
-            "id": itemid,
-            "groupIds": replaced or None,
-            "addedGroupIds": added or None,
-            "removedGroupIds": removed or None,
-        },
-        t.get_update_as_csv,
-    )
+    # Omit unset arguments rather than sending null, so the API never reads null as "clear".
+    variables: dict = {"id": itemid}
+    for key, ids in (("groupIds", replaced), ("addedGroupIds", added), ("removedGroupIds", removed)):
+        if ids:
+            variables[key] = ids
+    run_query(get_client(), q.UPDATE_POLICY_GROUPS, variables, t.get_update_as_csv)

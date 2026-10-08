@@ -44,23 +44,22 @@ class TestPolicyUpdate:
     def _variables(self, inst):
         return inst.execute.call_args.args[1]
 
-    def test_add_groups_sends_only_added(self):
+    def test_add_groups_sends_only_added_and_omits_the_rest(self):
         result, inst = self._invoke(["-i", "pol-1", "-a", "g1, g2"])
         assert result.exit_code == 0
-        assert self._variables(inst) == {"id": "pol-1", "groupIds": None, "addedGroupIds": ["g1", "g2"], "removedGroupIds": None}
+        assert self._variables(inst) == {"id": "pol-1", "addedGroupIds": ["g1", "g2"]}
 
     def test_remove_groups_sends_only_removed(self):
         _, inst = self._invoke(["-i", "pol-1", "-r", "g3"])
-        assert self._variables(inst) == {"id": "pol-1", "groupIds": None, "addedGroupIds": None, "removedGroupIds": ["g3"]}
+        assert self._variables(inst) == {"id": "pol-1", "removedGroupIds": ["g3"]}
 
     def test_add_and_remove_together(self):
         _, inst = self._invoke(["-i", "pol-1", "-a", "g1", "-r", "g2"])
-        v = self._variables(inst)
-        assert v["addedGroupIds"] == ["g1"] and v["removedGroupIds"] == ["g2"] and v["groupIds"] is None
+        assert self._variables(inst) == {"id": "pol-1", "addedGroupIds": ["g1"], "removedGroupIds": ["g2"]}
 
     def test_set_groups_sends_only_replacement(self):
         _, inst = self._invoke(["-i", "pol-1", "--set-groups", "g1,g2"])
-        assert self._variables(inst) == {"id": "pol-1", "groupIds": ["g1", "g2"], "addedGroupIds": None, "removedGroupIds": None}
+        assert self._variables(inst) == {"id": "pol-1", "groupIds": ["g1", "g2"]}
 
     def test_output_lists_resulting_groups(self):
         result, _ = self._invoke(["-i", "pol-1", "-a", "g1"], _ok_payload(["g1", "g2"]))
