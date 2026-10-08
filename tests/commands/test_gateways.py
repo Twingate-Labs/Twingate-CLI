@@ -69,3 +69,111 @@ class TestGatewayList:
             MockClient.return_value.paginate.side_effect = TwingateAuthError("Bad token")
             result = runner.invoke(app, ["-s", SESSION, "gateway", "list"])
         assert result.exit_code != 0
+
+
+def _entity(gateway_id="gw-1", ssh_ca=None):
+    return _gateway(gateway_id, ssh_ca)["node"]
+
+
+class _Mutation:
+    def _invoke(self, args, key, payload):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            inst = MockClient.return_value
+            inst.execute.return_value = {"data": {key: payload}}
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "gateway", *args])
+        return result, inst
+
+    @staticmethod
+    def _variables(inst):
+        return inst.execute.call_args.args[1]
+
+
+class TestGatewayShow(_Mutation):
+    def test_show_flattens_fields(self):
+        result, inst = self._invoke(["show", "-i", "gw-1"], "gateway", _entity())
+        assert result.exit_code == 0
+        assert self._variables(inst) == {"itemID": "gw-1"}
+        (row,) = list(csv.DictReader(io.StringIO(result.output)))
+        assert row["id"] == "gw-1" and row["x509CA.name"] == "X509 CA" and row["sshCA.name"] == ""
+
+    def test_show_requires_id(self):
+        assert runner.invoke(app, ["-s", SESSION, "gateway", "show"]).exit_code != 0
+
+
+class TestGatewayCreate(_Mutation):
+    ARGS = ["create", "-n", "rn-1", "-a", "gw.example.com:443", "-x", "x-1"]
+
+    def test_sends_required_fields_and_omits_ssh_ca(self):
+        result, inst = self._invoke(self.ARGS, "gatewayCreate", {"ok": True, "error": None, "entity": _entity()})
+        assert result.exit_code == 0
+        assert self._variables(inst) == {"address": "gw.example.com:443", "remoteNetworkId": "rn-1", "x509CAId": "x-1"}
+
+    def test_includes_ssh_ca_when_given(self):
+        _, inst = self._invoke([*self.ARGS, "-s", "s-1"], "gatewayCreate", {"ok": True, "error": None, "entity": _entity()})
+        assert self._variables(inst)["sshCAId"] == "s-1"
+
+    def test_output_shows_created_gateway(self):
+        result, _ = self._invoke(self.ARGS, "gatewayCreate", {"ok": True, "error": None, "entity": _entity("gw-9")})
+        (row,) = list(csv.DictReader(io.StringIO(result.output)))
+        assert row["ok"] == "True" and row["id"] == "gw-9" and row["remoteNetwork.name"] == "K8s"
+
+    def test_reports_api_error(self):
+        result, _ = self._invoke(self.ARGS, "gatewayCreate", {"ok": False, "error": "RemoteNetwork does not exist", "entity": None})
+        assert "False" in result.output and "does not exist" in result.output
+
+    @pytest.mark.parametrize("missing", ["-n", "-a", "-x"])
+    def test_required_options(self, missing):
+        args = list(self.ARGS)
+        i = args.index(missing)
+        del args[i : i + 2]
+        assert runner.invoke(app, ["-s", SESSION, "gateway", *args]).exit_code != 0
+
+
+class TestGatewayUpdate(_Mutation):
+    def _ok(self):
+        return {"ok": True, "error": None, "entity": _entity()}
+
+    @pytest.mark.parametrize(
+        "args,expected",
+        [
+            (["-a", "new:443"], {"address": "new:443"}),
+            (["-n", "rn-2"], {"remoteNetworkId": "rn-2"}),
+            (["-x", "x-2"], {"x509CAId": "x-2"}),
+            (["-s", "s-2"], {"sshCAId": "s-2"}),
+            (["-a", "a:1", "-s", "s-2"], {"address": "a:1", "sshCAId": "s-2"}),
+        ],
+    )
+    def test_sends_only_the_options_given(self, args, expected):
+        result, inst = self._invoke(["update", "-i", "gw-1", *args], "gatewayUpdate", self._ok())
+        assert result.exit_code == 0
+        assert self._variables(inst) == {"id": "gw-1", **expected}
+
+    def test_requires_at_least_one_change_and_makes_no_api_call(self):
+        result, inst = self._invoke(["update", "-i", "gw-1"], "gatewayUpdate", self._ok())
+        assert result.exit_code != 0
+        inst.execute.assert_not_called()
+
+    def test_reports_api_error(self):
+        result, _ = self._invoke(
+            ["update", "-i", "gw-1", "-a", "x:1"], "gatewayUpdate", {"ok": False, "error": "Gateway does not exist", "entity": None}
+        )
+        assert "False" in result.output and "does not exist" in result.output
+
+    def test_requires_id(self):
+        assert runner.invoke(app, ["-s", SESSION, "gateway", "update", "-a", "x:1"]).exit_code != 0
+
+
+class TestGatewayDelete(_Mutation):
+    def test_sends_id_and_reports_ok(self):
+        result, inst = self._invoke(["delete", "-i", "gw-1"], "gatewayDelete", {"ok": True, "error": None})
+        assert result.exit_code == 0
+        query, variables = inst.execute.call_args.args
+        assert "gatewayDelete(id: $id)" in query and variables == {"id": "gw-1"}
+        assert result.output.split() == ["ok,error", "True,"]
+
+    def test_reports_api_error(self):
+        result, _ = self._invoke(["delete", "-i", "gw-1"], "gatewayDelete", {"ok": False, "error": "Gateway is in use"})
+        assert "False" in result.output and "in use" in result.output
+
+    def test_requires_id(self):
+        assert runner.invoke(app, ["-s", SESSION, "gateway", "delete"]).exit_code != 0

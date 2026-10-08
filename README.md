@@ -562,11 +562,21 @@ tgcli access-request reject  -i "QWNjZXNzUmVxdWVzdDox"
 
 ### gateway
 
-List Gateways (Layer 7 privileged-access proxies) with their remote network and certificate authorities.
+Manage Gateways (Layer 7 privileged-access proxies) and see their remote network and certificate authorities.
 
 ```bash
 tgcli gateway list
-tgcli -f CSV gateway list
+tgcli gateway show -i "R2F0ZXdheTox"
+
+# Create (SSH CA is optional)
+tgcli gateway create -n "UmVtb3RlTmV0d29yazox" -a "gateway.example.com:443" -x "<x509-ca-id>" [-s "<ssh-ca-id>"]
+
+# Update — only the options you pass are changed
+tgcli gateway update -i "R2F0ZXdheTox" -a "new.example.com:443"
+tgcli gateway update -i "R2F0ZXdheTox" -s "<ssh-ca-id>"
+
+# Delete (no confirmation prompt; the API reports success even if the ID doesn't exist)
+tgcli gateway delete -i "R2F0ZXdheTox"
 ```
 
 ---
