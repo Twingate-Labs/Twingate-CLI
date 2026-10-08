@@ -84,6 +84,7 @@ query listGroup($cursor: String!) {
 SHOW_RESOURCE = """
 query getResource($itemID: ID!) {
   resource(id: $itemID) {
+    __typename
     id
     name
     createdAt

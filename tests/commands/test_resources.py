@@ -168,6 +168,41 @@ class TestResourceShow:
         assert result.exit_code == 0
 
 
+    def _show_rows(self, resource):
+        import csv
+        import io
+
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.execute.return_value = {"data": {"resource": resource}}
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "show", "-i", "res-1"])
+        assert result.exit_code == 0
+        return result.output, list(csv.DictReader(io.StringIO(result.output)))
+
+    @pytest.mark.parametrize(
+        "typename,label",
+        [
+            ("NetworkResource", "NETWORK"),
+            ("SSHResource", "SSH"),
+            ("WebAppResource", "WEB_APP"),
+            ("KubernetesResource", "KUBERNETES"),
+            ("SomeFutureResource", "SomeFutureResource"),
+        ],
+    )
+    def test_show_type_column_labels_each_resource_type(self, mock_keyring, typename, label):
+        _, rows = self._show_rows({**SAMPLE_RESOURCE_EDGE["node"], "__typename": typename})
+        assert rows[0]["type"] == label and rows[0]["id"] == "res-1"
+
+    def test_show_type_column_is_last_so_existing_positions_are_unchanged(self, mock_keyring):
+        output, _ = self._show_rows({**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"})
+        header = output.splitlines()[0].split(",")
+        assert header[0] == "id" and header[-2:] == ["routingMode", "type"]
+
+    def test_show_unknown_id_prints_blank_row_without_crashing(self, mock_keyring):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.execute.return_value = {"data": {"resource": None}}
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "show", "-i", "res-1"])
+        assert result.exit_code == 0
+
 class TestResourceCreate:
     def test_create_exits_zero(self, mock_keyring):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:

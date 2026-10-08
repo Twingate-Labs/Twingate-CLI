@@ -15,6 +15,12 @@ TYPE_LABELS = {
 }
 
 
+def _label_type(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.rename(columns={"__typename": "type"})
+    df["type"] = df["type"].map(lambda t: TYPE_LABELS.get(t, t))
+    return df
+
+
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
     columns = [
         "id", "name", "isActive", "remoteNetwork.id",
@@ -23,10 +29,7 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
         "isBrowserShortcutEnabled", "routingMode", "tags",
     ]
     # "type" goes last so scripts reading the existing columns by position keep working.
-    df = generic.get_list_as_csv(json_results, columns + ["__typename"])
-    df = df.rename(columns={"__typename": "type"})
-    df["type"] = df["type"].map(lambda t: TYPE_LABELS.get(t, t))
-    return df
+    return _label_type(generic.get_list_as_csv(json_results, columns + ["__typename"]))
 
 
 def get_show_as_csv(json_results: dict) -> pd.DataFrame:
@@ -36,7 +39,7 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "protocols.allowIcmp", "protocols.tcp.policy", "protocols.udp.policy",
         "isVisible", "isBrowserShortcutEnabled", "routingMode",
     ]
-    return generic.get_show_as_csv_no_nesting(json_results, "resource", columns)
+    return _label_type(generic.get_show_as_csv_no_nesting(json_results, "resource", columns + ["__typename"]))
 
 
 def get_create_as_csv(json_results: dict) -> pd.DataFrame:
