@@ -74,6 +74,7 @@ def _register_commands() -> None:
     from tgcli.commands import (
         access_requests,
         auth,
+        certificate_authorities,
         connectors,
         devices,
         dns_profiles,
@@ -91,6 +92,7 @@ def _register_commands() -> None:
 
     app.add_typer(auth.app, name="auth")
     app.add_typer(access_requests.app, name="access-request")
+    app.add_typer(certificate_authorities.app, name="ca")
     app.add_typer(devices.app, name="device")
     app.add_typer(gateways.app, name="gateway")
     app.add_typer(connectors.app, name="connector")

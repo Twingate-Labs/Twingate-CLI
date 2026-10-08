@@ -28,6 +28,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [policy](#policy)
   - [access-request](#access-request)
   - [gateway](#gateway)
+  - [ca (certificate authorities)](#ca)
   - [dnssec](#dnssec)
   - [dns-profile](#dns-profile)
   - [mappings](#mappings)
@@ -577,6 +578,24 @@ tgcli gateway update -i "R2F0ZXdheTox" -s "<ssh-ca-id>"
 
 # Delete (no confirmation prompt; the API reports success even if the ID doesn't exist)
 tgcli gateway delete -i "R2F0ZXdheTox"
+```
+
+---
+
+### ca
+
+Manage the X.509 and SSH Certificate Authorities that Gateways use.
+
+```bash
+tgcli ca list                      # both types, with a "type" column (X509 / SSH)
+tgcli ca show -i "<ca-id>"
+
+# Create from PUBLIC material only (a PEM certificate, or an SSH public key)
+tgcli ca create -t x509 -n "Corp X509 CA" --file ./ca.pem
+tgcli ca create -t ssh  -n "Vault SSH CA" --file ./ssh_ca.pub
+
+# Delete (type detected automatically; errors if the ID doesn't exist; no confirmation prompt)
+tgcli ca delete -i "<ca-id>"
 ```
 
 ---

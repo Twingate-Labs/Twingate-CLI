@@ -31,6 +31,18 @@ def get_client() -> TwingateClient:
     return TwingateClient(require_session())
 
 
+def execute_query(client: TwingateClient, query: str, variables: dict | None) -> dict:
+    """Execute a single GraphQL request, exiting with a friendly message on API/auth errors."""
+    try:
+        return client.execute(query, variables)
+    except TwingateAuthError as exc:
+        typer.echo(f"Authentication error: {exc}", err=True)
+        raise typer.Exit(1)
+    except TwingateAPIError as exc:
+        typer.echo(f"API error: {exc}", err=True)
+        raise typer.Exit(1)
+
+
 def run_query(
     client: TwingateClient,
     query: str,
@@ -38,14 +50,7 @@ def run_query(
     transformer: Callable[..., pd.DataFrame],
 ) -> None:
     """Execute a single GraphQL query and print formatted output."""
-    try:
-        result = client.execute(query, variables)
-    except TwingateAuthError as exc:
-        typer.echo(f"Authentication error: {exc}", err=True)
-        raise typer.Exit(1)
-    except TwingateAPIError as exc:
-        typer.echo(f"API error: {exc}", err=True)
-        raise typer.Exit(1)
+    result = execute_query(client, query, variables)
     OutputFormatter.print_output(result, state.output_format, transformer)
 
 
