@@ -39,7 +39,13 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "protocols.allowIcmp", "protocols.tcp.policy", "protocols.udp.policy",
         "isVisible", "isBrowserShortcutEnabled", "routingMode",
     ]
-    return _label_type(generic.get_show_as_csv_no_nesting(json_results, "resource", columns + ["__typename"]))
+    # type, then the fields only some resource types have (blank otherwise), all after the original columns.
+    extra = [
+        "__typename", "accessPolicy.mode", "accessPolicy.durationSeconds",
+        "gateway.id", "gateway.address", "clusterRef",
+        "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode",
+    ]
+    return _label_type(generic.get_show_as_csv_no_nesting(json_results, "resource", columns + extra))
 
 
 def get_create_as_csv(json_results: dict) -> pd.DataFrame:

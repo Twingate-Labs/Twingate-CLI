@@ -192,10 +192,56 @@ class TestResourceShow:
         _, rows = self._show_rows({**SAMPLE_RESOURCE_EDGE["node"], "__typename": typename})
         assert rows[0]["type"] == label and rows[0]["id"] == "res-1"
 
-    def test_show_type_column_is_last_so_existing_positions_are_unchanged(self, mock_keyring):
+    _GATEWAY = {"id": "gw-1", "address": "gw.example:443"}
+    _POLICY = {"mode": "AUTO_LOCK", "durationSeconds": 7776000}
+
+    @pytest.mark.parametrize(
+        "typename,extra,expected",
+        [
+            (
+                "KubernetesResource",
+                {"gateway": _GATEWAY, "clusterRef": "prod", "upstream": {"port": 6443}, "downstream": {"port": 443}},
+                {"gateway.id": "gw-1", "gateway.address": "gw.example:443", "clusterRef": "prod",
+                 "upstream.port": "6443", "upstream.tlsMode": "", "downstream.port": "443", "downstream.tlsMode": ""},
+            ),
+            (
+                "SSHResource",
+                {"gateway": _GATEWAY, "upstream": {"port": 22}, "downstream": {"port": 2222}},
+                {"gateway.id": "gw-1", "clusterRef": "", "upstream.port": "22", "downstream.port": "2222", "upstream.tlsMode": ""},
+            ),
+            (
+                "WebAppResource",
+                {"gateway": _GATEWAY, "upstream": {"port": 8443, "tlsMode": "VERIFY_FULL"}, "downstream": {"port": 443, "tlsMode": "TLS13"}},
+                {"gateway.id": "gw-1", "upstream.port": "8443", "upstream.tlsMode": "VERIFY_FULL",
+                 "downstream.port": "443", "downstream.tlsMode": "TLS13"},
+            ),
+            (
+                "NetworkResource",
+                {},
+                {"gateway.id": "", "gateway.address": "", "clusterRef": "", "upstream.port": "", "downstream.port": ""},
+            ),
+        ],
+    )
+    def test_show_gateway_ports_and_access_policy_per_type(self, mock_keyring, typename, extra, expected):
+        resource = {**SAMPLE_RESOURCE_EDGE["node"], "__typename": typename, "accessPolicy": self._POLICY, **extra}
+        _, rows = self._show_rows(resource)
+        row = rows[0]
+        assert row["accessPolicy.mode"] == "AUTO_LOCK" and row["accessPolicy.durationSeconds"] == "7776000"
+        for column, value in expected.items():
+            assert row[column] == value, column
+
+    def test_show_access_policy_without_duration_is_blank(self, mock_keyring):
+        resource = {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "NetworkResource", "accessPolicy": {"mode": "MANUAL", "durationSeconds": None}}
+        _, rows = self._show_rows(resource)
+        assert rows[0]["accessPolicy.mode"] == "MANUAL" and rows[0]["accessPolicy.durationSeconds"] == ""
+
+    def test_show_original_columns_keep_their_positions(self, mock_keyring):
         output, _ = self._show_rows({**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"})
         header = output.splitlines()[0].split(",")
-        assert header[0] == "id" and header[-2:] == ["routingMode", "type"]
+        assert header[:13] == [
+            "id", "name", "isActive", "remoteNetwork.id", "address.type", "address.value", "protocols.allowIcmp",
+            "protocols.tcp.policy", "protocols.udp.policy", "isVisible", "isBrowserShortcutEnabled", "routingMode", "type",
+        ]
 
     def test_show_unknown_id_prints_blank_row_without_crashing(self, mock_keyring):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:

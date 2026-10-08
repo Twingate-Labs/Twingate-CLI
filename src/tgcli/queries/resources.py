@@ -95,6 +95,61 @@ query getResource($itemID: ID!) {
     isActive
     ... on NetworkResource {
       routingMode
+      accessPolicy {
+        mode
+        durationSeconds
+      }
+    }
+    ... on SSHResource {
+      accessPolicy {
+        mode
+        durationSeconds
+      }
+      gateway {
+        id
+        address
+      }
+      upstream {
+        port
+      }
+      downstream {
+        port
+      }
+    }
+    ... on WebAppResource {
+      accessPolicy {
+        mode
+        durationSeconds
+      }
+      gateway {
+        id
+        address
+      }
+      upstream {
+        port
+        tlsMode
+      }
+      downstream {
+        port
+        tlsMode
+      }
+    }
+    ... on KubernetesResource {
+      accessPolicy {
+        mode
+        durationSeconds
+      }
+      gateway {
+        id
+        address
+      }
+      clusterRef
+      upstream {
+        port
+      }
+      downstream {
+        port
+      }
     }
     remoteNetwork {
       name
