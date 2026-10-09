@@ -69,13 +69,19 @@ def resource_list(
         None, "-a", "--active",
         help="Filter by active state: true or false. Omit to show all Resources.",
     ),
+    detail: bool = typer.Option(
+        False, "-d", "--detail",
+        help="Add access policy, approval mode, approver groups, gateway, ports and cluster ref (slower on large tenants).",
+    ),
 ) -> None:
     """List all Resources."""
     filter_fn = None
     if active is not None:
         active_bool = parse_bool_string(active)
         filter_fn = lambda node: node.get("isActive") == active_bool  # noqa: E731
-    run_paginated(get_client(), q.LIST_RESOURCES, "resources", t.get_list_as_csv, filter_fn=filter_fn)
+    query = q.LIST_RESOURCES_DETAIL if detail else q.LIST_RESOURCES
+    transformer = t.get_list_detail_as_csv if detail else t.get_list_as_csv
+    run_paginated(get_client(), query, "resources", transformer, filter_fn=filter_fn)
 
 
 @app.command("show")

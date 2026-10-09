@@ -216,11 +216,14 @@ tgcli -f CSV device list                          # export all devices with that
 Manage Twingate resources and their access controls.
 
 ```bash
-# List / show — both have a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES.
-# `show` also reports the access policy (mode, duration), the approval mode and approver groups (IDs, plus names in the same order), and,
-# for Gateway-backed types, the gateway, upstream/downstream ports (plus TLS modes for web apps) and the
-# cluster ref (Kubernetes).
+# List / show. Both have a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES.
+# `show` (and `list --detail`) add, after the original columns: the access policy (mode, duration), the
+# approval mode, approver groups (IDs, plus names in the same order) and, for Gateway-backed types, the
+# gateway, upstream/downstream ports (plus TLS modes for web apps) and the cluster ref (Kubernetes).
+# Columns that don't apply to a resource's type are blank. `list` leaves the extras out by default because
+# they make it slower on large tenants (about 13% at 144 resources).
 tgcli resource list
+tgcli resource list --detail              # (-d) the extra columns described above
 tgcli resource show -i "UmVzb3VyY2U6MQ=="
 
 # List only disabled (or only enabled) resources

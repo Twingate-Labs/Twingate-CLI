@@ -2,97 +2,8 @@
 
 from __future__ import annotations
 
-LIST_RESOURCES = """
-query listGroup($cursor: String!) {
-  resources(after: $cursor, first: null) {
-    pageInfo {
-      endCursor
-      hasNextPage
-    }
-    edges {
-      node {
-        __typename
-        id
-        isActive
-        name
-        alias
-        createdAt
-        updatedAt
-        isVisible
-        isBrowserShortcutEnabled
-        usageBasedAutolockDurationDays
-        ... on NetworkResource {
-          routingMode
-        }
-        tags {
-          key
-          value
-        }
-        access {
-          edges {
-            node {
-              ... on Group {
-                id
-                name
-              }
-              ... on ServiceAccount {
-                id
-                name
-              }
-            }
-            securityPolicy {
-              id
-              name
-            }
-          }
-        }
-        securityPolicy {
-          id
-          name
-        }
-        remoteNetwork {
-          name
-          id
-        }
-        address {
-          type
-          value
-        }
-        protocols {
-          allowIcmp
-          tcp {
-            policy
-            ports {
-              start
-              end
-            }
-          }
-          udp {
-            policy
-            ports {
-              start
-              end
-            }
-          }
-        }
-      }
-    }
-  }
-}
-"""
-
-SHOW_RESOURCE = """
-query getResource($itemID: ID!) {
-  resource(id: $itemID) {
-    __typename
-    id
-    name
-    createdAt
-    updatedAt
-    isVisible
-    isBrowserShortcutEnabled
-    usageBasedAutolockDurationDays
-    isActive
+# Selections that only exist on some Resource implementations (Resource is a GraphQL interface).
+_TYPE_SPECIFIC_FIELDS = """
     ... on NetworkResource {
       routingMode
       accessPolicy {
@@ -187,7 +98,106 @@ query getResource($itemID: ID!) {
         port
       }
     }
-    remoteNetwork {
+"""
+
+_LIST_RESOURCES_TEMPLATE = """
+query listGroup($cursor: String!) {
+  resources(after: $cursor, first: null) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    edges {
+      node {
+        __typename
+        id
+        isActive
+        name
+        alias
+        createdAt
+        updatedAt
+        isVisible
+        isBrowserShortcutEnabled
+        usageBasedAutolockDurationDays
+@@TYPE_FIELDS@@        tags {
+          key
+          value
+        }
+        access {
+          edges {
+            node {
+              ... on Group {
+                id
+                name
+              }
+              ... on ServiceAccount {
+                id
+                name
+              }
+            }
+            securityPolicy {
+              id
+              name
+            }
+          }
+        }
+        securityPolicy {
+          id
+          name
+        }
+        remoteNetwork {
+          name
+          id
+        }
+        address {
+          type
+          value
+        }
+        protocols {
+          allowIcmp
+          tcp {
+            policy
+            ports {
+              start
+              end
+            }
+          }
+          udp {
+            policy
+            ports {
+              start
+              end
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+# Default listing: only what costs next to nothing. `resource list --detail` pays for the rest.
+_LIST_TYPE_FIELDS = """    ... on NetworkResource {
+      routingMode
+    }
+"""
+
+LIST_RESOURCES = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _LIST_TYPE_FIELDS)
+LIST_RESOURCES_DETAIL = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _TYPE_SPECIFIC_FIELDS)
+
+SHOW_RESOURCE = """
+query getResource($itemID: ID!) {
+  resource(id: $itemID) {
+    __typename
+    id
+    name
+    createdAt
+    updatedAt
+    isVisible
+    isBrowserShortcutEnabled
+    usageBasedAutolockDurationDays
+    isActive
+""" + _TYPE_SPECIFIC_FIELDS + """    remoteNetwork {
       name
       id
     }

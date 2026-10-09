@@ -118,11 +118,98 @@ class TestResourceList:
         _, rows = self._csv_rows([edge])
         assert rows[0]["type"] == label
 
-    def test_list_type_column_is_last_so_existing_positions_are_unchanged(self, mock_keyring):
+    ORIGINAL_COLUMNS = [
+        "id", "name", "isActive", "remoteNetwork.id", "address.type", "address.value", "access.edges",
+        "securityPolicy.id", "alias", "isVisible", "isBrowserShortcutEnabled", "routingMode", "tags", "type",
+    ]
+    DETAIL_COLUMNS = [
+        "accessPolicy.mode", "accessPolicy.durationSeconds", "gateway.id", "gateway.address", "clusterRef",
+        "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode",
+        "approvalMode", "approverGroups", "approverGroupNames",
+    ]
+
+    def test_list_default_has_only_the_original_columns_plus_type(self, mock_keyring):
         edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
         output, _ = self._csv_rows([edge])
-        header = output.splitlines()[0].split(",")
-        assert header[0] == "id" and header[-2:] == ["tags", "type"]
+        assert output.splitlines()[0].split(",") == self.ORIGINAL_COLUMNS
+
+    def test_list_detail_appends_the_extra_columns_after_the_original_ones(self, mock_keyring):
+        edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
+        output, _ = self._csv_rows([edge], ["--detail"])
+        assert output.splitlines()[0].split(",") == self.ORIGINAL_COLUMNS + self.DETAIL_COLUMNS
+
+    def test_list_short_flag_d_is_detail(self, mock_keyring):
+        edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
+        output, _ = self._csv_rows([edge], ["-d"])
+        assert output.splitlines()[0].split(",")[-1] == "approverGroupNames"
+
+    def _sent_query(self, args):
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            MockClient.return_value.paginate.return_value = [[SAMPLE_RESOURCE_EDGE]]
+            runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "list", *args])
+            return MockClient.return_value.paginate.call_args.args[0]
+
+    def test_list_default_query_leaves_out_the_expensive_fields(self, mock_keyring):
+        query = self._sent_query([])
+        for field in ("approverGroups", "gateway", "accessPolicy", "upstream", "clusterRef"):
+            assert field not in query, field
+        assert "__typename" in query and "routingMode" in query
+
+    def test_list_detail_query_asks_for_them(self, mock_keyring):
+        query = self._sent_query(["--detail"])
+        for field in ("approverGroups", "gateway", "accessPolicy", "upstream", "clusterRef"):
+            assert field in query, field
+
+    def test_mappings_keep_using_the_lean_list_query(self, mock_keyring):
+        from tgcli.queries import resources as rq
+
+        assert "approverGroups" not in rq.LIST_RESOURCES and "approverGroups" in rq.LIST_RESOURCES_DETAIL
+        import inspect
+
+        from tgcli.commands import mappings
+
+        source = inspect.getsource(mappings)
+        assert "resq.LIST_RESOURCES," in source and "LIST_RESOURCES_DETAIL" not in source
+
+    def test_list_reports_type_specific_fields_per_row(self, mock_keyring):
+        node = SAMPLE_RESOURCE_EDGE["node"]
+        gateway = {"id": "gw-1", "address": "gw.example:443"}
+        policy = {"mode": "AUTO_LOCK", "durationSeconds": 86400}
+        edges = [
+            {"node": {**node, "id": "net", "__typename": "NetworkResource", "accessPolicy": {"mode": "MANUAL", "durationSeconds": None},
+                      "approvalMode": "AUTOMATIC", "approverGroups": {"edges": [{"node": {"id": "g-1", "name": "Ops, EMEA"}}, {"node": {"id": "g-2", "name": "DBAs"}}]}}},
+            {"node": {**node, "id": "k8s", "__typename": "KubernetesResource", "accessPolicy": policy, "approvalMode": "MANUAL",
+                      "approverGroups": {"edges": []}, "gateway": gateway, "clusterRef": "prod",
+                      "upstream": {"port": 6443}, "downstream": {"port": 443}}},
+            {"node": {**node, "id": "web", "__typename": "WebAppResource", "accessPolicy": policy, "approvalMode": "MANUAL",
+                      "approverGroups": {"edges": [{"node": {"id": "g-3", "name": "Web"}}]}, "gateway": gateway,
+                      "upstream": {"port": 8443, "tlsMode": "VERIFY_FULL"}, "downstream": {"port": 443, "tlsMode": "TLS13"}}},
+        ]
+        _, rows = self._csv_rows(edges, ["--detail"])
+        net, k8s, web = rows
+        assert (net["accessPolicy.mode"], net["accessPolicy.durationSeconds"], net["gateway.id"], net["upstream.port"]) == ("MANUAL", "", "", "")
+        assert (net["approvalMode"], net["approverGroups"], net["approverGroupNames"]) == ("AUTOMATIC", "['g-1', 'g-2']", "['Ops, EMEA', 'DBAs']")
+        assert (k8s["gateway.id"], k8s["gateway.address"], k8s["clusterRef"], k8s["upstream.port"], k8s["downstream.port"]) == ("gw-1", "gw.example:443", "prod", "6443", "443")
+        assert (k8s["accessPolicy.durationSeconds"], k8s["approverGroups"], k8s["approverGroupNames"]) == ("86400", "[]", "[]")
+        assert (web["upstream.tlsMode"], web["downstream.tlsMode"], web["approverGroupNames"]) == ("VERIFY_FULL", "TLS13", "['Web']")
+
+    def test_list_approver_names_stay_aligned_with_rows_after_active_filter(self, mock_keyring):
+        node = SAMPLE_RESOURCE_EDGE["node"]
+        edges = [
+            {"node": {**node, "id": "a", "isActive": True, "__typename": "NetworkResource", "approvalMode": "MANUAL",
+                      "approverGroups": {"edges": [{"node": {"id": "g-a", "name": "A-team"}}]}}},
+            {"node": {**node, "id": "b", "isActive": False, "__typename": "NetworkResource", "approvalMode": "MANUAL",
+                      "approverGroups": {"edges": [{"node": {"id": "g-b", "name": "B-team"}}]}}},
+        ]
+        _, rows = self._csv_rows(edges, ["-a", "false", "--detail"])
+        assert [(r["id"], r["approverGroups"], r["approverGroupNames"]) for r in rows] == [("b", "['g-b']", "['B-team']")]
+
+    def test_list_handles_a_null_node_without_misaligning_later_rows(self, mock_keyring):
+        node = {**SAMPLE_RESOURCE_EDGE["node"], "id": "ok", "__typename": "NetworkResource", "approvalMode": "MANUAL",
+                "approverGroups": {"edges": [{"node": {"id": "g", "name": "G"}}]}}
+        _, rows = self._csv_rows([{"node": None}, {"node": node}], ["--detail"])
+        assert rows[0]["id"] == "" and rows[0]["approverGroupNames"] == ""
+        assert rows[1]["id"] == "ok" and rows[1]["approverGroupNames"] == "['G']"
 
     def test_list_mixed_types_and_active_filter(self, mock_keyring):
         node = SAMPLE_RESOURCE_EDGE["node"]
