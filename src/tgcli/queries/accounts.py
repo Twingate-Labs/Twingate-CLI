@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tgcli.queries.nested import connection, continuation
+
 LIST_ACCOUNTS = """
 {
   serviceAccounts(after: null, first: null) {
@@ -42,37 +44,28 @@ LIST_ACCOUNTS = """
 }
 """
 
-SHOW_ACCOUNT = """
-query getObj($itemID: ID!) {
-  serviceAccount(id: $itemID) {
+# The API returns at most 50 items per page, so `account show` and `account listKeys` follow each nested list to its end.
+_SHOW_NESTED = {
+    "resources": "node { id name }",
+    "keys": "node { id name createdAt expiresAt revokedAt updatedAt status }",
+}
+_KEYS_NESTED = {"keys": "node { id name status createdAt expiresAt revokedAt }"}
+
+SHOW_ACCOUNT = f"""
+query getObj($itemID: ID!) {{
+  serviceAccount(id: $itemID) {{
     id
     name
     createdAt
     updatedAt
-    resources {
-      edges {
-        node {
-          id
-          name
-        }
-      }
-    }
-    keys {
-      edges {
-        node {
-          id
-          name
-          createdAt
-          expiresAt
-          revokedAt
-          updatedAt
-          status
-        }
-      }
-    }
-  }
-}
+    {connection("resources", _SHOW_NESTED["resources"])}
+    {connection("keys", _SHOW_NESTED["keys"])}
+  }}
+}}
 """
+
+ACCOUNT_SHOW_CONTINUATIONS = {field: continuation("serviceAccount", field, edge) for field, edge in _SHOW_NESTED.items()}
+ACCOUNT_KEYS_CONTINUATIONS = {field: continuation("serviceAccount", field, edge) for field, edge in _KEYS_NESTED.items()}
 
 CREATE_ACCOUNT = """
 mutation ObjCreate($name: String!, $resourceIds: [ID!]) {
@@ -155,23 +148,12 @@ mutation ObjRename($id: ID!, $name: String!) {
 }
 """
 
-LIST_ACCOUNT_KEYS = """
-query getObj($itemID: ID!) {
-  serviceAccount(id: $itemID) {
+LIST_ACCOUNT_KEYS = f"""
+query getObj($itemID: ID!) {{
+  serviceAccount(id: $itemID) {{
     id
     name
-    keys {
-      edges {
-        node {
-          id
-          name
-          status
-          createdAt
-          expiresAt
-          revokedAt
-        }
-      }
-    }
-  }
-}
+    {connection("keys", _KEYS_NESTED["keys"])}
+  }}
+}}
 """

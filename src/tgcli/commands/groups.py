@@ -22,7 +22,7 @@ def group_list() -> None:
     """List all Groups."""
     run_paginated(
         get_client(), q.LIST_GROUPS, "groups", t.get_list_as_csv,
-        nested=NestedLists("group", q.LIST_GROUPS_CONTINUATIONS),
+        nested=NestedLists("group", q.GROUP_CONTINUATIONS),
     )
 
 
@@ -31,7 +31,10 @@ def group_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Group ID."),
 ) -> None:
     """Show details for a specific group."""
-    run_query(get_client(), q.SHOW_GROUP, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_GROUP, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("group", q.GROUP_CONTINUATIONS),
+    )
 
 
 @app.command("create")

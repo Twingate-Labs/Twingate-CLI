@@ -6,6 +6,7 @@ import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
 from tgcli.output.transformers import policies as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import policies as q
 
 app = typer.Typer(help="Manage Twingate Resource policies.")
@@ -22,7 +23,10 @@ def policy_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource Policy ID."),
 ) -> None:
     """Show details for a specific Resource policy."""
-    run_query(get_client(), q.SHOW_POLICY, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_POLICY, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("securityPolicy", q.POLICY_CONTINUATIONS),
+    )
 
 
 @app.command("update")

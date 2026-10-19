@@ -10,8 +10,9 @@ import pandas as pd
 import typer
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
-from tgcli.commands._common import get_client
+from tgcli.commands._common import complete_or_exit, get_client
 from tgcli.main import state
+from tgcli.pagination import NestedLists
 from tgcli.queries import connectors as connq
 from tgcli.queries import mappings as q
 from tgcli.queries import resources as resq
@@ -48,6 +49,13 @@ def user_network() -> None:
     except TwingateAPIError as exc:
         typer.echo(f"API error: {exc}", err=True)
         raise typer.Exit(1)
+
+    # Follow each level to its end: a user's groups, then each group's resources (a group shared by many users
+    # is read once).
+    users = [edge["node"] for page in all_users for edge in page]
+    complete_or_exit(client, users, NestedLists("user", q.USER_GROUPS_CONTINUATIONS))
+    group_nodes = [grp["node"] for user in users for grp in user.get("groups", {}).get("edges", [])]
+    complete_or_exit(client, group_nodes, NestedLists("group", q.GROUP_RESOURCES_CONTINUATIONS))
 
     user_info: list[dict] = []
     for page in all_users:
@@ -107,6 +115,7 @@ def user_resource(
         typer.echo(f"No User found with email '{email}'.")
         raise typer.Exit(0)
 
+    complete_or_exit(client, [edges[0]["node"]], NestedLists("user", q.USER_BY_EMAIL_CONTINUATIONS))
     group_ids = [
         grp["node"]["id"]
         for grp in edges[0]["node"].get("groups", {}).get("edges", [])

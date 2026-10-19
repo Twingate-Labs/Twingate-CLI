@@ -12,6 +12,7 @@ from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.commands._common import get_client, run_paginated, run_query
 from tgcli.main import state
 from tgcli.output.transformers import keys as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import keys as q
 from tgcli.validators.key import validate_key_expiration
 
@@ -84,7 +85,10 @@ def key_list(
     def transformer(json_results: list) -> pd.DataFrame:
         return t.get_list_as_csv(json_results, status_filter=status_upper)
 
-    run_paginated(get_client(), q.LIST_KEYS, "serviceAccounts", transformer)
+    run_paginated(
+        get_client(), q.LIST_KEYS, "serviceAccounts", transformer,
+        nested=NestedLists("serviceAccount", q.KEYS_CONTINUATIONS),
+    )
 
 
 @app.command("expiring")
@@ -99,7 +103,10 @@ def key_expiring(
     def transformer(json_results: list) -> pd.DataFrame:
         return t.get_list_as_csv(json_results, status_filter="ACTIVE", expiring_days=days)
 
-    run_paginated(get_client(), q.LIST_KEYS, "serviceAccounts", transformer)
+    run_paginated(
+        get_client(), q.LIST_KEYS, "serviceAccounts", transformer,
+        nested=NestedLists("serviceAccount", q.KEYS_CONTINUATIONS),
+    )
 
 
 @app.command("rotate")

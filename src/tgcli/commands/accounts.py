@@ -6,6 +6,7 @@ import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
 from tgcli.output.transformers import accounts as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import accounts as q
 
 app = typer.Typer(help="Manage Twingate Service Accounts.")
@@ -22,7 +23,10 @@ def account_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
 ) -> None:
     """Show details for a specific Service Account."""
-    run_query(get_client(), q.SHOW_ACCOUNT, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_ACCOUNT, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("serviceAccount", q.ACCOUNT_SHOW_CONTINUATIONS),
+    )
 
 
 @app.command("create")
@@ -89,4 +93,7 @@ def account_list_keys(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
 ) -> None:
     """List all keys for a specific Service Account."""
-    run_query(get_client(), q.LIST_ACCOUNT_KEYS, {"itemID": itemid}, t.get_list_keys_as_csv)
+    run_query(
+        get_client(), q.LIST_ACCOUNT_KEYS, {"itemID": itemid}, t.get_list_keys_as_csv,
+        nested=NestedLists("serviceAccount", q.ACCOUNT_KEYS_CONTINUATIONS),
+    )

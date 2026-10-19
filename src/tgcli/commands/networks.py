@@ -19,7 +19,7 @@ def network_list() -> None:
     """List all Remote Networks."""
     run_paginated(
         get_client(), q.LIST_NETWORKS, "remoteNetworks", t.get_list_as_csv,
-        nested=NestedLists("remoteNetwork", q.LIST_NETWORKS_CONTINUATIONS),
+        nested=NestedLists("remoteNetwork", q.NETWORK_CONTINUATIONS),
     )
 
 
@@ -28,7 +28,10 @@ def network_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Remote Network ID."),
 ) -> None:
     """Show details for a specific Remote Network."""
-    run_query(get_client(), q.SHOW_NETWORK, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_NETWORK, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("remoteNetwork", q.NETWORK_CONTINUATIONS),
+    )
 
 
 @app.command("create")

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tgcli.queries.nested import connection, continuation
+
 SHOW_KEY = """
 query getSAK($itemID: ID!) {
   serviceAccountKey(id: $itemID) {
@@ -72,31 +74,25 @@ mutation ObjRename($id: ID!, $name: String!) {
 }
 """
 
-LIST_KEYS = """
-query ListKeys($cursor: String) {
-  serviceAccounts(first: 100, after: $cursor) {
-    pageInfo {
+# The API returns at most 50 items per page, so `key list` and `key expiring` follow each service account's keys to the end.
+_NESTED = {"keys": "node { id name status createdAt expiresAt revokedAt }"}
+
+LIST_KEYS = f"""
+query ListKeys($cursor: String) {{
+  serviceAccounts(first: 100, after: $cursor) {{
+    pageInfo {{
       endCursor
       hasNextPage
-    }
-    edges {
-      node {
+    }}
+    edges {{
+      node {{
         id
         name
-        keys {
-          edges {
-            node {
-              id
-              name
-              status
-              createdAt
-              expiresAt
-              revokedAt
-            }
-          }
-        }
-      }
-    }
-  }
-}
+        {connection("keys", _NESTED["keys"])}
+      }}
+    }}
+  }}
+}}
 """
+
+KEYS_CONTINUATIONS = {field: continuation("serviceAccount", field, edge) for field, edge in _NESTED.items()}

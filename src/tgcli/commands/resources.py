@@ -10,6 +10,7 @@ from tgcli.commands._common import get_client, run_paginated, run_query, split_i
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import resources as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import resources as q
 from tgcli.validators.generic import parse_bool_string, validate_routing_mode
 from tgcli.validators.protocol import (
@@ -81,7 +82,11 @@ def resource_list(
         filter_fn = lambda node: node.get("isActive") == active_bool  # noqa: E731
     query = q.LIST_RESOURCES_DETAIL if detail else q.LIST_RESOURCES
     transformer = t.get_list_detail_as_csv if detail else t.get_list_as_csv
-    run_paginated(get_client(), query, "resources", transformer, filter_fn=filter_fn)
+    continuations = q.RESOURCE_DETAIL_CONTINUATIONS if detail else q.RESOURCE_LIST_CONTINUATIONS
+    run_paginated(
+        get_client(), query, "resources", transformer, filter_fn=filter_fn,
+        nested=NestedLists("resource", continuations),
+    )
 
 
 @app.command("show")
@@ -89,7 +94,10 @@ def resource_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
 ) -> None:
     """Show details for a specific Resource."""
-    run_query(get_client(), q.SHOW_RESOURCE, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_RESOURCE, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("resource", q.RESOURCE_SHOW_CONTINUATIONS),
+    )
 
 
 @app.command("create")

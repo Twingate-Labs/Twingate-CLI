@@ -46,14 +46,41 @@ def execute_query(client: TwingateClient, query: str, variables: dict | None) ->
         raise typer.Exit(1)
 
 
+def complete_or_exit(client: TwingateClient, nodes: list[dict], nested: NestedLists) -> None:
+    """Fill in nested lists the API cut off at 50 items, in place. Count mismatches only warn; failures exit."""
+    try:
+        problems = complete_nested_lists(client, nodes, nested)
+    except TwingateAuthError as exc:
+        typer.echo(f"Authentication error: {exc}", err=True)
+        raise typer.Exit(1)
+    except TwingateAPIError as exc:
+        typer.echo(f"API error: {exc}", err=True)
+        raise typer.Exit(1)
+    except PaginationError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+    for problem in problems[:MAX_NESTED_WARNINGS]:
+        typer.echo(f"Warning: {problem}", err=True)
+    if len(problems) > MAX_NESTED_WARNINGS:
+        typer.echo(f"Warning: ... and {len(problems) - MAX_NESTED_WARNINGS} more", err=True)
+
+
 def run_query(
     client: TwingateClient,
     query: str,
     variables: dict | None,
     transformer: Callable[..., pd.DataFrame],
+    nested: NestedLists | None = None,
 ) -> None:
-    """Execute a single GraphQL query and print formatted output."""
+    """Execute a single GraphQL query and print formatted output.
+
+    ``nested`` completes nested lists on the object at ``data[nested.parent]`` (the API returns at most 50 per page).
+    """
     result = execute_query(client, query, variables)
+    if nested is not None:
+        node = ((result or {}).get("data") or {}).get(nested.parent)
+        if isinstance(node, dict):
+            complete_or_exit(client, [node], nested)
     OutputFormatter.print_output(result, state.output_format, transformer)
 
 
@@ -81,22 +108,14 @@ def fetch_paginated(
         pages = client.paginate(query, make_vars, data_key)
         if filter_fn is not None:
             pages = [[edge for edge in page if filter_fn(edge["node"])] for page in pages]
-        if nested is not None:
-            nodes = [edge["node"] for page in pages for edge in page if edge["node"]]
-            problems = complete_nested_lists(client, nodes, nested)
-            for problem in problems[:MAX_NESTED_WARNINGS]:
-                typer.echo(f"Warning: {problem}", err=True)
-            if len(problems) > MAX_NESTED_WARNINGS:
-                typer.echo(f"Warning: ... and {len(problems) - MAX_NESTED_WARNINGS} more", err=True)
     except TwingateAuthError as exc:
         typer.echo(f"Authentication error: {exc}", err=True)
         raise typer.Exit(1)
     except TwingateAPIError as exc:
         typer.echo(f"API error: {exc}", err=True)
         raise typer.Exit(1)
-    except PaginationError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(1)
+    if nested is not None:
+        complete_or_exit(client, [edge["node"] for page in pages for edge in page if edge["node"]], nested)
     return pages
 
 

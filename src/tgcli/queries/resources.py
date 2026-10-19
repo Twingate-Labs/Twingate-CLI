@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from tgcli.queries.nested import connection, continuation
+
 # Selections that only exist on some Resource implementations (Resource is a GraphQL interface).
-_TYPE_SPECIFIC_FIELDS = """
+_TYPE_SPECIFIC_TEMPLATE = """
     ... on NetworkResource {
       routingMode
       accessPolicy {
@@ -11,14 +13,7 @@ _TYPE_SPECIFIC_FIELDS = """
         durationSeconds
       }
       approvalMode
-      approverGroups(first: null) {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
+      @@APPROVERS@@
     }
     ... on SSHResource {
       accessPolicy {
@@ -26,14 +21,7 @@ _TYPE_SPECIFIC_FIELDS = """
         durationSeconds
       }
       approvalMode
-      approverGroups(first: null) {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
+      @@APPROVERS@@
       gateway {
         id
         address
@@ -51,14 +39,7 @@ _TYPE_SPECIFIC_FIELDS = """
         durationSeconds
       }
       approvalMode
-      approverGroups(first: null) {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
+      @@APPROVERS@@
       gateway {
         id
         address
@@ -78,14 +59,7 @@ _TYPE_SPECIFIC_FIELDS = """
         durationSeconds
       }
       approvalMode
-      approverGroups(first: null) {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
+      @@APPROVERS@@
       gateway {
         id
         address
@@ -99,6 +73,12 @@ _TYPE_SPECIFIC_FIELDS = """
       }
     }
 """
+
+# The API returns at most 50 items per page, so the resource commands follow each nested list to its end.
+RESOURCE_TYPES = ("NetworkResource", "SSHResource", "WebAppResource", "KubernetesResource")
+_APPROVER_EDGE = "node { id name }"
+_ACCESS_EDGE = "node { ... on Group { id name } ... on ServiceAccount { id name } } securityPolicy { id name }"
+_TYPE_SPECIFIC_FIELDS = _TYPE_SPECIFIC_TEMPLATE.replace("@@APPROVERS@@", connection("approverGroups", _APPROVER_EDGE))
 
 _LIST_RESOURCES_TEMPLATE = """
 query listGroup($cursor: String!) {
@@ -123,24 +103,7 @@ query listGroup($cursor: String!) {
           key
           value
         }
-        access {
-          edges {
-            node {
-              ... on Group {
-                id
-                name
-              }
-              ... on ServiceAccount {
-                id
-                name
-              }
-            }
-            securityPolicy {
-              id
-              name
-            }
-          }
-        }
+        @@ACCESS@@
         securityPolicy {
           id
           name
@@ -182,8 +145,17 @@ _LIST_TYPE_FIELDS = """    ... on NetworkResource {
     }
 """
 
-LIST_RESOURCES = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _LIST_TYPE_FIELDS)
-LIST_RESOURCES_DETAIL = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _TYPE_SPECIFIC_FIELDS)
+LIST_RESOURCES = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _LIST_TYPE_FIELDS).replace(
+    "@@ACCESS@@", connection("access", _ACCESS_EDGE)
+)
+LIST_RESOURCES_DETAIL = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _TYPE_SPECIFIC_FIELDS).replace(
+    "@@ACCESS@@", connection("access", _ACCESS_EDGE)
+)
+
+_APPROVERS_CONTINUATION = continuation("resource", "approverGroups", _APPROVER_EDGE, on=RESOURCE_TYPES)
+RESOURCE_LIST_CONTINUATIONS = {"access": continuation("resource", "access", _ACCESS_EDGE)}
+RESOURCE_DETAIL_CONTINUATIONS = {**RESOURCE_LIST_CONTINUATIONS, "approverGroups": _APPROVERS_CONTINUATION}
+RESOURCE_SHOW_CONTINUATIONS = {"approverGroups": _APPROVERS_CONTINUATION}
 
 SHOW_RESOURCE = """
 query getResource($itemID: ID!) {

@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
-LIST_USERS = """
-query listGroup($cursor: String!) {
-  users(after: $cursor, first: null) {
-    pageInfo {
+from tgcli.queries.nested import connection, continuation
+
+# The API returns at most 50 items per page, so `user list` and `user show` follow each nested list to its end.
+_LIST_NESTED = {"groups": "node { id }"}
+_SHOW_NESTED = {"groups": "node { id name }"}
+
+LIST_USERS = f"""
+query listGroup($cursor: String!) {{
+  users(after: $cursor, first: null) {{
+    pageInfo {{
       endCursor
       hasNextPage
-    }
-    edges {
-      node {
+    }}
+    edges {{
+      node {{
         id
         state
         email
@@ -19,22 +25,19 @@ query listGroup($cursor: String!) {
         firstName
         createdAt
         updatedAt
-        groups {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
-    }
-  }
-}
+        {connection("groups", _LIST_NESTED["groups"])}
+      }}
+    }}
+  }}
+}}
 """
 
-SHOW_USER = """
-query getObj($itemID: ID!) {
-  user(id: $itemID) {
+USER_LIST_CONTINUATIONS = {field: continuation("user", field, edge) for field, edge in _LIST_NESTED.items()}
+USER_SHOW_CONTINUATIONS = {field: continuation("user", field, edge) for field, edge in _SHOW_NESTED.items()}
+
+SHOW_USER = f"""
+query getObj($itemID: ID!) {{
+  user(id: $itemID) {{
     id
     state
     email
@@ -43,16 +46,9 @@ query getObj($itemID: ID!) {
     firstName
     createdAt
     updatedAt
-    groups {
-      edges {
-        node {
-          id
-          name
-        }
-      }
-    }
-  }
-}
+    {connection("groups", _SHOW_NESTED["groups"])}
+  }}
+}}
 """
 
 CREATE_USER = """

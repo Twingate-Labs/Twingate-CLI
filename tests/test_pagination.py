@@ -132,6 +132,30 @@ class TestCompleteNestedLists:
         assert problems == [] and len(node["users"]["edges"]) == 5 and len(node["resources"]["edges"]) == 4
         assert set(seen) == {"Q-users", "Q-resources"}
 
+    def test_a_parent_that_appears_under_many_nodes_is_read_once(self):
+        all_edges = edges("u", 5)
+        copies = [self.node("g", users=first_page(all_edges)) for _ in range(4)]
+        client, problems = self.run(copies, {("g", "users"): all_edges})
+        assert [c["cursor"] for c in client.calls] == ["c2", "c4"]  # one read of the list, not four
+        assert problems == []
+        for copy in copies:
+            assert [e["node"]["id"] for e in copy["users"]["edges"]] == [f"u{i}" for i in range(5)]
+            assert set(copy["users"]) == {"edges"}
+
+    def test_cached_copies_are_independent_lists(self):
+        all_edges = edges("u", 5)
+        nodes = [self.node("g", users=first_page(all_edges)) for _ in range(3)]
+        self.run(nodes, {("g", "users"): all_edges})
+        nodes[1]["users"]["edges"].append("mutated")  # the second and third both came from the cache
+        assert "mutated" not in nodes[2]["users"]["edges"] and "mutated" not in nodes[0]["users"]["edges"]
+
+    def test_the_cache_is_per_field_and_per_parent(self):
+        a_edges, b_edges = edges("a", 5), edges("b", 5)
+        nodes = [self.node("a", users=first_page(a_edges)), self.node("b", users=first_page(b_edges))]
+        client, _ = self.run(nodes, {("a", "users"): a_edges, ("b", "users"): b_edges})
+        assert {c["id"] for c in client.calls} == {"a", "b"}
+        assert [e["node"]["id"] for e in nodes[1]["users"]["edges"]] == [f"b{i}" for i in range(5)]
+
     def test_old_shaped_nodes_without_counts_or_cursors_are_left_alone(self):
         node = self.node("g", users={"edges": edges("u", 3)})
         client, problems = self.run([node], {})

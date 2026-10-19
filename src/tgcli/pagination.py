@@ -55,10 +55,12 @@ def complete_nested_lists(client: Any, nodes: list[dict], nested: NestedLists) -
     """Append the pages missing from each node's nested lists, in place, so every list is complete.
 
     A nested connection carries ``totalCount`` and ``pageInfo`` only so truncation can be seen; both are
-    removed afterwards so the node keeps the shape the list query always produced. Returns problems
+    removed afterwards so the node keeps the shape the list query always produced. A parent that appears under
+    several nodes (a group shared by many users) is read only once. Returns problems
     (counts that still don't match the API's total, parents that vanished) for the caller to report.
     """
     problems: list[str] = []
+    complete: dict[tuple[str, str], list[dict]] = {}  # (field, parent id) -> every edge, so a repeated parent is read once
     for node in nodes:
         for field, query in nested.continuations.items():
             connection = node.get(field)
@@ -66,13 +68,18 @@ def complete_nested_lists(client: Any, nodes: list[dict], nested: NestedLists) -
                 continue
             info = connection.get("pageInfo") or {}
             if info.get("hasNextPage"):
-                more, _, found = fetch_connection(
-                    client, query, {"id": node["id"]}, [nested.parent, field], cursor=info.get("endCursor")
-                )
-                if found:
-                    connection["edges"].extend(more)
+                key = (field, node["id"])
+                if key in complete:
+                    connection["edges"] = list(complete[key])
                 else:
-                    problems.append(f"{node['id']}: disappeared while its {field} were being read")
+                    more, _, found = fetch_connection(
+                        client, query, {"id": node["id"]}, [nested.parent, field], cursor=info.get("endCursor")
+                    )
+                    if found:
+                        connection["edges"].extend(more)
+                        complete[key] = list(connection["edges"])
+                    else:
+                        problems.append(f"{node['id']}: disappeared while its {field} were being read")
             expected = connection.get("totalCount")
             if expected is not None and len(connection["edges"]) != expected:
                 problems.append(f"{node['id']} {field}: API reports {expected}, listed {len(connection['edges'])}")

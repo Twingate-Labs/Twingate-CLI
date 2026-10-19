@@ -2,21 +2,10 @@
 
 from __future__ import annotations
 
-def _nested(field: str, edge: str) -> str:
-    """A nested list as the first page sees it: with the count and cursor needed to spot and finish truncation."""
-    return f"{field} {{ totalCount pageInfo {{ hasNextPage endCursor }} edges {{ {edge} }} }}"
+from tgcli.queries.nested import connection, continuation
 
-
-def _continuation(parent: str, field: str, edge: str) -> str:
-    """The same nested list, fetched on its own so the pages after the first can be read."""
-    return (
-        f"query($id: ID!, $cursor: String) {{ {parent}(id: $id) {{ {field}(after: $cursor) {{ "
-        f"pageInfo {{ hasNextPage endCursor }} edges {{ {edge} }} }} }} }}"
-    )
-
-
-# The API returns at most 50 items per page, so `group list` follows each nested list to its end.
-_LIST_NESTED = {
+# The API returns at most 50 items per page, so `group list` and `group show` follow each nested list to its end.
+_NESTED = {
     "users": "node { id email firstName lastName }",
     "resources": "node { id name address { type value } isActive }",
 }
@@ -36,50 +25,29 @@ query listGroup($cursor: String!) {{
         updatedAt
         isActive
         type
-        {_nested("users", _LIST_NESTED["users"])}
-        {_nested("resources", _LIST_NESTED["resources"])}
+        {connection("users", _NESTED["users"])}
+        {connection("resources", _NESTED["resources"])}
       }}
     }}
   }}
 }}
 """
 
-LIST_GROUPS_CONTINUATIONS = {field: _continuation("group", field, edge) for field, edge in _LIST_NESTED.items()}
+GROUP_CONTINUATIONS = {field: continuation("group", field, edge) for field, edge in _NESTED.items()}
 
-SHOW_GROUP = """
-query getObj($itemID: ID!) {
-  group(id: $itemID) {
+SHOW_GROUP = f"""
+query getObj($itemID: ID!) {{
+  group(id: $itemID) {{
     id
     name
     createdAt
     updatedAt
     isActive
     type
-    users {
-      edges {
-        node {
-          id
-          email
-          firstName
-          lastName
-        }
-      }
-    }
-    resources {
-      edges {
-        node {
-          id
-          name
-          address {
-            type
-            value
-          }
-          isActive
-        }
-      }
-    }
-  }
-}
+    {connection("users", _NESTED["users"])}
+    {connection("resources", _NESTED["resources"])}
+  }}
+}}
 """
 
 CREATE_GROUP = """

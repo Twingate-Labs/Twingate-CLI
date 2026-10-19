@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from tgcli.queries.nested import connection, continuation
+
 LIST_POLICIES = """
 query listObj($cursor: String!) {
   securityPolicies(after: $cursor, first: null) {
@@ -22,25 +24,23 @@ query listObj($cursor: String!) {
 }
 """
 
-SHOW_POLICY = """
-query getObj($itemID: ID!) {
-  securityPolicy(id: $itemID) {
+# The API returns at most 50 items per page, so `policy show` follows each nested list to its end.
+_NESTED = {"groups": "node { id name }"}
+
+SHOW_POLICY = f"""
+query getObj($itemID: ID!) {{
+  securityPolicy(id: $itemID) {{
     id
     name
     updatedAt
     createdAt
     policyType
-    groups {
-      edges {
-        node {
-          id
-          name
-        }
-      }
-    }
-  }
-}
+    {connection("groups", _NESTED["groups"])}
+  }}
+}}
 """
+
+POLICY_CONTINUATIONS = {field: continuation("securityPolicy", field, edge) for field, edge in _NESTED.items()}
 
 UPDATE_POLICY_GROUPS = """
 mutation updatePolicyGroups($id: ID!, $groupIds: [ID], $addedGroupIds: [ID], $removedGroupIds: [ID]) {

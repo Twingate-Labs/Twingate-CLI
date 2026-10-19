@@ -6,6 +6,7 @@ import typer
 
 from tgcli.commands._common import execute_query, get_client, run_query
 from tgcli.output.transformers import dns_profiles as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import dns_profiles as q
 
 app = typer.Typer(help="Manage Twingate DNS Filtering profiles.")
@@ -22,7 +23,10 @@ def dns_profile_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="DNS Filtering Profile ID."),
 ) -> None:
     """Show details for a specific DNS Filtering profile, including assigned groups."""
-    run_query(get_client(), q.SHOW_DNS_PROFILE, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_DNS_PROFILE, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("dnsFilteringProfile", q.DNS_PROFILE_CONTINUATIONS),
+    )
 
 
 @app.command("create")

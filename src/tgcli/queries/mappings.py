@@ -2,49 +2,41 @@
 
 from __future__ import annotations
 
-LIST_USER_RN_MAPPINGS = """
-query getUsers($cursor: String!) {
-  users(after: $cursor) {
-    edges {
-      node {
+from tgcli.queries.nested import connection, continuation
+
+# The API returns at most 50 items per page, and this walks users -> groups -> resources, so each level is
+# followed to its end (a user's groups, then each group's resources).
+_RESOURCE_EDGE = "node { id name remoteNetwork { id name } }"
+_GROUP_EDGE = "node { id name " + connection("resources", _RESOURCE_EDGE) + " }"
+
+LIST_USER_RN_MAPPINGS = f"""
+query getUsers($cursor: String!) {{
+  users(after: $cursor) {{
+    edges {{
+      node {{
         id
         firstName
         lastName
         email
-        groups {
-          edges {
-            node {
-              name
-              resources {
-                edges {
-                  node {
-                    id
-                    name
-                    remoteNetwork {
-                      id
-                      name
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    pageInfo {
+        {connection("groups", _GROUP_EDGE)}
+      }}
+    }}
+    pageInfo {{
       endCursor
       hasNextPage
-    }
-  }
-}
+    }}
+  }}
+}}
 """
 
-GET_USER_BY_EMAIL = """
-query listUsers($userEmail: String!) {
-  users(filter: {email: {eq: $userEmail}}) {
-    edges {
-      node {
+USER_GROUPS_CONTINUATIONS = {"groups": continuation("user", "groups", _GROUP_EDGE)}
+GROUP_RESOURCES_CONTINUATIONS = {"resources": continuation("group", "resources", _RESOURCE_EDGE)}
+
+GET_USER_BY_EMAIL = f"""
+query listUsers($userEmail: String!) {{
+  users(filter: {{email: {{eq: $userEmail}}}}) {{
+    edges {{
+      node {{
         id
         firstName
         lastName
@@ -52,22 +44,18 @@ query listUsers($userEmail: String!) {
         createdAt
         updatedAt
         state
-        groups {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
-    }
-    pageInfo {
+        {connection("groups", "node { id }")}
+      }}
+    }}
+    pageInfo {{
       startCursor
       hasNextPage
-    }
-  }
-}
+    }}
+  }}
+}}
 """
+
+USER_BY_EMAIL_CONTINUATIONS = {"groups": continuation("user", "groups", "node { id }")}
 
 GET_GROUP_RESOURCES = """
 query getGroup($cursor: String!, $groupID: ID!) {

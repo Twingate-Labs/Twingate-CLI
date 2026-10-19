@@ -6,6 +6,7 @@ import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query
 from tgcli.output.transformers import users as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import users as q
 from tgcli.validators.generic import parse_bool_string
 from tgcli.validators.user import validate_user_role, validate_user_state
@@ -16,7 +17,10 @@ app = typer.Typer(help="Manage Twingate Users.")
 @app.command("list")
 def user_list() -> None:
     """List all Users."""
-    run_paginated(get_client(), q.LIST_USERS, "users", t.get_list_as_csv)
+    run_paginated(
+        get_client(), q.LIST_USERS, "users", t.get_list_as_csv,
+        nested=NestedLists("user", q.USER_LIST_CONTINUATIONS),
+    )
 
 
 @app.command("show")
@@ -24,7 +28,10 @@ def user_show(
     itemid: str = typer.Option(..., "-i", "--itemid", help="User ID."),
 ) -> None:
     """Show details for a specific User."""
-    run_query(get_client(), q.SHOW_USER, {"itemID": itemid}, t.get_show_as_csv)
+    run_query(
+        get_client(), q.SHOW_USER, {"itemID": itemid}, t.get_show_as_csv,
+        nested=NestedLists("user", q.USER_SHOW_CONTINUATIONS),
+    )
 
 
 @app.command("create") 

@@ -205,16 +205,16 @@ def squash(text: str) -> str:
 
 @pytest.mark.parametrize(
     "module,list_query,continuations",
-    [(gq, gq.LIST_GROUPS, gq.LIST_GROUPS_CONTINUATIONS), (nq, nq.LIST_NETWORKS, nq.LIST_NETWORKS_CONTINUATIONS)],
+    [(gq, gq.LIST_GROUPS, gq.GROUP_CONTINUATIONS), (nq, nq.LIST_NETWORKS, nq.NETWORK_CONTINUATIONS)],
 )
 class TestQueriesStayInSync:
     def test_each_follow_up_selects_exactly_the_fields_the_list_selects(self, module, list_query, continuations):
-        for field, edge in module._LIST_NESTED.items():
+        for field, edge in module._NESTED.items():
             assert edge in squash(list_query), field
             assert edge in squash(continuations[field]), field
 
     def test_list_query_asks_for_the_counts_needed_to_notice_truncation(self, module, list_query, continuations):
-        for field in module._LIST_NESTED:
+        for field in module._NESTED:
             assert f"{field} {{ totalCount pageInfo {{ hasNextPage endCursor }}" in squash(list_query)
 
     def test_follow_ups_take_an_id_and_a_cursor_that_may_be_null(self, module, list_query, continuations):
