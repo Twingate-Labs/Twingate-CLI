@@ -8,9 +8,12 @@ from tgcli.client.client import TwingateClient
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.main import state
 from tgcli.output.formatter import OutputFormatter
+from tgcli.pagination import NestedLists, PaginationError, complete_nested_lists
 
 from typing import Any, Callable
 import pandas as pd
+
+MAX_NESTED_WARNINGS = 5
 
 
 def require_session() -> str:
@@ -60,11 +63,13 @@ def fetch_paginated(
     data_key: str,
     extra_vars: dict | None = None,
     filter_fn: Callable[[dict], bool] | None = None,
+    nested: NestedLists | None = None,
 ) -> list[list[dict]]:
     """Execute a paginated list query and return all pages of edges.
 
     If provided, ``filter_fn`` is applied to each item's ``node`` dict and
-    only nodes for which it returns True are kept.
+    only nodes for which it returns True are kept. ``nested`` completes nested lists
+    that did not fit in the first page (the API returns at most 50 items per page).
     """
     def make_vars(cursor: str) -> dict:
         v = {"cursor": cursor}
@@ -74,15 +79,24 @@ def fetch_paginated(
 
     try:
         pages = client.paginate(query, make_vars, data_key)
+        if filter_fn is not None:
+            pages = [[edge for edge in page if filter_fn(edge["node"])] for page in pages]
+        if nested is not None:
+            nodes = [edge["node"] for page in pages for edge in page if edge["node"]]
+            problems = complete_nested_lists(client, nodes, nested)
+            for problem in problems[:MAX_NESTED_WARNINGS]:
+                typer.echo(f"Warning: {problem}", err=True)
+            if len(problems) > MAX_NESTED_WARNINGS:
+                typer.echo(f"Warning: ... and {len(problems) - MAX_NESTED_WARNINGS} more", err=True)
     except TwingateAuthError as exc:
         typer.echo(f"Authentication error: {exc}", err=True)
         raise typer.Exit(1)
     except TwingateAPIError as exc:
         typer.echo(f"API error: {exc}", err=True)
         raise typer.Exit(1)
-
-    if filter_fn is not None:
-        pages = [[edge for edge in page if filter_fn(edge["node"])] for page in pages]
+    except PaginationError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
     return pages
 
 
@@ -93,13 +107,14 @@ def run_paginated(
     transformer: Callable[..., pd.DataFrame],
     extra_vars: dict | None = None,
     filter_fn: Callable[[dict], bool] | None = None,
+    nested: NestedLists | None = None,
 ) -> None:
     """Execute a paginated list query and print formatted output.
 
     ``filter_fn`` is applied before output formatting, so it affects JSON,
     CSV, and DF output alike.
     """
-    pages = fetch_paginated(client, query, data_key, extra_vars, filter_fn)
+    pages = fetch_paginated(client, query, data_key, extra_vars, filter_fn, nested)
     OutputFormatter.print_output(pages, state.output_format, transformer)
 
 

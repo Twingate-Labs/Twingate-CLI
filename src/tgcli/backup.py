@@ -13,6 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from tgcli import VERSION
+from tgcli.pagination import PaginationError, fetch_connection
 from tgcli.output.transformers.resources import TYPE_LABELS
 from tgcli.queries import backup as q
 
@@ -38,36 +39,13 @@ class BackupResult:
     problems: list[str]
 
 
-def _dig(data: Any, path: list[str]) -> Any:
-    for key in path:
-        if not isinstance(data, dict):
-            return None
-        data = data.get(key)
-    return data
-
-
 def _fetch_connection(
     client: Any, query: str, variables: dict, path: list[str], cursor: str | None = None
 ) -> tuple[list[dict], int | None, bool]:
-    """Follow a cursor-paginated connection to its end.
-
-    Returns (edges, totalCount or None, found). ``found`` is False when the object at ``path`` is gone,
-    e.g. a parent deleted while the backup was running.
-    """
-    edges: list[dict] = []
-    total: int | None = None
-    while True:
-        connection = _dig(client.execute(query, {**variables, "cursor": cursor}).get("data"), path)
-        if connection is None:
-            return edges, total, False
-        edges.extend(connection["edges"])
-        total = connection.get("totalCount", total)
-        info = connection["pageInfo"]
-        if not info["hasNextPage"]:
-            return edges, total, True
-        if info["endCursor"] == cursor:
-            raise BackupError("The API returned the same page cursor twice; stopping instead of looping forever.")
-        cursor = info["endCursor"]
+    try:
+        return fetch_connection(client, query, variables, path, cursor)
+    except PaginationError as exc:
+        raise BackupError(str(exc)) from exc
 
 
 def _flatten_edge(entity: str, name: str, edge: dict) -> dict:

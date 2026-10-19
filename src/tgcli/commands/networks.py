@@ -6,6 +6,7 @@ import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query
 from tgcli.output.transformers import networks as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import networks as q
 from tgcli.validators.generic import parse_bool_string
 from tgcli.validators.network import validate_rn_location
@@ -16,7 +17,10 @@ app = typer.Typer(help="Manage Twingate Remote Networks.")
 @app.command("list")
 def network_list() -> None:
     """List all Remote Networks."""
-    run_paginated(get_client(), q.LIST_NETWORKS, "remoteNetworks", t.get_list_as_csv)
+    run_paginated(
+        get_client(), q.LIST_NETWORKS, "remoteNetworks", t.get_list_as_csv,
+        nested=NestedLists("remoteNetwork", q.LIST_NETWORKS_CONTINUATIONS),
+    )
 
 
 @app.command("show")

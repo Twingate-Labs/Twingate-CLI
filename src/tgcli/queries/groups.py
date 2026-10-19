@@ -2,49 +2,49 @@
 
 from __future__ import annotations
 
-LIST_GROUPS = """
-query listGroup($cursor: String!) {
-  groups(after: $cursor, first: null) {
-    pageInfo {
+def _nested(field: str, edge: str) -> str:
+    """A nested list as the first page sees it: with the count and cursor needed to spot and finish truncation."""
+    return f"{field} {{ totalCount pageInfo {{ hasNextPage endCursor }} edges {{ {edge} }} }}"
+
+
+def _continuation(parent: str, field: str, edge: str) -> str:
+    """The same nested list, fetched on its own so the pages after the first can be read."""
+    return (
+        f"query($id: ID!, $cursor: String) {{ {parent}(id: $id) {{ {field}(after: $cursor) {{ "
+        f"pageInfo {{ hasNextPage endCursor }} edges {{ {edge} }} }} }} }}"
+    )
+
+
+# The API returns at most 50 items per page, so `group list` follows each nested list to its end.
+_LIST_NESTED = {
+    "users": "node { id email firstName lastName }",
+    "resources": "node { id name address { type value } isActive }",
+}
+
+LIST_GROUPS = f"""
+query listGroup($cursor: String!) {{
+  groups(after: $cursor, first: null) {{
+    pageInfo {{
       endCursor
       hasNextPage
-    }
-    edges {
-      node {
+    }}
+    edges {{
+      node {{
         id
         name
         createdAt
         updatedAt
         isActive
         type
-        users {
-          edges {
-            node {
-              id
-              email
-              firstName
-              lastName
-            }
-          }
-        }
-        resources {
-          edges {
-            node {
-              id
-              name
-              address {
-                type
-                value
-              }
-              isActive
-            }
-          }
-        }
-      }
-    }
-  }
-}
+        {_nested("users", _LIST_NESTED["users"])}
+        {_nested("resources", _LIST_NESTED["resources"])}
+      }}
+    }}
+  }}
+}}
 """
+
+LIST_GROUPS_CONTINUATIONS = {field: _continuation("group", field, edge) for field, edge in _LIST_NESTED.items()}
 
 SHOW_GROUP = """
 query getObj($itemID: ID!) {

@@ -11,6 +11,7 @@ import typer
 
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
 from tgcli.output.transformers import groups as t
+from tgcli.pagination import NestedLists
 from tgcli.queries import groups as q
 
 app = typer.Typer(help="Manage Twingate Groups.")
@@ -19,7 +20,10 @@ app = typer.Typer(help="Manage Twingate Groups.")
 @app.command("list")
 def group_list() -> None:
     """List all Groups."""
-    run_paginated(get_client(), q.LIST_GROUPS, "groups", t.get_list_as_csv)
+    run_paginated(
+        get_client(), q.LIST_GROUPS, "groups", t.get_list_as_csv,
+        nested=NestedLists("group", q.LIST_GROUPS_CONTINUATIONS),
+    )
 
 
 @app.command("show")
