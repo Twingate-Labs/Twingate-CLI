@@ -16,50 +16,10 @@ from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.client.session import SessionManager
 from tgcli.main import app
 
+from ..nested_fakes import LONG, PAGE, Backend, edges, first_page
+
 runner = CliRunner()
 SESSION = "TestSess"
-PAGE = 2
-LONG = 5  # more than one page of PAGE
-
-
-@pytest.fixture(autouse=True)
-def stored_session(mock_keyring):
-    SessionManager.store(SESSION, "acme", "tok-test")
-
-
-def edges(prefix: str, n: int, **extra: Any) -> list[dict]:
-    return [{"node": {"id": f"{prefix}{i}", "name": f"{prefix} {i}"}, **extra} for i in range(n)]
-
-
-def first_page(all_edges: list[dict]) -> dict:
-    more = len(all_edges) > PAGE
-    return {"totalCount": len(all_edges), "pageInfo": {"hasNextPage": more, "endCursor": f"c{PAGE}" if more else None},
-            "edges": all_edges[:PAGE]}
-
-
-class Backend:
-    """Serves the command's own query, and every follow-up query from the full lists it was given."""
-
-    def __init__(self, main: Callable[[], Any], full: dict[tuple[str, str], list[dict]]):
-        self.main, self.full, self.followups = main, full, []
-
-    def paginate(self, query, make_vars, data_key):
-        return self.main()
-
-    def execute(self, query, variables):
-        m = re.match(r"query\(\$id: ID!, \$cursor: String\) \{ (\w+)\(id: \$id\) \{ (.*) \} \}$", query)
-        if not m:
-            return self.main()
-        parent, field = m.group(1), re.search(r"(\w+)\(after: \$cursor\)", m.group(2)).group(1)
-        self.followups.append((parent, variables["id"], field, variables["cursor"]))
-        all_edges = self.full[(variables["id"], field)]
-        start = int(variables["cursor"][1:])
-        more = start + PAGE < len(all_edges)
-        return {"data": {parent: {field: {
-            "pageInfo": {"hasNextPage": more, "endCursor": f"c{start + PAGE}" if more else None},
-            "edges": all_edges[start : start + PAGE],
-        }}}}
-
 
 @dataclass
 class Case:
@@ -83,6 +43,11 @@ class Case:
     def result_node(self, output: str) -> dict:
         data = json.loads(output[output.index("[" if self.kind == "list" else "{"):])
         return data["data"][self.parent] if self.kind == "show" else data[0][0]["node"]
+
+
+@pytest.fixture(autouse=True)
+def stored_session(mock_keyring):
+    SessionManager.store(SESSION, "acme", "tok-test")
 
 
 R = lambda p, n: edges(p, n)

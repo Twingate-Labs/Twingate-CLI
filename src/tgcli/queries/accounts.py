@@ -65,6 +65,7 @@ query getObj($itemID: ID!) {{
 """
 
 ACCOUNT_SHOW_CONTINUATIONS = {field: continuation("serviceAccount", field, edge) for field, edge in _SHOW_NESTED.items()}
+ACCOUNT_RESOURCES_CONTINUATIONS = {"resources": ACCOUNT_SHOW_CONTINUATIONS["resources"]}  # echo of add/removeResources
 ACCOUNT_KEYS_CONTINUATIONS = {field: continuation("serviceAccount", field, edge) for field, edge in _KEYS_NESTED.items()}
 
 CREATE_ACCOUNT = """
@@ -89,50 +90,36 @@ mutation ObjCreate($id: ID!) {
 }
 """
 
-ADD_RESOURCES_TO_ACCOUNT = """
-mutation addResToSAccount($id: ID!, $resourceIDS: [ID!]) {
-  serviceAccountUpdate(id: $id, addedResourceIds: $resourceIDS) {
+ADD_RESOURCES_TO_ACCOUNT = f"""
+mutation addResToSAccount($id: ID!, $resourceIDS: [ID!]) {{
+  serviceAccountUpdate(id: $id, addedResourceIds: $resourceIDS) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       createdAt
       updatedAt
-      resources {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("resources", _SHOW_NESTED["resources"])}
+    }}
+  }}
+}}
 """
 
-REMOVE_RESOURCES_FROM_ACCOUNT = """
-mutation removeResToSAccount($id: ID!, $resourceIDS: [ID!]) {
-  serviceAccountUpdate(id: $id, removedResourceIds: $resourceIDS) {
+REMOVE_RESOURCES_FROM_ACCOUNT = f"""
+mutation removeResToSAccount($id: ID!, $resourceIDS: [ID!]) {{
+  serviceAccountUpdate(id: $id, removedResourceIds: $resourceIDS) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       createdAt
       updatedAt
-      resources {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("resources", _SHOW_NESTED["resources"])}
+    }}
+  }}
+}}
 """
 
 RENAME_ACCOUNT = """

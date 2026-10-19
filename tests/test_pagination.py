@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tgcli.pagination import NestedLists, PaginationError, complete_nested_lists, fetch_connection
+from tgcli.pagination import NestedLists, PaginationError, complete_nested_lists, fetch_connection, strip_markers
 
 QUERY = "query($id: ID!, $cursor: String) { ... }"
 NESTED = NestedLists("group", {"users": QUERY, "resources": QUERY})
@@ -179,3 +179,24 @@ class TestCompleteNestedLists:
         problems = complete_nested_lists(client, [node], NESTED)
         assert any("g" in p and "disappeared" in p for p in problems)
         assert len(node["users"]["edges"]) == 2  # what was already fetched is kept
+
+
+class TestNestedListsAt:
+    def test_defaults_to_no_path_so_the_object_is_data_parent(self):
+        assert NestedLists("group", {}).at == ()
+
+    def test_a_write_echo_path_can_be_given(self):
+        assert NestedLists("group", {}, at=("groupUpdate", "entity")).at == ("groupUpdate", "entity")
+
+
+class TestStripMarkers:
+    def test_removes_the_count_and_cursor_from_every_listed_field(self):
+        node = {"id": "g", "users": {"totalCount": 5, "pageInfo": {"hasNextPage": True}, "edges": [1]},
+                "resources": {"totalCount": 2, "pageInfo": {}, "edges": []}}
+        strip_markers([node], NestedLists("group", {"users": "q", "resources": "q"}))
+        assert node == {"id": "g", "users": {"edges": [1]}, "resources": {"edges": []}}
+
+    def test_ignores_missing_and_null_fields_and_unlisted_fields(self):
+        node = {"id": "g", "users": None, "other": {"totalCount": 1, "edges": []}}
+        strip_markers([node], NestedLists("group", {"users": "q", "absent": "q"}))
+        assert node == {"id": "g", "users": None, "other": {"totalCount": 1, "edges": []}}

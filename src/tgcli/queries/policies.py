@@ -42,24 +42,17 @@ query getObj($itemID: ID!) {{
 
 POLICY_CONTINUATIONS = {field: continuation("securityPolicy", field, edge) for field, edge in _NESTED.items()}
 
-UPDATE_POLICY_GROUPS = """
-mutation updatePolicyGroups($id: ID!, $groupIds: [ID], $addedGroupIds: [ID], $removedGroupIds: [ID]) {
-  securityPolicyUpdate(id: $id, groupIds: $groupIds, addedGroupIds: $addedGroupIds, removedGroupIds: $removedGroupIds) {
+UPDATE_POLICY_GROUPS = f"""
+mutation updatePolicyGroups($id: ID!, $groupIds: [ID], $addedGroupIds: [ID], $removedGroupIds: [ID]) {{
+  securityPolicyUpdate(id: $id, groupIds: $groupIds, addedGroupIds: $addedGroupIds, removedGroupIds: $removedGroupIds) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       policyType
-      groups {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("groups", _NESTED["groups"])}
+    }}
+  }}
+}}
 """

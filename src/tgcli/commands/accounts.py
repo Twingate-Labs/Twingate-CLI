@@ -62,6 +62,7 @@ def account_add_resources(
         q.ADD_RESOURCES_TO_ACCOUNT,
         {"id": itemid, "resourceIDS": split_ids(resourceids)},
         t.get_add_remove_resources_as_csv,
+        nested=NestedLists("serviceAccount", q.ACCOUNT_RESOURCES_CONTINUATIONS, at=("serviceAccountUpdate", "entity")),
     )
 
 
@@ -76,6 +77,7 @@ def account_remove_resources(
         q.REMOVE_RESOURCES_FROM_ACCOUNT,
         {"id": itemid, "resourceIDS": split_ids(resourceids)},
         t.get_add_remove_resources_as_csv,
+        nested=NestedLists("serviceAccount", q.ACCOUNT_RESOURCES_CONTINUATIONS, at=("serviceAccountUpdate", "entity")),
     )
 
 

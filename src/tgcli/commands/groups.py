@@ -56,6 +56,7 @@ def group_create(
             "securityPolicyId": policyid or None,
         },
         t.get_create_as_csv,
+        nested=NestedLists("group", q.GROUP_CONTINUATIONS, at=("groupCreate", "entity")),
     )
 
 
@@ -78,6 +79,7 @@ def group_add_users(
         q.ADD_USERS_TO_GROUP,
         {"groupID": groupid, "userIDS": split_ids(userids)},
         t.get_add_remove_users_as_csv,
+        nested=NestedLists("group", q.GROUP_USERS_CONTINUATIONS, at=("groupUpdate", "entity")),
     )
 
 
@@ -92,6 +94,7 @@ def group_remove_users(
         q.REMOVE_USERS_FROM_GROUP,
         {"groupID": groupid, "userIDS": split_ids(userids)},
         t.get_add_remove_users_as_csv,
+        nested=NestedLists("group", q.GROUP_USERS_CONTINUATIONS, at=("groupUpdate", "entity")),
     )
 
 
@@ -106,6 +109,7 @@ def group_add_resources(
         q.ADD_RESOURCES_TO_GROUP,
         {"groupID": groupid, "resourceIDS": split_ids(resourceids)},
         t.get_add_remove_resources_as_csv,
+        nested=NestedLists("group", q.GROUP_RESOURCES_ECHO_CONTINUATIONS, at=("groupUpdate", "entity")),
     )
 
 
@@ -120,6 +124,7 @@ def group_remove_resources(
         q.REMOVE_RESOURCES_FROM_GROUP,
         {"groupID": groupid, "resourceIDS": split_ids(resourceids)},
         t.get_add_remove_resources_as_csv,
+        nested=NestedLists("group", q.GROUP_RESOURCES_ECHO_CONTINUATIONS, at=("groupUpdate", "entity")),
     )
 
 
@@ -288,4 +293,5 @@ def group_assign_policy(
         q.ASSIGN_POLICY_TO_GROUP,
         {"groupID": groupid, "policyID": policyid},
         t.get_assign_policy_as_csv,
+        nested=NestedLists("group", q.GROUP_USERS_CONTINUATIONS, at=("groupUpdate", "entity")),
     )

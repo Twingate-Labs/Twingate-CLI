@@ -91,12 +91,12 @@ mutation userDelete($itemid: ID!) {
 }
 """
 
-UPDATE_USER_ROLE = """
-mutation updateUserRole($itemid: ID!, $userRole: UserRole!) {
-  userRoleUpdate(id: $itemid, role: $userRole) {
+UPDATE_USER_ROLE = f"""
+mutation updateUserRole($itemid: ID!, $userRole: UserRole!) {{
+  userRoleUpdate(id: $itemid, role: $userRole) {{
     ok
     error
-    entity {
+    entity {{
       id
       state
       email
@@ -105,16 +105,10 @@ mutation updateUserRole($itemid: ID!, $userRole: UserRole!) {
       firstName
       createdAt
       updatedAt
-      groups {
-        edges {
-          node {
-            id
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("groups", _LIST_NESTED["groups"])}
+    }}
+  }}
+}}
 """
 
 UPDATE_USER_STATE = """

@@ -35,6 +35,11 @@ query listGroup($cursor: String!) {{
 
 GROUP_CONTINUATIONS = {field: continuation("group", field, edge) for field, edge in _NESTED.items()}
 
+# What a group write echoes back. add/removeResources echo a shorter resource than `group show` does.
+_ECHO_RESOURCE_EDGE = "node { id name }"
+GROUP_USERS_CONTINUATIONS = {"users": GROUP_CONTINUATIONS["users"]}
+GROUP_RESOURCES_ECHO_CONTINUATIONS = {"resources": continuation("group", "resources", _ECHO_RESOURCE_EDGE)}
+
 SHOW_GROUP = f"""
 query getObj($itemID: ID!) {{
   group(id: $itemID) {{
@@ -50,54 +55,33 @@ query getObj($itemID: ID!) {{
 }}
 """
 
-CREATE_GROUP = """
+CREATE_GROUP = f"""
 mutation createGroup(
   $groupName: String!
   $userIDS: [ID!]
   $resourceIDS: [ID!]
   $securityPolicyId: ID
-) {
+) {{
   groupCreate(
     name: $groupName
     resourceIds: $resourceIDS
     userIds: $userIDS
     securityPolicyId: $securityPolicyId
-  ) {
+  ) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       isActive
       type
       createdAt
       updatedAt
-      users {
-        edges {
-          node {
-            id
-            email
-            firstName
-            lastName
-          }
-        }
-      }
-      resources {
-        edges {
-          node {
-            id
-            name
-            address {
-              type
-              value
-            }
-            isActive
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("users", _NESTED["users"])}
+      {connection("resources", _NESTED["resources"])}
+    }}
+  }}
+}}
 """
 
 DELETE_GROUP = """
@@ -109,108 +93,76 @@ mutation deleteGroup($groupId: ID!) {
 }
 """
 
-ADD_USERS_TO_GROUP = """
-mutation addUsersToGroup($groupID: ID!, $userIDS: [ID!]) {
-  groupUpdate(id: $groupID, addedUserIds: $userIDS) {
+ADD_USERS_TO_GROUP = f"""
+mutation addUsersToGroup($groupID: ID!, $userIDS: [ID!]) {{
+  groupUpdate(id: $groupID, addedUserIds: $userIDS) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       isActive
       createdAt
       updatedAt
       type
-      users {
-        edges {
-          node {
-            id
-            email
-            firstName
-            lastName
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("users", _NESTED["users"])}
+    }}
+  }}
+}}
 """
 
-REMOVE_USERS_FROM_GROUP = """
-mutation removeUsersFromGroup($groupID: ID!, $userIDS: [ID!]) {
-  groupUpdate(id: $groupID, removedUserIds: $userIDS) {
+REMOVE_USERS_FROM_GROUP = f"""
+mutation removeUsersFromGroup($groupID: ID!, $userIDS: [ID!]) {{
+  groupUpdate(id: $groupID, removedUserIds: $userIDS) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       isActive
       createdAt
       updatedAt
       type
-      users {
-        edges {
-          node {
-            id
-            email
-            firstName
-            lastName
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("users", _NESTED["users"])}
+    }}
+  }}
+}}
 """
 
-ADD_RESOURCES_TO_GROUP = """
-mutation addResToGroup($groupID: ID!, $resourceIDS: [ID!]) {
-  groupUpdate(id: $groupID, addedResourceIds: $resourceIDS) {
+ADD_RESOURCES_TO_GROUP = f"""
+mutation addResToGroup($groupID: ID!, $resourceIDS: [ID!]) {{
+  groupUpdate(id: $groupID, addedResourceIds: $resourceIDS) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       isActive
       createdAt
       updatedAt
       type
-      resources {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("resources", _ECHO_RESOURCE_EDGE)}
+    }}
+  }}
+}}
 """
 
-REMOVE_RESOURCES_FROM_GROUP = """
-mutation removeResToGroup($groupID: ID!, $resourceIDS: [ID!]) {
-  groupUpdate(id: $groupID, removedResourceIds: $resourceIDS) {
+REMOVE_RESOURCES_FROM_GROUP = f"""
+mutation removeResToGroup($groupID: ID!, $resourceIDS: [ID!]) {{
+  groupUpdate(id: $groupID, removedResourceIds: $resourceIDS) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       isActive
       createdAt
       updatedAt
       type
-      resources {
-        edges {
-          node {
-            id
-            name
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("resources", _ECHO_RESOURCE_EDGE)}
+    }}
+  }}
+}}
 """
 
 LIST_GROUP_USERS = """
@@ -260,32 +212,19 @@ query listGroupsForMigrate($cursor: String!) {
 }
 """
 
-ASSIGN_POLICY_TO_GROUP = """
-mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {
-  groupUpdate(id: $groupID, securityPolicyId: $policyID) {
+ASSIGN_POLICY_TO_GROUP = f"""
+mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {{
+  groupUpdate(id: $groupID, securityPolicyId: $policyID) {{
     ok
     error
-    entity {
+    entity {{
       id
       name
       isActive
-      securityPolicy {
-        id
-        name
-        policyType
-      }
+      securityPolicy {{ id name policyType }}
       type
-      users {
-        edges {
-          node {
-            id
-            email
-            firstName
-            lastName
-          }
-        }
-      }
-    }
-  }
-}
+      {connection("users", _NESTED["users"])}
+    }}
+  }}
+}}
 """

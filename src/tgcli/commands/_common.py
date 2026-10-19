@@ -8,7 +8,7 @@ from tgcli.client.client import TwingateClient
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.main import state
 from tgcli.output.formatter import OutputFormatter
-from tgcli.pagination import NestedLists, PaginationError, complete_nested_lists
+from tgcli.pagination import NestedLists, PaginationError, complete_nested_lists, strip_markers
 
 from typing import Any, Callable
 import pandas as pd
@@ -47,17 +47,28 @@ def execute_query(client: TwingateClient, query: str, variables: dict | None) ->
 
 
 def complete_or_exit(client: TwingateClient, nodes: list[dict], nested: NestedLists) -> None:
-    """Fill in nested lists the API cut off at 50 items, in place. Count mismatches only warn; failures exit."""
+    """Fill in nested lists the API cut off at 50 items, in place. Count mismatches only warn; failures exit.
+
+    For a write's echo (``nested.at`` set) the change has already been made, so a failure here must not look
+    like the write failed: it warns, drops the markers and leaves the first page the API returned.
+    """
     try:
         problems = complete_nested_lists(client, nodes, nested)
-    except TwingateAuthError as exc:
-        typer.echo(f"Authentication error: {exc}", err=True)
-        raise typer.Exit(1)
-    except TwingateAPIError as exc:
-        typer.echo(f"API error: {exc}", err=True)
-        raise typer.Exit(1)
-    except PaginationError as exc:
-        typer.echo(f"Error: {exc}", err=True)
+    except (TwingateAuthError, TwingateAPIError, PaginationError) as exc:
+        if nested.at:
+            strip_markers(nodes, nested)
+            typer.echo(
+                f"Warning: the change was made, but the rest of the lists could not be read back ({exc}); "
+                "the lists shown may be incomplete.",
+                err=True,
+            )
+            return
+        if isinstance(exc, TwingateAuthError):
+            typer.echo(f"Authentication error: {exc}", err=True)
+        elif isinstance(exc, TwingateAPIError):
+            typer.echo(f"API error: {exc}", err=True)
+        else:
+            typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
     for problem in problems[:MAX_NESTED_WARNINGS]:
         typer.echo(f"Warning: {problem}", err=True)
@@ -78,8 +89,10 @@ def run_query(
     """
     result = execute_query(client, query, variables)
     if nested is not None:
-        node = ((result or {}).get("data") or {}).get(nested.parent)
-        if isinstance(node, dict):
+        node: Any = (result or {}).get("data")
+        for key in nested.at or (nested.parent,):
+            node = node.get(key) if isinstance(node, dict) else None
+        if isinstance(node, dict):  # a missing object, or a write that reported ok: false, has nothing to complete
             complete_or_exit(client, [node], nested)
     OutputFormatter.print_output(result, state.output_format, transformer)
 

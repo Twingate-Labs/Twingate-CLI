@@ -15,8 +15,12 @@ class PaginationError(Exception):
 
 
 class NestedLists(NamedTuple):
-    parent: str  # single-object query field, e.g. "group"
+    parent: str  # single-object query field the follow-up queries use, e.g. "group"
     continuations: dict[str, str]  # nested field -> query taking $id and $cursor that returns that field's next page
+    # Where the object sits under `data` when it is not simply data[parent]: a write's echo of the object it
+    # changed, e.g. ("groupUpdate", "entity"). Because the write has already happened by then, a failure while
+    # reading back the rest of its lists is reported as a warning instead of failing the command.
+    at: tuple[str, ...] = ()
 
 
 def _dig(data: Any, path: list[str]) -> Any:
@@ -86,3 +90,13 @@ def complete_nested_lists(client: Any, nodes: list[dict], nested: NestedLists) -
             connection.pop("pageInfo", None)
             connection.pop("totalCount", None)
     return problems
+
+
+def strip_markers(nodes: list[dict], nested: NestedLists) -> None:
+    """Remove the count and cursor a nested connection carried only so truncation could be noticed."""
+    for node in nodes:
+        for field in nested.continuations:
+            connection = node.get(field)
+            if isinstance(connection, dict):
+                connection.pop("pageInfo", None)
+                connection.pop("totalCount", None)

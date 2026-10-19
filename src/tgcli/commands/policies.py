@@ -52,4 +52,7 @@ def policy_update(
     for key, ids in (("groupIds", replaced), ("addedGroupIds", added), ("removedGroupIds", removed)):
         if ids:
             variables[key] = ids
-    run_query(get_client(), q.UPDATE_POLICY_GROUPS, variables, t.get_update_as_csv)
+    run_query(
+        get_client(), q.UPDATE_POLICY_GROUPS, variables, t.get_update_as_csv,
+        nested=NestedLists("securityPolicy", q.POLICY_CONTINUATIONS, at=("securityPolicyUpdate", "entity")),
+    )

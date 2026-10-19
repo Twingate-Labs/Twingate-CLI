@@ -79,6 +79,7 @@ def user_role(
         q.UPDATE_USER_ROLE,
         {"itemid": itemid, "userRole": role_val},
         t.get_update_role_as_csv,
+        nested=NestedLists("user", q.USER_LIST_CONTINUATIONS, at=("userRoleUpdate", "entity")),
     )
 
 
