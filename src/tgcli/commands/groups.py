@@ -9,6 +9,7 @@ from typing import Optional
 
 import typer
 
+from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
 from tgcli.output.transformers import groups as t
 from tgcli.pagination import NestedLists
@@ -139,7 +140,7 @@ def group_migrate(
         while True:
             vars_ = {**variables, "after": after}
             result = client.execute(query, vars_)
-            node = result
+            node = result["data"]
             for key in path:
                 node = node[key]
             items.extend(edge["node"] for edge in node["edges"])
@@ -153,7 +154,14 @@ def group_migrate(
             yield seq[i:i + size]
 
     typer.echo("Fetching all groups...")
-    pages = client.paginate(q.LIST_GROUPS, lambda c: {"cursor": c}, "groups")
+    try:
+        pages = client.paginate(q.LIST_GROUPS_FOR_MIGRATE, lambda c: {"cursor": c}, "groups")
+    except TwingateAuthError as exc:
+        typer.echo(f"Authentication error: {exc}", err=True)
+        raise typer.Exit(1)
+    except TwingateAPIError as exc:
+        typer.echo(f"API error: {exc}", err=True)
+        raise typer.Exit(1)
     all_groups = [item["node"] for page in pages for item in page]
 
     synced_groups = [g for g in all_groups if g["type"] == "SYNCED" and g["isActive"]]
@@ -175,20 +183,31 @@ def group_migrate(
         new_name = f"{g['name']}{name_suffix}"
         typer.echo(f"\n=== {g['name']} ({g['id']}) -> {new_name} ===")
 
-        users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["group", "users"])
-        resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["group", "resources"])
-        typer.echo(f"  members: {len(users)}   resources: {len(resources)}")
-
         row = {
             "source_group_id": g["id"],
             "source_group_name": g["name"],
             "target_group_name": new_name,
-            "user_count": len(users),
-            "resource_count": len(resources),
+            "user_count": "",
+            "resource_count": "",
             "target_group_id": "",
-            "status": "dry-run" if not execute else "",
+            "status": "",
             "error": "",
         }
+        try:
+            users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["group", "users"])
+            resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["group", "resources"])
+        except (TwingateAuthError, TwingateAPIError) as e:
+            # Nothing has been created for this group yet. Record it and carry on, so one failed read does not
+            # lose the report of the groups already migrated.
+            row["status"] = "error"
+            row["error"] = f"reading group failed: {e}"
+            typer.echo(f"  ERROR: {e}", err=True)
+            report_rows.append(row)
+            continue
+        typer.echo(f"  members: {len(users)}   resources: {len(resources)}")
+        row["user_count"] = len(users)
+        row["resource_count"] = len(resources)
+        row["status"] = "dry-run" if not execute else ""
 
         if execute:
             try:
@@ -205,7 +224,7 @@ def group_migrate(
                         "userIDS": [],
                         "resourceIDS": [],
                         "securityPolicyId": sec_policy_id,
-                    })["groupCreate"]
+                    })["data"]["groupCreate"]
                     if not result["ok"]:
                         raise RuntimeError(f"groupCreate failed: {result['error']}")
                     new_id = result["entity"]["id"]
@@ -214,12 +233,12 @@ def group_migrate(
                 row["target_group_id"] = new_id
 
                 for chunk in chunked([u["id"] for u in users], BATCH_SIZE):
-                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["groupUpdate"]
+                    res = client.execute(q.ADD_USERS_TO_GROUP, {"groupID": new_id, "userIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding users failed: {res['error']}")
 
                 for chunk in chunked([r["id"] for r in resources], BATCH_SIZE):
-                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["groupUpdate"]
+                    res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding resources failed: {res['error']}")
 

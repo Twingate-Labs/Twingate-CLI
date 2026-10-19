@@ -421,7 +421,11 @@ tgcli group migrate --execute \
   --report my_report.csv
 ```
 
-`group migrate` writes a timestamped CSV report of every group processed (or use `--report` for a custom path), reuses an existing Manual Group if one with the target name already exists, and skips inactive Synced Groups.
+`group migrate` creates an empty Manual Group for each active Synced Group (named `<name><suffix>`), then adds the source group's members and resources in batches of 200. It copies the source group's Security Policy unless you pass `--no-copy-security-policy`. It reuses an existing Manual Group if one with the target name already exists (so a re-run does not create duplicates), skips inactive Synced Groups, and writes a timestamped CSV report of every group processed (or use `--report` for a custom path).
+
+- A failure on one group is recorded in the report and the rest continue; the command then exits 1.
+- **Not copied:** settings on a group's access to an individual resource (a different policy, access policy or expiry for that grant). Only the resource itself is added, so check any such grants on the new group.
+- There is no option to migrate a single group, so `--execute` always acts on every active Synced Group. Run the dry run first.
 
 ---
 

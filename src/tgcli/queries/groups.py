@@ -235,6 +235,31 @@ query groupResources($id: ID!, $after: String) {
 }
 """
 
+# `group migrate` reads each group's users and resources itself (LIST_GROUP_USERS / LIST_GROUP_RESOURCES), so
+# this selects only the group, plus the security policy that migrate copies to the new group.
+LIST_GROUPS_FOR_MIGRATE = """
+query listGroupsForMigrate($cursor: String!) {
+  groups(after: $cursor, first: null) {
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    edges {
+      node {
+        id
+        name
+        isActive
+        type
+        securityPolicy {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+"""
+
 ASSIGN_POLICY_TO_GROUP = """
 mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {
   groupUpdate(id: $groupID, securityPolicyId: $policyID) {
