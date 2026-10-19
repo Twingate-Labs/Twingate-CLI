@@ -33,6 +33,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [dnssec](#dnssec)
   - [dns-profile](#dns-profile)
   - [mappings](#mappings)
+  - [backup](#backup)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
 
@@ -702,6 +703,33 @@ tgcli -f CSV mappings user-resource -e alice@example.com
 tgcli mappings resource-connectivity
 tgcli mappings resource-connectivity --offline-only
 ```
+
+---
+
+### backup
+
+Save the tenant's current state — groups, users, resources, connectors and remote networks — as JSON files. Read-only.
+
+```bash
+tgcli backup                         # ./twingate-backup-<tenant>-<UTC timestamp>/
+tgcli backup -o ./backups/acme-weekly
+tgcli -s staging backup              # another saved session
+```
+
+It writes one file per type plus a manifest:
+
+```
+groups.json  users.json  resources.json  connectors.json  remote-networks.json  manifest.json
+```
+
+- **Complete lists.** The API returns at most 50 items per page, so every list, including nested ones such as a group's resources or a resource's access, is followed to its end. Each count is then checked against the API's own total; the manifest records the result, and the command exits non-zero if anything doesn't add up (the files are still written).
+- **Relationships are saved from both sides** (a group lists its users and each user lists its groups), and IDs are kept, so a backup can be compared against a later one or used to rebuild state.
+- **Resources** include their type, protocols, tags, access (groups and service accounts with their policy, access policy, approval mode and expiry), approver groups, and gateway/ports/cluster ref for Gateway-backed types. Deprecated API fields are not included.
+- **Secrets are never included.** The API does not return connector tokens or service account keys.
+- **Privacy.** The files contain user names and emails, so the directory is created readable by you only (`0700`/`0600`). Keep backups somewhere appropriate.
+- **Safe to run unattended.** It never overwrites: an existing output directory is refused. Files are written to `<dir>.partial` and renamed once complete, so an interrupted run leaves no half-finished backup.
+- **Not a transaction.** Pages are read one after another, so changes made while it runs may or may not be included. Connector `lastHeartbeatAt` changes about once a minute, so backups taken minutes apart can differ there even if nothing was edited.
+- **Not included:** devices, service accounts and their keys, security policies, DNS filtering profiles, gateways and certificate authorities (gateways appear only as references on remote networks).
 
 ---
 
