@@ -414,6 +414,10 @@ tgcli group assignPolicy -g "R3JvdXA6MQ==" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 tgcli group migrate
 tgcli group migrate --execute
 
+# Migrate only some groups: by ID or exact name, repeat --group for several
+tgcli group migrate --group "Engineering"
+tgcli group migrate --group "Engineering" --group "R3JvdXA6MQ==" --execute
+
 # Customize the migration
 tgcli group migrate --execute \
   --name-suffix " (Manual)" \
@@ -425,7 +429,7 @@ tgcli group migrate --execute \
 
 - A failure on one group is recorded in the report and the rest continue; the command then exits 1.
 - **Not copied:** settings on a group's access to an individual resource (a different policy, access policy or expiry for that grant). Only the resource itself is added, so check any such grants on the new group.
-- There is no option to migrate a single group, so `--execute` always acts on every active Synced Group. Run the dry run first.
+- With `--group`, only the groups you name are read and migrated, and the report lists only those. Every name is checked before anything is read or written: a name that matches no group, matches several active Synced Groups (use the ID), or names a group that cannot be migrated (a Manual group, or an inactive one) stops the run with an error rather than being skipped. Without `--group`, `--execute` acts on every active Synced Group, so run the dry run first.
 
 ---
 

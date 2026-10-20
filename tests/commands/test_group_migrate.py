@@ -285,6 +285,128 @@ class TestFailures:
         assert result.exit_code == 1 and [c["groupName"] for c in api.created] == ["Ops (Manual)"]  # nothing half-made for s1
 
 
+def multi_api(**kw):
+    return Api(
+        [group("s1", "Eng"), group("s2", "Ops"), group("s3", "Sales"), group("s4", "Old", active=False), group("m1", "Manual one", "MANUAL")],
+        users={"s1": ["u1"], "s2": ["u2", "u3"], "s3": ["u4"]},
+        resources={"s1": ["r1"], "s2": [], "s3": ["r2"]},
+        **kw,
+    )
+
+
+def targets(api):
+    return [c["groupName"] for c in api.created]
+
+
+class TestGroupSelection:
+    """--group limits the migration to named groups, and a name that cannot be migrated is an error, never a skip."""
+
+    def test_only_the_named_group_is_migrated_by_id(self, tmp_path):
+        api = multi_api()
+        result, rows = migrate(api, tmp_path, "--execute", "--group", "s2")
+        assert result.exit_code == 0, result.output
+        assert targets(api) == ["Ops (Manual)"] and api.user_chunks == [("new-1", ["u2", "u3"])]
+        assert [(r["source_group_id"], r["status"]) for r in rows] == [("s2", "success")]  # no skipped-inactive row either
+
+    def test_a_group_can_be_named_by_its_exact_name(self, tmp_path):
+        api = multi_api()
+        migrate(api, tmp_path, "--execute", "--group", "Sales")
+        assert targets(api) == ["Sales (Manual)"]
+
+    def test_short_flag(self, tmp_path):
+        api = multi_api()
+        migrate(api, tmp_path, "--execute", "-g", "s1")
+        assert targets(api) == ["Eng (Manual)"]
+
+    def test_several_groups_are_migrated_in_the_order_given(self, tmp_path):
+        api = multi_api()
+        _, rows = migrate(api, tmp_path, "--execute", "-g", "s3", "-g", "Eng")
+        assert targets(api) == ["Sales (Manual)", "Eng (Manual)"]
+        assert [r["source_group_id"] for r in rows] == ["s3", "s1"]
+
+    def test_a_group_named_twice_is_migrated_once(self, tmp_path):
+        api = multi_api()
+        migrate(api, tmp_path, "--execute", "-g", "s1", "-g", "Eng", "-g", "s1")
+        assert targets(api) == ["Eng (Manual)"]
+
+    def test_dry_run_with_a_selection_writes_nothing_and_says_what_was_selected(self, tmp_path):
+        api = multi_api()
+        result, rows = migrate(api, tmp_path, "--group", "Ops")
+        assert result.exit_code == 0 and api.writes == []
+        assert "Selected 1 of the 3 active synced groups" in result.output
+        assert [(r["source_group_id"], r["status"]) for r in rows] == [("s2", "dry-run")]
+
+    def test_without_the_option_every_active_synced_group_is_still_migrated(self, tmp_path):
+        api = multi_api()
+        _, rows = migrate(api, tmp_path, "--execute")
+        assert targets(api) == ["Eng (Manual)", "Ops (Manual)", "Sales (Manual)"]
+        assert {r["status"] for r in rows} == {"success", "skipped-inactive"}
+
+    def test_only_the_selected_groups_members_and_resources_are_read(self, tmp_path):
+        api = multi_api()
+        migrate(api, tmp_path, "--group", "Ops")
+        assert {v["id"] for n, v in api.calls if n in ("groupUsers", "groupResources")} == {"s2"}
+
+    def test_an_existing_manual_copy_is_still_reused(self, tmp_path):
+        api = Api([group("s1", "Eng"), group("m9", "Eng (Manual)", "MANUAL")], users={"s1": ["u1"]})
+        result, rows = migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert api.created == [] and api.user_chunks == [("m9", ["u1"])] and "reused existing: m9" in result.output
+
+    def test_an_id_always_wins_over_a_group_that_happens_to_be_named_like_it(self, tmp_path):
+        api = Api([group("s1", "Eng"), group("s9", "s1")], users={"s1": ["u1"], "s9": ["u9"]})
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert targets(api) == ["Eng (Manual)"] and api.user_chunks == [("new-1", ["u1"])]
+
+    def test_a_name_shared_with_a_manual_group_means_the_synced_one(self, tmp_path):
+        api = Api([group("m1", "Eng", "MANUAL"), group("s1", "Eng")], users={"s1": ["u1"]})
+        result, _ = migrate(api, tmp_path, "--execute", "--group", "Eng")
+        assert result.exit_code == 0 and targets(api) == ["Eng (Manual)"]
+
+
+class TestGroupSelectionErrors:
+    def assert_refused(self, result, api, tmp_path, *messages):
+        assert result.exit_code == 1, result.output
+        for message in messages:
+            assert message in result.output, (message, result.output)
+        assert api.writes == [] and not any(n in ("groupUsers", "groupResources") for n, _ in api.calls)
+        assert not (tmp_path / "report.csv").exists()
+
+    def test_an_unknown_group_stops_everything(self, tmp_path):
+        api = multi_api()
+        result, _ = migrate(api, tmp_path, "--execute", "--group", "Nope")
+        self.assert_refused(result, api, tmp_path, "no group with ID or name 'Nope'")
+
+    def test_a_name_shared_by_two_synced_groups_must_be_given_by_id(self, tmp_path):
+        api = Api([group("s1", "Eng"), group("s2", "Eng")], users={"s1": ["u1"], "s2": ["u2"]})
+        result, _ = migrate(api, tmp_path, "--execute", "--group", "Eng")
+        self.assert_refused(result, api, tmp_path, "'Eng' matches 2 active synced groups", "s1", "s2", "use the ID")
+
+    def test_a_manual_group_cannot_be_migrated(self, tmp_path):
+        api = multi_api()
+        result, _ = migrate(api, tmp_path, "--execute", "--group", "m1")
+        self.assert_refused(result, api, tmp_path, "'Manual one' (m1) is a MANUAL group; only SYNCED groups can be migrated")
+
+    def test_an_inactive_group_is_an_error_not_a_silent_skip(self, tmp_path):
+        api = multi_api()
+        result, _ = migrate(api, tmp_path, "--execute", "--group", "Old")
+        self.assert_refused(result, api, tmp_path, "'Old' (s4) is inactive; only active SYNCED groups can be migrated")
+
+    def test_several_groups_with_that_name_none_of_them_migratable(self, tmp_path):
+        api = Api([group("m1", "Eng", "MANUAL"), group("s1", "Eng", active=False)])
+        result, _ = migrate(api, tmp_path, "--execute", "--group", "Eng")
+        self.assert_refused(result, api, tmp_path, "none of the 2 groups named 'Eng' can be migrated")
+
+    def test_every_problem_is_reported_and_one_good_name_does_not_let_the_run_proceed(self, tmp_path):
+        api = multi_api()
+        result, _ = migrate(api, tmp_path, "--execute", "-g", "s1", "-g", "Nope", "-g", "m1")
+        self.assert_refused(result, api, tmp_path, "no group with ID or name 'Nope'", "is a MANUAL group")
+
+    def test_a_bad_selection_is_refused_in_a_dry_run_too(self, tmp_path):
+        api = multi_api()
+        result, _ = migrate(api, tmp_path, "--group", "Nope")
+        self.assert_refused(result, api, tmp_path, "no group with ID or name 'Nope'")
+
+
 def test_the_default_report_name_is_timestamped_in_the_current_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     api = two_groups_api()

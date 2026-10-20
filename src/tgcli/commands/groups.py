@@ -128,14 +128,54 @@ def group_remove_resources(
     )
 
 
+def _migratable(group: dict) -> bool:
+    return group["type"] == "SYNCED" and group["isActive"]
+
+
+def _select_groups(all_groups: list[dict], selectors: list[str]) -> tuple[list[dict], list[str]]:
+    """Resolve --group values (a group ID, else an exact name) to the active Synced Groups to migrate.
+
+    Returns (groups in the order given, without repeats, problems). A group that cannot be migrated is a problem
+    rather than something to skip, because the caller asked for it by name.
+    """
+    chosen: list[dict] = []
+    problems: list[str] = []
+    for selector in selectors:
+        by_id = [g for g in all_groups if g["id"] == selector]
+        matches = by_id or [g for g in all_groups if g["name"] == selector]
+        ready = [g for g in matches if _migratable(g)]
+        if len(ready) == 1:
+            if ready[0] not in chosen:
+                chosen.append(ready[0])
+        elif len(ready) > 1:
+            ids = ", ".join(g["id"] for g in ready)
+            problems.append(f"'{selector}' matches {len(ready)} active synced groups ({ids}); use the ID")
+        elif not matches:
+            problems.append(f"no group with ID or name '{selector}'")
+        elif len(matches) > 1:
+            problems.append(f"none of the {len(matches)} groups named '{selector}' can be migrated (they are not active SYNCED groups)")
+        elif matches[0]["type"] != "SYNCED":
+            problems.append(f"'{matches[0]['name']}' ({matches[0]['id']}) is a {matches[0]['type']} group; only SYNCED groups can be migrated")
+        else:
+            problems.append(f"'{matches[0]['name']}' ({matches[0]['id']}) is inactive; only active SYNCED groups can be migrated")
+    return chosen, problems
+
+
 @app.command("migrate")
 def group_migrate(
     execute: bool = typer.Option(False, "--execute", help="Apply changes. Without this flag, only a dry run is performed."),
     name_suffix: str = typer.Option(" (Manual)", "--name-suffix", help="Suffix appended to new Manual Group names."),
     no_copy_policy: bool = typer.Option(False, "--no-copy-security-policy", help="Don't copy the source group's Security Policy."),
     report: Optional[str] = typer.Option(None, "--report", help="Path to write the CSV report."),
+    only_groups: Optional[list[str]] = typer.Option(
+        None, "-g", "--group",
+        help=(
+            "Migrate only this Synced Group, given by ID or exact name. Repeat for several. "
+            "Default: every active Synced Group."
+        ),
+    ),
 ) -> None:
-    """Migrate all active Synced Groups to new Manual Groups (dry run by default)."""
+    """Migrate active Synced Groups (all, or only those named with --group) to new Manual Groups (dry run by default)."""
     BATCH_SIZE = 200
     client = get_client()
 
@@ -169,7 +209,7 @@ def group_migrate(
         raise typer.Exit(1)
     all_groups = [item["node"] for page in pages for item in page]
 
-    synced_groups = [g for g in all_groups if g["type"] == "SYNCED" and g["isActive"]]
+    synced_groups = [g for g in all_groups if _migratable(g)]
     inactive_synced = [g for g in all_groups if g["type"] == "SYNCED" and not g["isActive"]]
     existing_manual = {g["name"]: g for g in all_groups if g["type"] == "MANUAL"}
 
@@ -178,6 +218,15 @@ def group_migrate(
         f"{len(synced_groups)} active synced, "
         f"{len(inactive_synced)} inactive synced (will be skipped)."
     )
+
+    if only_groups:
+        chosen, problems = _select_groups(all_groups, only_groups)
+        if problems:
+            for problem in problems:
+                typer.echo(f"Error: {problem}", err=True)
+            raise typer.Exit(1)
+        typer.echo(f"Selected {len(chosen)} of the {len(synced_groups)} active synced groups with --group.")
+        synced_groups = chosen
 
     if not execute:
         typer.echo("\n*** DRY RUN — no groups will be created or modified. Re-run with --execute to apply. ***")
@@ -255,7 +304,7 @@ def group_migrate(
 
         report_rows.append(row)
 
-    for g in inactive_synced:
+    for g in ([] if only_groups else inactive_synced):
         report_rows.append({
             "source_group_id": g["id"],
             "source_group_name": g["name"],
