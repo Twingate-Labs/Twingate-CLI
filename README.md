@@ -71,6 +71,25 @@ The `tgcli` command is now available in your shell.
 > export PYTHON_KEYRING_BACKEND=keyrings.alt.file.PlaintextKeyring
 > ```
 
+### Windows
+
+`tgcli` is pure Python and should run on Windows, but it is developed and tested on macOS and has not yet been tested on Windows. If something does not work, please report it.
+
+```powershell
+git clone https://github.com/Twingate-Labs/Twingate-CLI.git
+cd Twingate-CLI
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1      # PowerShell   (cmd.exe: .venv\Scripts\activate.bat)
+pip install .
+```
+
+- **PowerShell blocks `Activate.ps1`?** If it says "running scripts is disabled on this system", allow scripts for the current window only with `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`, then activate again.
+- **Credentials** are kept in Windows Credential Manager (look for entries mentioning `tgcli`), as the Keychain is used on macOS.
+- **The examples in this README are written for bash.** Where a command continues on the next line with `\`, use a backtick `` ` `` at the end of the line in PowerShell, `^` in cmd.exe, or put the command on one line. Commands that use `$(...)`, `head`, `grep` or `cron` need PowerShell equivalents (Task Scheduler instead of cron).
+- **Saving output to a file or piping it (`> file.csv`)?** Set UTF-8 first, in PowerShell `$env:PYTHONUTF8 = "1"` (cmd.exe: `set PYTHONUTF8=1`). Without it, CSV and table output can fail with a `UnicodeEncodeError` when a name contains characters outside your Windows code page (Greek, Cyrillic, Chinese, Japanese, emoji, ...). JSON output is not affected. `tgcli backup` writes its own UTF-8 files and is not affected.
+- **Windows PowerShell 5.1 saves `>` redirection as UTF-16.** For plain UTF-8 files, use PowerShell 7 (`pwsh`), or `| Out-File -Encoding utf8 file.csv` in 5.1.
+- **`scripts/disable_offline_resources.sh`** is a bash script. Run it from Git Bash or WSL.
+
 ---
 
 ## Quick Start
@@ -734,7 +753,7 @@ groups.json  users.json  resources.json  connectors.json  remote-networks.json  
 - **Relationships are saved from both sides** (a group lists its users and each user lists its groups), and IDs are kept, so a backup can be compared against a later one or used to rebuild state.
 - **Resources** include their type, protocols, tags, access (groups and service accounts with their policy, access policy, approval mode and expiry), approver groups, and gateway/ports/cluster ref for Gateway-backed types. Deprecated API fields are not included.
 - **Secrets are never included.** The API does not return connector tokens or service account keys.
-- **Privacy.** The files contain user names and emails, so the directory is created readable by you only (`0700`/`0600`). Keep backups somewhere appropriate.
+- **Privacy.** The files contain user names and emails. On macOS and Linux the directory is created readable by you only (`0700`/`0600`). **On Windows those permission bits do not apply**, so the files simply inherit the folder's access rights: save backups to a folder only you can read. Keep backups somewhere appropriate.
 - **Safe to run unattended.** It never overwrites: an existing output directory is refused. Files are written to `<dir>.partial` and renamed once complete, so an interrupted run leaves no half-finished backup.
 - **Not a transaction.** Pages are read one after another, so changes made while it runs may or may not be included. Connector `lastHeartbeatAt` changes about once a minute, so backups taken minutes apart can differ there even if nothing was edited.
 - **Not included:** devices, service accounts and their keys, security policies, DNS filtering profiles, gateways and certificate authorities (gateways appear only as references on remote networks).

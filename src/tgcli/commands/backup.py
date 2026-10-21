@@ -27,7 +27,7 @@ def backup(
 ) -> None:
     """Back up the tenant's groups, users, resources, connectors and remote networks as JSON files.
 
-    Read-only. Writes one JSON file per type plus a manifest with counts and checksums. Secrets (connector tokens, service account keys) are never included. The files contain user emails, so they are created readable by you only.
+    Read-only. Writes one JSON file per type plus a manifest with counts and checksums. Secrets (connector tokens, service account keys) are never included. The files contain user emails: on macOS and Linux they are created readable by you only; on Windows they inherit the folder's permissions, so choose a private folder.
     """
     client = get_client()
     out_dir = Path(output) if output else default_output_path(client)
