@@ -34,6 +34,15 @@ access_app = typer.Typer(help="Give groups and service accounts access to a Reso
 app.add_typer(access_app, name="access")
 
 
+# The API silently stores anything longer as 365 days (verified live), so a longer request is refused instead.
+MAX_AUTOLOCK_DAYS = 365
+
+
+def _autolock_policy(days: int) -> dict:
+    """The API's accessPolicy for auto-locking after ``days`` days (it replaces the deprecated usageBasedAutolockDurationDays)."""
+    return {"mode": "AUTO_LOCK", "durationSeconds": days * 86400}
+
+
 def _access_inputs(
     client,
     groupid: Optional[list[str]],
@@ -44,6 +53,16 @@ def _access_inputs(
 ) -> list[dict]:
     """Build the AccessInput array for resourceAccessSet/Add. Groups, policies and service accounts may be IDs or exact names."""
     groups, services, policies = split_values(groupid), split_values(serviceid), split_values(policyid)
+    if autolockdays is not None and not 1 <= autolockdays <= MAX_AUTOLOCK_DAYS:
+        typer.echo(f"Error: --autolock is a number of days from 1 to {MAX_AUTOLOCK_DAYS}.", err=True)
+        raise typer.Exit(1)
+    if services and (autolockdays is not None or expiresat):
+        typer.echo(
+            "Error: auto-lock (-a) and expiry (-e) can only be set on groups: the API refuses them for service accounts. "
+            "Add the service account in its own call without -a or -e.",
+            err=True,
+        )
+        raise typer.Exit(1)
     if len(policies) > 1 and len(policies) != len(groups):
         typer.echo(
             "Error: Number of Policy IDs must be 1 (applied to all Groups) "
@@ -56,18 +75,13 @@ def _access_inputs(
     access_array: list[dict] = []
 
     for sid in service_ids:
-        entry: dict = {"principalId": sid, "securityPolicyId": None}
-        if autolockdays:
-            entry["usageBasedAutolockDurationDays"] = autolockdays
-        if expiresat:
-            entry["expiresAt"] = expiresat
-        access_array.append(entry)
+        access_array.append({"principalId": sid, "securityPolicyId": None})
 
     for idx, gid in enumerate(group_ids):
         pol = (policy_ids[idx] if len(policy_ids) > 1 else policy_ids[0]) if policy_ids else None
         entry = {"principalId": gid, "securityPolicyId": pol}
         if autolockdays:
-            entry["usageBasedAutolockDurationDays"] = autolockdays
+            entry["accessPolicy"] = _autolock_policy(autolockdays)
         if expiresat:
             entry["expiresAt"] = expiresat
         access_array.append(entry)
@@ -288,14 +302,17 @@ def resource_autolock(
     autolock: int = typer.Option(..., "-a", "--autolock", help="Autolock duration in days (1–365, or -1 to disable)."),
     autoapprove: str = typer.Option("False", "-r", "--autoapprove", help="Auto-approve mode: true (AUTOMATIC) or false (MANUAL)."),
 ) -> None:
-    """Update usage-based autolock duration for a Resource."""
+    """Auto-lock a Resource's access after a number of days of non-use, or turn auto-lock off with -a -1."""
+    if autolock != -1 and not 1 <= autolock <= MAX_AUTOLOCK_DAYS:
+        typer.echo(f"Error: --autolock is a number of days from 1 to {MAX_AUTOLOCK_DAYS}, or -1 to turn auto-lock off.", err=True)
+        raise typer.Exit(1)
     approve_bool = parse_bool_string(autoapprove)
     approve_mode = "AUTOMATIC" if approve_bool else "MANUAL"
-    autolock_val = None if autolock == -1 else autolock
+    policy = {"mode": "MANUAL"} if autolock == -1 else _autolock_policy(autolock)
     run_query(
         get_client(),
         q.UPDATE_RESOURCE_AUTOLOCK,
-        {"itemid": itemid, "autolock": autolock_val, "autoapprovemode": approve_mode},
+        {"itemid": itemid, "accessPolicy": policy, "autoapprovemode": approve_mode},
         t.get_autolock_update_as_csv,
     )
 

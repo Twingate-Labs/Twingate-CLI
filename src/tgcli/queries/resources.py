@@ -98,7 +98,6 @@ query listGroup($cursor: String!) {
         updatedAt
         isVisible
         isBrowserShortcutEnabled
-        usageBasedAutolockDurationDays
 @@TYPE_FIELDS@@        tags {
           key
           value
@@ -167,7 +166,6 @@ query getResource($itemID: ID!) {
     updatedAt
     isVisible
     isBrowserShortcutEnabled
-    usageBasedAutolockDurationDays
     isActive
 """ + _TYPE_SPECIFIC_FIELDS + """    remoteNetwork {
       name
@@ -291,7 +289,6 @@ mutation ObjUpdate($itemid: ID!, $address: String!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
       address {
         type
         value
@@ -314,7 +311,6 @@ mutation ObjUpdate($itemid: ID!, $alias: String!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
       address {
         type
         value
@@ -337,7 +333,6 @@ mutation ObjUpdate($itemid: ID!, $securityPolicyId: ID!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
       securityPolicy {
         id
       }
@@ -347,15 +342,18 @@ mutation ObjUpdate($itemid: ID!, $securityPolicyId: ID!) {
 """
 
 UPDATE_RESOURCE_AUTOLOCK = """
-mutation ObjUpdate($itemid: ID!, $autolock: Int, $autoapprovemode: AccessApprovalMode!) {
-  resourceUpdate(id: $itemid, usageBasedAutolockDurationDays: $autolock, approvalMode: $autoapprovemode) {
+mutation ObjUpdate($itemid: ID!, $accessPolicy: AccessPolicyInput!, $autoapprovemode: AccessApprovalMode!) {
+  resourceUpdate(id: $itemid, accessPolicy: $accessPolicy, approvalMode: $autoapprovemode) {
     ok
     error
     entity {
       id
       name
       alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       approvalMode
       address {
         type
@@ -379,7 +377,10 @@ mutation ObjUpdate($itemid: ID!, $autoapprovemode: AccessApprovalMode!) {
       id
       name
       alias
-      usageBasedAutolockDurationDays
+      accessPolicy {
+        mode
+        durationSeconds
+      }
       approvalMode
       address {
         type

@@ -327,7 +327,7 @@ tgcli resource policy -i "UmVzb3VyY2U6MQ==" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m BYPASS_TWINGATE
 tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m THROUGH_TWINGATE
 
-# Usage-based autolock (disable with -a -1)
+# Auto-lock access after N days of non-use (-a is days, 1 to 365; turn it off with -a -1)
 tgcli resource autolock -i "UmVzb3VyY2U6MQ==" -a 7
 tgcli resource autolock -i "UmVzb3VyY2U6MQ==" -a 30 -r True   # auto-approve
 
@@ -349,10 +349,11 @@ tgcli resource access add -i "UmVzb3VyY2U6MQ==" -g "Engineering" -p "Strict Poli
 # A different policy per group: give one -p per group, in the same order
 tgcli resource access add -i "UmVzb3VyY2U6MQ==" -g "Engineering,Ops" -p "Strict Policy,Default Policy"
 
-# Add service account access with an expiry date
-tgcli resource access add -i "UmVzb3VyY2U6MQ==" \
-  -s "U2VydmljZUFjY291bnQ6MQ==" \
-  -e "2026-12-31T23:59:59Z"
+# Add service account access (a service account cannot have an expiry or auto-lock; see below)
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" -s "U2VydmljZUFjY291bnQ6MQ=="
+
+# Give a group access that expires
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" -g "Contractors" -e "2026-12-31T23:59:59Z"
 
 # Remove access for a group or service account
 tgcli resource access remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
@@ -385,6 +386,8 @@ tgcli -s acme resource access add -i <the id it printed> -g "Ops" -e "2026-12-31
 ```
 
 If `resource create` is run without `-g`, it prints a reminder to **stderr** (so piped JSON/CSV on stdout is unaffected) with the exact `access add` command for the new resource. To find a resource's ID later, use `tgcli resource list`; `tgcli resource show -i <id>` lists who has access.
+
+**Auto-lock and the access policy.** Auto-lock is set through the API's `accessPolicy` (mode `AUTO_LOCK`, duration in seconds; `resource autolock` and `access add|set -a` convert your days for you). It replaces the API's deprecated `usageBasedAutolockDurationDays`, which this CLI no longer sends or selects, so `resource list` and `resource show` JSON no longer contain that key: read `accessPolicy.mode` and `accessPolicy.durationSeconds` (`resource show` and `resource list --detail` have them; the default `list` leaves them out to stay fast). `-a` must be 1 to 365 days (the API silently stores anything longer as 365, so the CLI refuses it); `0`, negative numbers and anything over 365 are refused (`resource autolock -a -1` turns auto-lock off). **Auto-lock (`-a`) and expiry (`-e`) apply to groups only**: the API rejects both for a service account, so the CLI refuses the call instead of sending it (add the service account in its own call without them). The CLI only sets `AUTO_LOCK`; other modes the API has (`ACCESS_REQUEST`) are not yet settable here.
 
 **Changing access safely.** `access add` only adds. `access set` **replaces** the whole list, so anything you leave out loses access; to protect against a typo it refuses to run when you name nobody, and removing everyone's access takes the explicit `--clear`. `access add` and `access remove` likewise require at least one group (`-g`) or service account (`-s`). The older spellings `access_add`, `access_set` and `access_remove` still work (they are the same commands, no longer shown in `--help`), so existing scripts keep running.
 

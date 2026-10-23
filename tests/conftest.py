@@ -64,7 +64,7 @@ def resource_edge() -> dict:
             "isActive": True,
             "isVisible": True,
             "isBrowserShortcutEnabled": False,
-            "usageBasedAutolockDurationDays": None,
+            "accessPolicy": {"mode": "MANUAL", "durationSeconds": None},
             "alias": None,
             "createdAt": "2024-01-01T00:00:00Z",
             "updatedAt": "2024-01-01T00:00:00Z",

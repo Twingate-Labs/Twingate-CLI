@@ -124,7 +124,7 @@ def get_routing_mode_update_as_csv(json_results: dict) -> pd.DataFrame:
 def get_autolock_update_as_csv(json_results: dict) -> pd.DataFrame:
     columns = [
         "ok", "error", "id", "name",
-        "usageBasedAutolockDurationDays", "approvalMode",
+        "accessPolicy.mode", "accessPolicy.durationSeconds", "approvalMode",
     ]
     return generic.get_update_as_csv_no_nesting(json_results, "resourceUpdate", columns)
 

@@ -188,10 +188,11 @@ class TestAccessAdd:
         _, api = run("access_add", "-i", RES, "-g", "Eng", "-s", "ci")
         assert [e["principalId"] for e in api.writes[0][1]["accessids"]] == [SA_CI, G_ENG]
 
-    def test_autolock_and_expiry_are_still_attached_to_every_entry(self):
-        _, api = run("access_add", "-i", RES, "-g", "Eng", "-s", "ci", "-a", "7", "-e", "2027-01-01T00:00:00Z")
+    def test_autolock_and_expiry_are_attached_to_every_group_entry(self):
+        _, api = run("access_add", "-i", RES, "-g", "Eng,Ops", "-a", "7", "-e", "2027-01-01T00:00:00Z")
         for entry in api.writes[0][1]["accessids"]:
-            assert entry["usageBasedAutolockDurationDays"] == 7 and entry["expiresAt"] == "2027-01-01T00:00:00Z"
+            assert entry["accessPolicy"] == {"mode": "AUTO_LOCK", "durationSeconds": 604800} and entry["expiresAt"] == "2027-01-01T00:00:00Z"
+            assert "usageBasedAutolockDurationDays" not in entry
 
     def test_ids_only_makes_exactly_the_one_write_request_as_before(self):
         result, api = run("access_add", "-i", RES, "-g", f"{G_ENG},{G_OPS}", "-p", POL_STRICT, "-s", SA_CI)
