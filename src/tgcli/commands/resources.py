@@ -6,7 +6,15 @@ from typing import Optional
 
 import typer
 
-from tgcli.commands._common import get_client, resolve_many_or_exit, run_paginated, run_query, split_ids, split_values
+from tgcli.commands._common import (
+    get_client,
+    require_session,
+    resolve_many_or_exit,
+    run_paginated,
+    run_query,
+    split_ids,
+    split_values,
+)
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import resources as t
@@ -22,6 +30,8 @@ from tgcli.validators.protocol import (
 from tgcli.main import state
 
 app = typer.Typer(help="Manage Twingate Resources.")
+access_app = typer.Typer(help="Give groups and service accounts access to a Resource: add, set (replaces everything), remove.")
+app.add_typer(access_app, name="access")
 
 
 def _access_inputs(
@@ -159,7 +169,15 @@ def resource_create(
             "udp": {"policy": udp_policy, "ports": udp_ports},
         },
     }
-    run_query(client, q.CREATE_RESOURCE, variables, t.get_create_as_csv)
+    result = run_query(client, q.CREATE_RESOURCE, variables, t.get_create_as_csv)
+    created = ((result or {}).get("data") or {}).get("resourceCreate") or {}
+    if created.get("ok") and not group_ids:
+        typer.echo(
+            "\nNote: no group has access to this Resource yet, so nobody can reach it. Give a group access with:\n"
+            f"  tgcli -s {require_session()} resource access add -i {(created.get('entity') or {}).get('id', '<resource id>')} -g <group name or ID>\n"
+            "or add -g <group> to 'resource create' to create the Resource and grant access in one step.",
+            err=True,
+        )
 
 
 @app.command("delete")
@@ -303,7 +321,6 @@ _SERVICE_HELP = "Service Account ID or exact name. Comma-separated, or repeat -s
 _POLICY_HELP = "Policy ID or exact name: one for all groups, or one per group in order. Comma-separated, or repeat -p."
 
 
-@app.command("access_set")
 def resource_access_set(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     groupid: Optional[list[str]] = typer.Option(None, "-g", "--group", help=_GROUP_HELP),
@@ -311,10 +328,23 @@ def resource_access_set(
     serviceid: Optional[list[str]] = typer.Option(None, "-s", "--service", help=_SERVICE_HELP),
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601, e.g. 2024-03-14T20:20:32-07:00)."),
+    clear: bool = typer.Option(False, "--clear", help="Remove ALL access (the only way to set an empty list). Cannot be combined with -g or -s."),
 ) -> None:
-    """Set Resource access. REPLACES all existing Group/Service Account access (use access_add to keep it)."""
+    """Set Resource access. REPLACES all existing Group/Service Account access: anything not listed loses access. Use 'access add' to keep what is there."""
+    named = bool(split_values(groupid) or split_values(serviceid))
+    if clear and named:
+        typer.echo("Error: --clear removes all access, so it cannot be combined with -g or -s.", err=True)
+        raise typer.Exit(1)
+    if not clear and not named:
+        typer.echo(
+            "Error: 'access set' REPLACES all access, and no group (-g) or service account (-s) was given, "
+            "so it would remove everyone's access. Name who should have access, or pass --clear if removing all access is what you want. "
+            "To keep the existing access and add more, use 'access add'.",
+            err=True,
+        )
+        raise typer.Exit(1)
     client = get_client()
-    access_array = _access_inputs(client, groupid, serviceid, policyid, autolockdays, expiresat)
+    access_array = [] if clear else _access_inputs(client, groupid, serviceid, policyid, autolockdays, expiresat)
     run_query(
         client,
         q.RESOURCE_ACCESS_SET,
@@ -323,7 +353,6 @@ def resource_access_set(
     )
 
 
-@app.command("access_add")
 def resource_access_add(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     groupid: Optional[list[str]] = typer.Option(None, "-g", "--group", help=_GROUP_HELP),
@@ -333,6 +362,9 @@ def resource_access_add(
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601)."),
 ) -> None:
     """Add Group/Service Account access to a Resource (non-destructive)."""
+    if not split_values(groupid) and not split_values(serviceid):
+        typer.echo("Error: Provide at least one group (-g) or service account (-s) to give access to.", err=True)
+        raise typer.Exit(1)
     client = get_client()
     access_array = _access_inputs(client, groupid, serviceid, policyid, autolockdays, expiresat)
     run_query(
@@ -343,7 +375,6 @@ def resource_access_add(
     )
 
 
-@app.command("access_remove")
 def resource_access_remove(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
     groupid: Optional[list[str]] = typer.Option(
@@ -366,6 +397,15 @@ def resource_access_remove(
         {"itemid": itemid, "groupid": principal_ids},
         lambda d: t.get_access_update_as_csv(d, "resourceAccessRemove"),
     )
+
+
+access_app.command("add")(resource_access_add)
+access_app.command("set")(resource_access_set)
+access_app.command("remove")(resource_access_remove)
+# The original names keep working (scripts, customer write-ups) but are no longer listed in --help.
+app.command("access_set", hidden=True)(resource_access_set)
+app.command("access_add", hidden=True)(resource_access_add)
+app.command("access_remove", hidden=True)(resource_access_remove)
 
 
 @app.command("disable")

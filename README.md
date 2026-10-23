@@ -338,36 +338,55 @@ tgcli resource autoapprove -i "UmVzb3VyY2U6MQ==" -r True
 tgcli resource enable  -i "UmVzb3VyY2U6MQ=="
 tgcli resource disable -i "UmVzb3VyY2U6MQ=="
 
-# --- Access control ---
-
-# Replace ALL group/service-account access (destructive: anything not listed loses access)
-tgcli resource access_set -i "UmVzb3VyY2U6MQ==" \
-  -g "R3JvdXA6MQ==,R3JvdXA6Mg=="
+# --- Access control: `resource access add | set | remove` ---
 
 # Add group access (non-destructive). Groups, policies and service accounts can be IDs or exact names
-tgcli resource access_add -i "UmVzb3VyY2U6MQ==" \
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" \
   -g "R3JvdXA6Mw==" \
   -p "U2VjdXJpdHlQb2xpY3k6MQ=="
-tgcli resource access_add -i "UmVzb3VyY2U6MQ==" -g "Engineering" -p "Strict Policy"
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" -g "Engineering" -p "Strict Policy"
 
 # A different policy per group: give one -p per group, in the same order
-tgcli resource access_add -i "UmVzb3VyY2U6MQ==" -g "Engineering,Ops" -p "Strict Policy,Default Policy"
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" -g "Engineering,Ops" -p "Strict Policy,Default Policy"
 
 # Add service account access with an expiry date
-tgcli resource access_add -i "UmVzb3VyY2U6MQ==" \
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" \
   -s "U2VydmljZUFjY291bnQ6MQ==" \
   -e "2026-12-31T23:59:59Z"
 
 # Remove access for a group or service account
-tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
-tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "Engineering" -s "ci-bot"
+tgcli resource access remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
+tgcli resource access remove -i "UmVzb3VyY2U6MQ==" -g "Engineering" -s "ci-bot"
+
+# Replace ALL access with exactly this list (destructive: anything not listed loses access)
+tgcli resource access set -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ==,R3JvdXA6Mg=="
+
+# Remove ALL access. `access set` with nobody named is refused; --clear says you mean it
+tgcli resource access set -i "UmVzb3VyY2U6MQ==" --clear
 ```
 
-**Names or IDs.** `-r`, `-p`, `-g` and `-s` on `resource create` and the three `access_*` commands accept either an ID or the object's **exact name** (capitals matter). Several values can be comma-separated or you can repeat the flag (`-g Engineering -g Ops`).
+**Names or IDs.** `-r`, `-p`, `-g` and `-s` on `resource create` and the three `resource access` commands accept either an ID or the object's **exact name** (capitals matter). Several values can be comma-separated or you can repeat the flag (`-g Engineering -g Ops`).
 - An ID is used as given, with no extra request, so scripts that pass IDs behave exactly as before. A name costs one extra lookup per kind (a fraction of a second).
 - A name that matches nothing, or matches more than one object, is an error and **nothing is changed**. All the problems are listed together, and an ambiguous name shows the matching IDs so you can pick one.
 - A name containing a comma cannot be given by name (the comma splits the list); use its ID.
 - Other commands, including `ssh-resource`, `webapp-resource`, `k8s-resource` and the rest of `resource`, still take IDs only.
+
+**Create a resource and give groups access.** A new resource can be reached by nobody until a group (or service account) has access, so there are two ways to do it:
+
+```bash
+# One step: create the resource and give groups access. -p is the resource's own Security Policy
+tgcli -s acme resource create -a app.internal.example.com -n "Internal App" \
+  -r "Cloud Applications" -p "Default Policy" -g "Engineering,Ops"
+
+# Two steps, when you need a different policy per group, service accounts, an expiry or autolock
+tgcli -s acme resource create -a app.internal.example.com -n "Internal App" -r "Cloud Applications" -p "Default Policy"
+tgcli -s acme resource access add -i <the id it printed> -g "Engineering" -p "Strict Policy"
+tgcli -s acme resource access add -i <the id it printed> -g "Ops" -e "2026-12-31T23:59:59Z"
+```
+
+If `resource create` is run without `-g`, it prints a reminder to **stderr** (so piped JSON/CSV on stdout is unaffected) with the exact `access add` command for the new resource. To find a resource's ID later, use `tgcli resource list`; `tgcli resource show -i <id>` lists who has access.
+
+**Changing access safely.** `access add` only adds. `access set` **replaces** the whole list, so anything you leave out loses access; to protect against a typo it refuses to run when you name nobody, and removing everyone's access takes the explicit `--clear`. `access add` and `access remove` likewise require at least one group (`-g`) or service account (`-s`). The older spellings `access_add`, `access_set` and `access_remove` still work (they are the same commands, no longer shown in `--help`), so existing scripts keep running.
 
 **Protocol flags for `resource create`:**
 

@@ -83,8 +83,8 @@ def run_query(
     variables: dict | None,
     transformer: Callable[..., pd.DataFrame],
     nested: NestedLists | None = None,
-) -> None:
-    """Execute a single GraphQL query and print formatted output.
+) -> dict:
+    """Execute a single GraphQL query, print formatted output and return the response.
 
     ``nested`` completes nested lists on the object at ``data[nested.parent]`` (the API returns at most 50 per page).
     """
@@ -96,6 +96,7 @@ def run_query(
         if isinstance(node, dict):  # a missing object, or a write that reported ok: false, has nothing to complete
             complete_or_exit(client, [node], nested)
     OutputFormatter.print_output(result, state.output_format, transformer)
+    return result
 
 
 def fetch_paginated(
