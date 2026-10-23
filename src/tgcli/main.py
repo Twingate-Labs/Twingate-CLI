@@ -8,6 +8,7 @@ from typing import Optional
 import typer
 
 from tgcli import VERSION
+from tgcli.completion import complete_session
 
 app = typer.Typer(
     name="tgcli",
@@ -48,6 +49,7 @@ def global_callback(
     session: str = typer.Option(
         "", "-s", "--session",
         help="Session name (from 'tgcli auth login').",
+        autocompletion=complete_session,
     ),
     output_format: str = typer.Option(
         "JSON", "-f", "--format",

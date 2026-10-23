@@ -10,6 +10,7 @@ from typing import Optional
 import typer
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
+from tgcli.completion import complete_migratable_groups
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
 from tgcli.output.transformers import groups as t
 from tgcli.pagination import NestedLists
@@ -173,6 +174,7 @@ def group_migrate(
             "Migrate only this Synced Group, given by ID or exact name. Repeat for several. "
             "Default: every active Synced Group."
         ),
+        autocompletion=complete_migratable_groups,
     ),
 ) -> None:
     """Migrate active Synced Groups (all, or only those named with --group) to new Manual Groups (dry run by default)."""
