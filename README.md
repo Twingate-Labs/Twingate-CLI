@@ -15,6 +15,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
 - [Global Options](#global-options)
 - [Output Formats](#output-formats)
 - [Multiple Sessions](#multiple-sessions)
+- [Shell completion](#shell-completion)
 - [Commands](#commands)
   - [auth](#auth)
   - [device](#device)
@@ -95,16 +96,39 @@ pip install .
 ## Quick Start
 
 ```bash
-# Log in — stores your credentials in the OS keychain
-tgcli auth login -a tgp_xxxxxxxxxxxxxxxxxxxx -t acme
+# Log in — stores your credentials in the OS keychain under a session name you choose (-s)
+tgcli auth login -a tgp_xxxxxxxxxxxxxxxxxxxx -t acme -s acme
 
 # Verify it worked
-tgcli -v            # tgcli version 2.0.0
-tgcli resource list # list all resources
+tgcli -v                       # tgcli version 2.0.0
+tgcli -s acme resource list    # list all resources
 ```
 
 Your Twingate **tenant name** is the subdomain of your Twingate URL.
 e.g. for `acme.twingate.com` the tenant name is `acme`.
+
+> **Every command that talks to Twingate needs `-s <session>`. There is no default session.**
+> Put `-s` before the command, as above. If you leave `-s` off `auth login`, `tgcli` makes up a random session name, and you then have to pass that name with `-s` every time (`tgcli auth list` shows it). Naming your session when you log in avoids that.
+>
+> To keep the examples in this README short, most of them leave `-s <session>` out. Add it: `tgcli resource list` is really `tgcli -s acme resource list`.
+
+---
+
+## Shell completion
+
+```bash
+tgcli --install-completion      # then restart your shell
+```
+
+Press TAB to complete commands, subcommands and flags. Completion is provided for zsh, bash (4.4 or newer; the bash 3.2 that ships with macOS is not supported), fish and PowerShell, and has been tested with zsh. Two options also complete their values:
+
+- **`-s` / `--session`** completes your saved session names.
+- **`group migrate --group`** completes the names of the groups it can migrate (active Synced Groups). A name shared by several groups is offered as an ID instead, because `migrate` will not accept an ambiguous name. This asks the Twingate API, so type `-s <session>` first, as in `tgcli -s prod group migrate --group <TAB>`. Without a session it offers nothing.
+
+Notes:
+- The group names are cached for 2 minutes in `~/.cache/tgcli` (`%LOCALAPPDATA%\tgcli` on Windows), in files only you can read, so repeated TAB presses do not call the API each time.
+- Completion never prints errors. If the API cannot be reached or is rate-limiting, it offers the last list it saved, or nothing.
+- If `--install-completion` says "Shell not supported" (it detects your shell from the parent process), generate the script yourself and load it from your shell's startup file. For zsh, add `eval "$(_TGCLI_COMPLETE=source_zsh tgcli)"` (use `source_bash` for bash). The same variable with `source_fish` or `source_powershell` prints the script for those shells.
 
 ---
 
@@ -114,7 +138,7 @@ These flags go **before** the command name and apply to every call:
 
 | Flag | Short | Description | Default |
 |---|---|---|---|
-| `--session` | `-s` | Session name to use | `default` |
+| `--session` | `-s` | Session to use. **Required** for every command that contacts Twingate; there is no default session | none |
 | `--format` | `-f` | Output format: `JSON`, `CSV`, `DF` | `JSON` |
 | `--log` | `-l` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` | `ERROR` |
 | `--version` | `-v` | Print version and exit | |
@@ -146,7 +170,7 @@ You can manage several Twingate tenants at once by naming your sessions:
 tgcli auth login -a tgp_xxx -t acme -s prod
 tgcli auth login -a tgp_yyy -t acme-staging -s staging
 
-# Use them with -s
+# Use them with -s (required, even if you only have one session)
 tgcli -s prod    resource list
 tgcli -s staging resource list
 
@@ -166,16 +190,15 @@ tgcli auth logout -s staging
 Manage authentication sessions.
 
 ```bash
-# Log in (saves credentials to OS keychain)
-tgcli auth login -a <api-token> -t <tenant>
-tgcli auth login -a tgp_xxxx -t acme -s my-session   # named session
+# Log in (saves credentials to OS keychain). Always name the session with -s:
+tgcli auth login -a tgp_xxxx -t acme -s my-session
+# Without -s a random session name is generated, and you must then pass that name with -s on every command.
 
 # List all saved sessions
 tgcli auth list
 
-# Log out
-tgcli auth logout                  # default session
-tgcli auth logout -s my-session    # named session
+# Log out (-s is required: there is no default session)
+tgcli auth logout -s my-session
 ```
 
 ---
@@ -471,8 +494,9 @@ tgcli user create \
 # Create without sending the invitation
 tgcli user create -e bob@example.com -l Jones -r DEVOPS -s False
 
-# Update role (ADMIN | DEVOPS | SUPPORT | MEMBER)
+# Update role (see the roles table below)
 tgcli user role -i "VXNlcjox" -r ADMIN
+tgcli user role -i "VXNlcjox" -r HELPDESK
 
 # Enable or disable a user
 tgcli user state -i "VXNlcjox" -s ACTIVE
@@ -485,6 +509,20 @@ tgcli user resetmfa -i "VXNlcjox"
 tgcli user delete -i "VXNlcjox"
 ```
 
+**Roles** (`-r` on `user create` and `user role`; case-insensitive):
+
+| Role | Access |
+|---|---|
+| `ADMIN` | Full access to the Admin Console |
+| `SUPPORT` | Read-only access to the Admin Console |
+| `DEVOPS` | Full access to the Network tab, read-only access to the rest of the Admin Console |
+| `INTERNET_SECURITY` | Full access to the Internet Security tab, read-only access to the rest of the Admin Console |
+| `HELPDESK` | Read-only Admin Console access with MFA reset and device verification |
+| `ACCESS_REVIEWER` | Access to Resource requests only |
+| `BILLING` | Access to Billing functions only |
+| `MEMBER` | No access to the Admin Console |
+
+Which roles you can assign can depend on your Twingate plan.
 ---
 
 ### network
