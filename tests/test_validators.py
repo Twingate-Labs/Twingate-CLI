@@ -13,7 +13,7 @@ from tgcli.validators.protocol import (
     validate_protocol_policy,
     validate_range_with_policy,
 )
-from tgcli.validators.user import validate_user_role, validate_user_state
+from tgcli.validators.user import ROLE_DESCRIPTIONS, VALID_ROLES, validate_user_role, validate_user_state
 
 
 class TestParseBoolString:
@@ -42,13 +42,32 @@ class TestParseBoolString:
 
 
 class TestValidateUserRole:
-    @pytest.mark.parametrize("role", ["ADMIN", "DEVOPS", "SUPPORT", "MEMBER"])
+    ALL_ROLES = ["ADMIN", "SUPPORT", "DEVOPS", "INTERNET_SECURITY", "HELPDESK", "ACCESS_REVIEWER", "BILLING", "MEMBER"]
+
+    def test_the_accepted_roles_are_exactly_the_ones_the_api_defines(self):
+        # Written out in full on purpose: if the API gains a role, this is the test that says the list is stale.
+        assert list(VALID_ROLES) == self.ALL_ROLES
+
+    def test_every_role_has_a_description(self):
+        assert set(ROLE_DESCRIPTIONS) == set(VALID_ROLES) and all(ROLE_DESCRIPTIONS.values())
+
+    @pytest.mark.parametrize("role", ALL_ROLES)
     def test_valid_role_uppercase(self, role):
         assert validate_user_role(role) == role
 
-    @pytest.mark.parametrize("role", ["admin", "devops", "support", "member"])
+    @pytest.mark.parametrize("role", [r.lower() for r in ALL_ROLES])
     def test_valid_role_lowercase_normalised(self, role):
         assert validate_user_role(role) == role.upper()
+
+    def test_the_error_lists_every_valid_role(self):
+        with pytest.raises(typer.BadParameter) as exc:
+            validate_user_role("SUPERUSER")
+        assert all(role in str(exc.value) for role in self.ALL_ROLES)
+
+    @pytest.mark.parametrize("role", ["", "ADMIN ", "internet-security", "ACCESS REVIEWER", "OWNER"])
+    def test_near_misses_are_rejected(self, role):
+        with pytest.raises(typer.BadParameter):
+            validate_user_role(role)
 
     def test_invalid_role_raises(self):
         with pytest.raises(typer.BadParameter, match="Invalid role"):
