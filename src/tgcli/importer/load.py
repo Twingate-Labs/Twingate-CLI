@@ -16,8 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-NETWORKS, GROUPS, RESOURCES = "remote-networks", "groups", "resources"
-KINDS = (NETWORKS, GROUPS, RESOURCES)
+NETWORKS, GROUPS, RESOURCES, DEVICES = "remote-networks", "groups", "resources", "devices"
+KINDS = (NETWORKS, GROUPS, RESOURCES, DEVICES)
 # Files a backup holds that an import has no use for yet.
 IGNORED_FILES = ("users.json", "connectors.json", "manifest.json")
 
@@ -35,8 +35,9 @@ CSV_COLUMNS = {
         "name", "network", "address", "alias", "tcp_ports", "udp_ports", "allow_icmp", "visible",
         "security_policy", "groups", "routing_mode",
     ),
+    DEVICES: ("serial_number", "trusted"),
 }
-CSV_REQUIRED = {NETWORKS: ("name",), GROUPS: ("name",), RESOURCES: ("name", "network", "address")}
+CSV_REQUIRED = {NETWORKS: ("name",), GROUPS: ("name",), RESOURCES: ("name", "network", "address"), DEVICES: ("serial_number",)}
 
 
 class LoadError(Exception):
@@ -94,7 +95,18 @@ class ResourceSpec(Item):
 
 
 @dataclass
+class DeviceSpec(Item):
+    serial: str = ""
+    trusted: bool = True
+
+    @property
+    def name(self) -> str:  # a device is identified, and labelled in reports, by its serial number
+        return self.serial or "(no serial number)"
+
+
+@dataclass
 class Specs:
+    devices: list = field(default_factory=list)
     networks: list = field(default_factory=list)
     groups: list = field(default_factory=list)
     resources: list = field(default_factory=list)
@@ -297,6 +309,15 @@ def _resource(record: dict, source: str) -> ResourceSpec:
     return spec
 
 
+def _device(record: dict, source: str) -> DeviceSpec:
+    # JSON uses the API's own field names (`serialNumber`, `isTrusted`); CSV columns are `serial_number` and `trusted`.
+    spec = DeviceSpec(source=source, serial=_text(record.get("serialNumber", record.get("serial_number"))))
+    if not spec.serial:
+        spec.problems.append("has no serial number")
+    spec.trusted = parse_bool(record.get("isTrusted", record.get("trusted")), "trusted", True, spec.problems)
+    return spec
+
+
 # ---------------------------------------------------------------- CSV rows -> JSON-shaped records
 
 
@@ -347,8 +368,9 @@ _CSV_ADAPTERS: dict = {
     NETWORKS: lambda row, source: _network(_csv_network(row), source),
     GROUPS: lambda row, source: _group(_csv_group(row), source),
     RESOURCES: _resource_from_csv,
+    DEVICES: lambda row, source: _device({"serial_number": row.get("serial_number"), "trusted": row.get("trusted")}, source),
 }
-_JSON_PARSERS: dict = {NETWORKS: _network, GROUPS: _group, RESOURCES: _resource}
+_JSON_PARSERS: dict = {NETWORKS: _network, GROUPS: _group, RESOURCES: _resource, DEVICES: _device}
 
 
 # ---------------------------------------------------------------- files
@@ -412,7 +434,7 @@ def kind_of(path: Path) -> str:
 
 
 def load(path: Path) -> Specs:
-    """Read a folder (a backup, or one holding files named remote-networks / groups / resources) or a single such file."""
+    """Read a folder (a backup, or one holding files named remote-networks / groups / resources / devices) or a single such file."""
     if not path.exists():
         raise LoadError(f"{path} does not exist.")
     specs = Specs()
@@ -433,5 +455,5 @@ def load(path: Path) -> Specs:
     for kind, file in found.items():
         specs.files.append(file.name)
         loaded = load_file(file, kind)
-        {NETWORKS: specs.networks, GROUPS: specs.groups, RESOURCES: specs.resources}[kind].extend(loaded)
+        {NETWORKS: specs.networks, GROUPS: specs.groups, RESOURCES: specs.resources, DEVICES: specs.devices}[kind].extend(loaded)
     return specs

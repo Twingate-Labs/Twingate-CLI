@@ -46,6 +46,7 @@ class Row:
     network_id: Optional[str] = None  # None when the network is created by this import
     member_ids: list = field(default_factory=list)  # users to add
     grants: list = field(default_factory=list)  # Grants to add
+    device_ids: list = field(default_factory=list)  # devices whose trust is to be changed
     # filled in by apply
     status: str = ""
     id: str = ""
@@ -235,10 +236,45 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
             ))
 
 
+def _plan_devices(specs: list, state: State, rows: list) -> None:
+    seen: dict = {}
+    for spec in specs:
+        if spec.problems:
+            rows.append(_blocked("device", spec, spec.problems))
+            continue
+        key = spec.serial.lower()
+        if key in seen:
+            rows.append(_blocked("device", spec, [f"same serial number as {seen[key]}"]))
+            continue
+        seen[key] = spec.source
+        found = state.devices.get(key, [])
+        live = [d for d in found if d["activeState"] != "ARCHIVED"]
+        archived = len(found) - len(live)
+        note = f"; {_plural(archived, 'archived device')} ignored" if archived and live else ""
+        if not live:
+            why = "only archived devices have this serial number" if found else "no device with this serial number has registered in this tenant yet"
+            rows.append(Row("device", spec.serial, SKIP, spec, f"{why}; to trust a serial number ahead of time, use `tgcli device snumber add`"))
+            continue
+        owners = {(d.get("user") or {}).get("email") for d in live}
+        if spec.trusted and len(owners) > 1:
+            rows.append(_blocked("device", spec, [
+                f"{_plural(len(live), 'device')} belonging to {len(owners)} different users have this serial number, and trusting by serial "
+                "is only done for one user's devices; use `tgcli device updateTrust -i` for the one you mean"
+            ]))
+            continue
+        todo = [d["id"] for d in live if d["isTrusted"] != spec.trusted]
+        word = "trusted" if spec.trusted else "untrusted"
+        if todo:
+            rows.append(Row("device", spec.serial, UPDATE, spec, f"make {_plural(len(todo), 'device')} {word}{note}", device_ids=todo))
+        else:
+            rows.append(Row("device", spec.serial, EXISTS, spec, f"already {word} ({_plural(len(live), 'device')}){note}"))
+
+
 def build_plan(specs: Specs, state: State) -> list:
-    """Every row of the file, as a Row, networks first, then groups, then resources (the order they are applied in)."""
+    """Every row of the file, as a Row: networks, groups, resources, then devices (the order they are applied in)."""
     rows: list = []
     new_networks = _plan_networks(specs.networks, state, rows)
     new_groups = _plan_groups(specs.groups, state, rows)
     _plan_resources(specs.resources, state, new_networks, new_groups, rows)
+    _plan_devices(specs.devices, state, rows)
     return rows

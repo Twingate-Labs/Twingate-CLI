@@ -17,7 +17,7 @@ from tgcli.importer.report import write_report
 from tgcli.importer.state import fetch_state
 
 MAX_LISTED = 200  # rows echoed to the terminal; the report always has all of them
-KIND_ORDER = ("remote network", "group", "resource")
+KIND_ORDER = ("remote network", "group", "resource", "device")
 FAILED = ("error", "blocked", "not-run")
 RATE_LIMIT_PER_MINUTE = 20  # typical write limit (see Rate Limiting in the README); only used to warn about big imports
 
@@ -44,13 +44,13 @@ def _summary(rows: list) -> None:
 
 
 def import_(
-    path: Path = typer.Argument(..., help="A folder (a `tgcli backup`, or files named remote-networks / groups / resources, .json or .csv) or one such file."),
+    path: Path = typer.Argument(..., help="A folder (a `tgcli backup`, or files named remote-networks / groups / resources / devices, .json or .csv) or one such file."),
     execute: bool = typer.Option(False, "--execute", help="Apply the changes. Without this flag, only a dry run is performed."),
     report: Optional[str] = typer.Option(None, "--report", help="Path to write the CSV report."),
 ) -> None:
-    """Create Remote Networks, groups with members, and resources with group access from a file (dry run by default).
+    """Create Remote Networks, groups with members, resources with group access, and set device trust, from a file (dry run by default).
 
-    Anything that already exists is left as it is and only added to (missing members, missing access); Synced Groups are never touched. Group members are matched by email, groups and Remote Networks by exact name, and resources by name, Remote Network and address together.
+    Anything that already exists is left as it is and only added to (missing members, missing access); Synced Groups are never touched. Group members are matched by email, groups and Remote Networks by exact name, resources by name, Remote Network and address together, and devices by serial number (devices.csv sets trust on devices that have already registered).
     """
     try:
         specs = load(path)

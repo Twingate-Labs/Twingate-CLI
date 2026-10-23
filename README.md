@@ -820,7 +820,7 @@ groups.json  users.json  resources.json  connectors.json  remote-networks.json  
 
 ### import
 
-Create Remote Networks, groups (with their members) and resources (with group access) from a file. **A dry run by default**: nothing is changed until you add `--execute`.
+Create Remote Networks, groups (with their members) and resources (with group access), and set device trust by serial number, from a file. **A dry run by default**: nothing is changed until you add `--execute`.
 
 ```bash
 tgcli -s staging import ./twingate-backup-acme-20261023T101500Z                  # dry run, writes import_report_<timestamp>.csv
@@ -829,7 +829,7 @@ tgcli -s staging import ./my-files --report ./plan.csv                          
 tgcli -s staging import ./groups.csv                                             # one file
 ```
 
-The input is a folder, or a single file, named `remote-networks`, `groups` and `resources`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored.
+The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored. (A backup has no `devices` file; that one you write yourself.)
 
 **How it matches things**
 
@@ -858,15 +858,23 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 |---|---|
 | `remote-networks.csv` | `name` (required), `location` (`AWS`, `AZURE`, `GOOGLE_CLOUD`, `ON_PREMISE`, `OTHER`), `network_type` (`REGULAR`, `EXIT`), `active` |
 | `groups.csv` | `name` (required), `members` (emails separated by `;`), `security_policy` |
+| `devices.csv` | `serial_number` (required), `trusted` (default `true`) |
 | `resources.csv` | `name`, `network`, `address` (all required), `alias`, `tcp_ports`, `udp_ports`, `allow_icmp`, `visible`, `security_policy`, `groups`, `routing_mode` |
 
 - `tcp_ports` / `udp_ports`: `*` or blank means every port, `none` means no ports, otherwise a list like `80;443;8000-8100`.
 - `groups`: group names separated by `;`, each optionally followed by `=<Security Policy>` for a per-group policy, for example `Engineering=Strict Policy;Ops`. A group name containing `;` or `=` needs the JSON format.
 - True/false columns accept `true`/`false`, `yes`/`no` and `1`/`0`. Empty cells use the API's defaults.
 
+**Device trust by serial number.** `devices.csv` (or `devices.json` with `serialNumber` and `isTrusted`) sets `trusted` on devices that have **already registered** with the tenant; the serial number is matched ignoring case.
+
+- Only devices that are not archived are changed. A serial number that has no device yet, or only archived ones, is `skipped`; to trust a serial number before its device registers, add it to the allowlist with `tgcli device snumber add`.
+- One serial number can belong to several devices. Making them trusted is only done when they all belong to **one user**: if the matching devices belong to several users (some VMs and hardware report a generic serial), the row is `blocked` and you pick the device with `tgcli device updateTrust -i`. Making devices **untrusted** applies to all of them.
+- After each change the API's reply is checked: if it says the device did not end up with the trust you asked for, the row is an `error`.
+- The API refuses to untrust a device whose serial number is **verified** ("Serial number verified Devices cannot be unverified via API"). That row is an `error` showing the API's message, and the device is left as it was.
+
 **Imported from the backup's JSON:** Remote Network location, type and active state; group name, Security Policy and members; for each network resource its address, alias, protocols and ports, visibility, browser shortcut, routing mode, tags, Security Policy, access policy and approval mode, and the access of each group (with its own policy, access policy, approval mode and expiry).
 
-**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, SSH / web app / Kubernetes resources, service account access, approver groups, devices and device trust, security policies, DNS filtering profiles, gateways and certificate authorities.
+**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, SSH / web app / Kubernetes resources, service account access, approver groups, device posture checks, security policies, DNS filtering profiles, gateways and certificate authorities.
 
 **Rate limits.** The API typically allows about 20 writes a minute. A dry run tells you how many write requests a large import would make; the run pauses when rate limited, and if it gives up part way, run the same command again to finish.
 

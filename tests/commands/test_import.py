@@ -181,3 +181,40 @@ class TestErrors:
             result = runner.invoke(app, ["-s", SESSION, "import", str(folder)])
         assert result.exit_code == 0
         assert len(list(tmp_path.glob("import_report_*Z.csv"))) == 1
+
+
+class TestDevices:
+    def folder(self, tmp_path, text):
+        (tmp_path / "devices.csv").write_text(text, encoding="utf-8")
+        return tmp_path
+
+    def devices(self):
+        return [
+            {"id": "D1", "serialNumber": "ABC123", "isTrusted": False, "activeState": "ACTIVE", "user": {"email": "ann@x.com"}},
+            {"id": "D2", "serialNumber": "OLD", "isTrusted": False, "activeState": "ARCHIVED", "user": {"email": "ann@x.com"}},
+        ]
+
+    def test_a_dry_run_reports_what_would_change_and_changes_nothing(self, tmp_path):
+        api = FakeApi(devices=self.devices())
+        result, report = run(self.folder(tmp_path, "serial_number,trusted\nabc123,true\nOLD,true\nNEW,true\n"), api)
+        assert result.exit_code == 0, result.output
+        assert api.writes == [] and api.devices[0]["isTrusted"] is False
+        assert [(r["kind"], r["name"], r["status"]) for r in rows_of(report)] == [
+            ("device", "abc123", "would-update"), ("device", "OLD", "skipped"), ("device", "NEW", "skipped")]
+        assert "devices          2 skipped, 1 would-update" in result.output
+
+    def test_execute_changes_the_trust_and_the_report_lists_the_device_ids(self, tmp_path):
+        api = FakeApi(devices=self.devices())
+        result, report = run(self.folder(tmp_path, "serial_number,trusted\nABC123,true\n"), api, "--execute")
+        assert result.exit_code == 0 and api.devices[0]["isTrusted"] is True
+        assert (rows_of(report)[0]["status"], rows_of(report)[0]["id"]) == ("updated", "D1")
+
+    def test_a_change_the_api_did_not_apply_exits_1(self, tmp_path):
+        api = FakeApi(devices=self.devices())
+        api.ignore_trust = True
+        result, report = run(self.folder(tmp_path, "serial_number,trusted\nABC123,true\n"), api, "--execute")
+        assert result.exit_code == 1 and rows_of(report)[0]["status"] == "error"
+
+    def test_a_serial_that_has_not_registered_is_not_a_failure(self, tmp_path):
+        result, _ = run(self.folder(tmp_path, "serial_number\nNEW\n"), FakeApi(), "--execute")
+        assert result.exit_code == 0

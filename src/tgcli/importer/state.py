@@ -18,6 +18,7 @@ class State:
     users: dict = field(default_factory=dict)  # lowercased email -> [node]
     policies: dict = field(default_factory=dict)  # name -> [node]
     resources: dict = field(default_factory=dict)  # (name, network name, address) -> [node]
+    devices: dict = field(default_factory=dict)  # lowercased serial number -> [node with isTrusted, activeState, user]
     group_members: dict = field(default_factory=dict)  # group id -> set of user ids (only groups that will be topped up)
     resource_access: dict = field(default_factory=dict)  # resource id -> set of principal ids (only resources that will be topped up)
 
@@ -36,10 +37,11 @@ def _names(specs: Specs) -> dict:
     policies |= {a.security_policy for r in specs.resources for a in r.access}
     emails = {e for g in specs.groups for e in g.members}
     resources = {r.name for r in specs.resources}
+    serials = {d.serial for d in specs.devices}
     clean = lambda values: sorted(v for v in values if v)  # noqa: E731
     return {
         "networks": clean(networks), "groups": clean(groups), "policies": clean(policies),
-        "emails": clean(emails), "resources": clean(resources),
+        "emails": clean(emails), "resources": clean(resources), "serials": clean(serials),
     }
 
 
@@ -70,6 +72,13 @@ def fetch_state(client: Any, specs: Specs, progress: Callable[[str], None] = lam
         progress("Looking up resources...")
         nodes = lookup_nodes(client, "resources", "name", names["resources"], "id name address { value } remoteNetwork { name }")
         state.resources = _by(nodes, lambda n: (n["name"], (n.get("remoteNetwork") or {}).get("name", ""), (n.get("address") or {}).get("value", "")))
+
+    if names["serials"]:
+        progress(f"Looking up {len(names['serials'])} device serial number(s)...")
+        # The serial filter is case-sensitive, so the upper and lower case forms are asked for too and matching ignores case.
+        asked = sorted(set(names["serials"]) | {v.upper() for v in names["serials"]} | {v.lower() for v in names["serials"]})
+        nodes = lookup_nodes(client, "devices", "serialNumber", asked, "id serialNumber isTrusted activeState user { id email }")
+        state.devices = _by(nodes, lambda n: n["serialNumber"].lower())
 
     # Existing objects are topped up (never changed), so what they already hold has to be known.
     for group in specs.groups:

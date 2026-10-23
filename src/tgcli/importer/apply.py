@@ -27,6 +27,8 @@ def write_count(rows: list) -> int:
             continue
         if row.kind == "remote network":
             total += 1
+        elif row.kind == "device":
+            total += len(row.device_ids)
         elif row.kind == "group":
             total += (row.action == CREATE) + -(-len(row.member_ids) // BATCH_SIZE)
         else:
@@ -120,9 +122,26 @@ def _resource_variables(row: Row, network_id: str) -> dict:
     return variables
 
 
+def _set_trust(client: Any, row: Row) -> None:
+    """Change each device in turn, and check the reply says it now has the trust the file asks for."""
+    wanted = row.spec.trusted
+    done = 0
+    for device_id in row.device_ids:
+        try:
+            result = _call(client, q.UPDATE_DEVICE_TRUST, {"id": device_id, "isTrusted": wanted}, "deviceUpdate")
+            if (result.get("entity") or {}).get("isTrusted") is not wanted:
+                raise RowError("the API accepted the change but the device is still " + ("untrusted" if wanted else "trusted"))
+        except (RowError, TwingateAPIError) as exc:
+            raise RowError(f"changed {done} of {len(row.device_ids)} devices, then: {exc}. Run the import again to finish.") from exc
+        done += 1
+    row.id = ", ".join(row.device_ids)
+
+
 def _apply_row(client: Any, row: Row, ids: dict) -> None:
     spec = row.spec
-    if row.kind == "remote network":
+    if row.kind == "device":
+        _set_trust(client, row)
+    elif row.kind == "remote network":
         result = _call(client, q.CREATE_NETWORK, {
             "name": spec.name, "location": spec.location, "networkType": spec.network_type, "isActive": spec.is_active,
         }, "remoteNetworkCreate")

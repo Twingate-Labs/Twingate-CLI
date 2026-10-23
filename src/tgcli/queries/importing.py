@@ -59,3 +59,9 @@ mutation importAccess($id: ID!, $access: [AccessInput!]!) {
   resourceAccessAdd(resourceId: $id, access: $access) { ok error entity { id } }
 }
 """
+
+UPDATE_DEVICE_TRUST = """
+mutation importDeviceTrust($id: ID!, $isTrusted: Boolean!) {
+  deviceUpdate(id: $id, isTrusted: $isTrusted) { ok error entity { id isTrusted } }
+}
+"""

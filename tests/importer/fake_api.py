@@ -14,7 +14,7 @@ from tgcli.client.exceptions import TwingateAPIError
 
 PAGE = 2
 FIELDS = {"networks": ("id", "name"), "groups": ("id", "name", "type"), "users": ("id", "email"), "policies": ("id", "name", "policyType")}
-ROOTS = {"remoteNetworks": "networks", "groups": "groups", "users": "users", "securityPolicies": "policies", "resources": "resources"}
+ROOTS = {"remoteNetworks": "networks", "groups": "groups", "users": "users", "securityPolicies": "policies", "resources": "resources", "devices": "devices"}
 
 
 def page(items: list, cursor: Any) -> tuple:
@@ -24,7 +24,9 @@ def page(items: list, cursor: Any) -> tuple:
 
 
 class FakeApi:
-    def __init__(self, networks=(), groups=(), users=(), policies=(), resources=()):
+    def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=()):
+        self.devices = [{"activeState": "ACTIVE", "user": {"email": "ann@x.com"}, **d} for d in devices]
+        self.ignore_trust = False  # the API accepts a trust change but reports the device unchanged
         self.networks = [dict(n) for n in networks]
         self.groups = [{**g, "members": set(g.get("members", ()))} for g in groups]
         self.users = [dict(u) for u in users]
@@ -70,15 +72,16 @@ class FakeApi:
             root, field = lookup.groups()
             kind = ROOTS[root]
             wanted = set(variables["names"])
-            hits = [o for o in getattr(self, kind) if o[field if field == "email" else "name"] in wanted] if kind != "resources" else [
-                o for o in self.resources if o["name"] in wanted
-            ]
+            key = {"email": "email", "serialNumber": "serialNumber"}.get(field, "name")
+            hits = [o for o in getattr(self, kind) if o[key] in wanted]
             nodes = []
             for obj in hits:
                 if kind == "resources":
                     assert "address { value }" in query, "resources are matched by address too"
                     node = {"id": obj["id"], "name": obj["name"], "remoteNetwork": {"name": obj["network"]},
                             "address": {"value": obj.get("address", f"{obj['name'].lower()}.internal")}}
+                elif kind == "devices":
+                    node = {k: obj[k] for k in ("id", "serialNumber", "isTrusted", "activeState", "user") if k in query.split("node {", 1)[1] or k == "id"}
                 else:
                     node = {k: obj[k] for k in FIELDS[kind] if k in query.split("node {", 1)[1] and k in obj}
                 nodes.append(node)
@@ -104,7 +107,7 @@ class FakeApi:
         declared = set(re.findall(r"\$(\w+):", query.split(")", 1)[0]))
         assert set(variables) <= declared, f"{name} sent undeclared variables {set(variables) - declared}"
         field = {"importNetwork": "remoteNetworkCreate", "importGroup": "groupCreate", "importGroupUsers": "groupUpdate",
-                 "importResource": "resourceCreate", "importAccess": "resourceAccessAdd"}[name]
+                 "importResource": "resourceCreate", "importAccess": "resourceAccessAdd", "importDeviceTrust": "deviceUpdate"}[name]
         problem = self.fail.get(name)
         if callable(problem):
             problem = problem(variables)
@@ -141,3 +144,9 @@ class FakeApi:
             assert next((g for g in self.groups if g["id"] == entry["principalId"]), None), "access for a group that does not exist"
             res["access"][entry["principalId"]] = entry
         return {"id": v["id"]}
+
+    def _do_importDeviceTrust(self, v: dict) -> dict:
+        device = next(d for d in self.devices if d["id"] == v["id"])
+        if not self.ignore_trust:
+            device["isTrusted"] = v["isTrusted"]
+        return {"id": device["id"], "isTrusted": device["isTrusted"]}
