@@ -35,6 +35,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [dns-profile](#dns-profile)
   - [mappings](#mappings)
   - [backup](#backup)
+  - [import](#import)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
 
@@ -814,6 +815,62 @@ groups.json  users.json  resources.json  connectors.json  remote-networks.json  
 - **Safe to run unattended.** It never overwrites: an existing output directory is refused. Files are written to `<dir>.partial` and renamed once complete, so an interrupted run leaves no half-finished backup.
 - **Not a transaction.** Pages are read one after another, so changes made while it runs may or may not be included. Connector `lastHeartbeatAt` changes about once a minute, so backups taken minutes apart can differ there even if nothing was edited.
 - **Not included:** devices, service accounts and their keys, security policies, DNS filtering profiles, gateways and certificate authorities (gateways appear only as references on remote networks).
+
+---
+
+### import
+
+Create Remote Networks, groups (with their members) and resources (with group access) from a file. **A dry run by default**: nothing is changed until you add `--execute`.
+
+```bash
+tgcli -s staging import ./twingate-backup-acme-20261023T101500Z                  # dry run, writes import_report_<timestamp>.csv
+tgcli -s staging import ./twingate-backup-acme-20261023T101500Z --execute        # apply it
+tgcli -s staging import ./my-files --report ./plan.csv                           # files you wrote yourself
+tgcli -s staging import ./groups.csv                                             # one file
+```
+
+The input is a folder, or a single file, named `remote-networks`, `groups` and `resources`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored.
+
+**How it matches things**
+
+- Remote Networks and groups by exact name, group members by **email**, Security Policies by name, and resources by **name, Remote Network and address together**. IDs in a backup belong to the tenant it came from and are never used.
+- Anything that already exists is **left exactly as it is and only added to**: missing group members, missing resource access. Nothing is ever removed or changed, so you can run the same import again after a failure and it finishes the job, and a second run on a finished import does nothing.
+- **Synced Groups are never created, changed or given members** (their members belong to your identity provider). A resource can still be given access to one.
+- A name that matches more than one object is never guessed: the row is blocked (or, for an optional extra, left out with a warning). Real tenants can hold several resources with the same name, Remote Network and address; those cannot be told apart, so the second and later ones in a file are blocked (create them by hand).
+
+**What a row can end up as**
+
+| Status | Meaning |
+|---|---|
+| `would-create` / `would-update` (dry run), `created` / `updated` | What was, or would be, done |
+| `exists` | Already there, nothing to add |
+| `skipped` | Deliberately not imported (Synced and System groups, SSH / web app / Kubernetes resources) |
+| `blocked` | Cannot be made correctly, for example its Remote Network or Security Policy does not exist, or a port list is invalid. Nothing is sent for it |
+| `error` / `not-run` | The API refused it, or the run stopped because the credentials were rejected |
+
+A row with a **warning** still goes ahead, but something optional was left out and the report says what: a member whose email is not in this tenant, access for a group that does not exist, a per-group policy that does not exist (it is not replaced by the default), access that has already expired (it is never restored as permanent access). Warnings do not change the exit code; `blocked` and `error` rows exit 1, also on a dry run, so a script can check before applying.
+
+Every row, with its status, detail, warnings, error, the new ID and where in the file it came from, is written to the CSV report (`--report`, default `import_report_<UTC timestamp>.csv`).
+
+**CSV columns** (the first row is the header; unknown columns are an error, so a typo cannot silently drop access)
+
+| File | Columns |
+|---|---|
+| `remote-networks.csv` | `name` (required), `location` (`AWS`, `AZURE`, `GOOGLE_CLOUD`, `ON_PREMISE`, `OTHER`), `network_type` (`REGULAR`, `EXIT`), `active` |
+| `groups.csv` | `name` (required), `members` (emails separated by `;`), `security_policy` |
+| `resources.csv` | `name`, `network`, `address` (all required), `alias`, `tcp_ports`, `udp_ports`, `allow_icmp`, `visible`, `security_policy`, `groups`, `routing_mode` |
+
+- `tcp_ports` / `udp_ports`: `*` or blank means every port, `none` means no ports, otherwise a list like `80;443;8000-8100`.
+- `groups`: group names separated by `;`, each optionally followed by `=<Security Policy>` for a per-group policy, for example `Engineering=Strict Policy;Ops`. A group name containing `;` or `=` needs the JSON format.
+- True/false columns accept `true`/`false`, `yes`/`no` and `1`/`0`. Empty cells use the API's defaults.
+
+**Imported from the backup's JSON:** Remote Network location, type and active state; group name, Security Policy and members; for each network resource its address, alias, protocols and ports, visibility, browser shortcut, routing mode, tags, Security Policy, access policy and approval mode, and the access of each group (with its own policy, access policy, approval mode and expiry).
+
+**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, SSH / web app / Kubernetes resources, service account access, approver groups, devices and device trust, security policies, DNS filtering profiles, gateways and certificate authorities.
+
+**Rate limits.** The API typically allows about 20 writes a minute. A dry run tells you how many write requests a large import would make; the run pauses when rate limited, and if it gives up part way, run the same command again to finish.
+
+**Encoding:** reports, and CSV input, are UTF-8. Excel may show non-English characters wrongly if you double-click the report; use Data > From Text/CSV and choose UTF-8.
 
 ---
 

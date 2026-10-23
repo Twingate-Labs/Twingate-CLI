@@ -53,15 +53,29 @@ def looks_like_id(value: str) -> bool:
         return False
 
 
-def _lookup(client: Any, kind: Kind, names: list[str]) -> dict[str, list[str]]:
+LOOKUP_CHUNK = 200  # values per request; the API accepted 500 in a test, this leaves room
+
+
+def lookup_nodes(client: Any, root: str, field: str, values: list[str], selection: str = "id name") -> list[dict]:
+    """Every object in ``root`` whose ``field`` exactly equals one of ``values`` (case-sensitive), one page at a time.
+
+    Long lists go in chunks so a file with thousands of names does not become one enormous request.
+    """
     query = (
-        f"query($cursor: String, $names: [String!]) {{ {kind.root}(after: $cursor, filter: {{name: {{in: $names}}}}) "
-        "{ pageInfo { hasNextPage endCursor } edges { node { id name } } } }"
+        f"query($cursor: String, $names: [String!]) {{ {root}(after: $cursor, filter: {{{field}: {{in: $names}}}}) "
+        f"{{ pageInfo {{ hasNextPage endCursor }} edges {{ node {{ {selection} }} }} }} }}"
     )
-    edges, _, _ = fetch_connection(client, query, {"names": names}, [kind.root])
+    nodes: list[dict] = []
+    for start in range(0, len(values), LOOKUP_CHUNK):
+        edges, _, _ = fetch_connection(client, query, {"names": values[start : start + LOOKUP_CHUNK]}, [root])
+        nodes.extend(edge["node"] for edge in edges)
+    return nodes
+
+
+def _lookup(client: Any, kind: Kind, names: list[str]) -> dict[str, list[str]]:
     found: dict[str, list[str]] = {}
-    for edge in edges:
-        found.setdefault(edge["node"]["name"], []).append(edge["node"]["id"])
+    for node in lookup_nodes(client, kind.root, "name", names):
+        found.setdefault(node["name"], []).append(node["id"])
     return found
 
 

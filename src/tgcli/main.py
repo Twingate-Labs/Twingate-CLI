@@ -84,6 +84,7 @@ def _register_commands() -> None:
         dnssec,
         gateways,
         groups,
+        importing,
         keys,
         mappings,
         networks,
@@ -96,6 +97,7 @@ def _register_commands() -> None:
 
     app.add_typer(auth.app, name="auth")
     app.command("backup")(backup.backup)
+    app.command("import")(importing.import_)
     app.add_typer(access_requests.app, name="access-request")
     app.add_typer(certificate_authorities.app, name="ca")
     app.add_typer(devices.app, name="device")
