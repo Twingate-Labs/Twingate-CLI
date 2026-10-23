@@ -273,12 +273,20 @@ tgcli resource show -i "UmVzb3VyY2U6MQ=="
 tgcli resource list -a false
 tgcli resource list -a true
 
-# Create a resource (-r Remote Network ID, -p Security Policy ID — both required)
+# Create a resource (-r Remote Network, -p Security Policy — both required; each an ID or an exact name)
 tgcli resource create \
   -a 10.0.0.0/24 \
   -n "Internal Network" \
   -r "UmVtb3RlTmV0d29yazox" \
   -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+
+# The same by name, and give two groups access in the same command (-g takes IDs or names)
+tgcli resource create \
+  -a app.internal.example.com \
+  -n "Internal App" \
+  -r "Cloud Applications" \
+  -p "Default Policy" \
+  -g "Engineering,Ops"
 
 # Create with TCP port restriction and a security policy
 tgcli resource create \
@@ -331,14 +339,18 @@ tgcli resource disable -i "UmVzb3VyY2U6MQ=="
 
 # --- Access control ---
 
-# Replace all group/service-account access (destructive)
+# Replace ALL group/service-account access (destructive: anything not listed loses access)
 tgcli resource access_set -i "UmVzb3VyY2U6MQ==" \
   -g "R3JvdXA6MQ==,R3JvdXA6Mg=="
 
-# Add group access (non-destructive)
+# Add group access (non-destructive). Groups, policies and service accounts can be IDs or exact names
 tgcli resource access_add -i "UmVzb3VyY2U6MQ==" \
   -g "R3JvdXA6Mw==" \
   -p "U2VjdXJpdHlQb2xpY3k6MQ=="
+tgcli resource access_add -i "UmVzb3VyY2U6MQ==" -g "Engineering" -p "Strict Policy"
+
+# A different policy per group: give one -p per group, in the same order
+tgcli resource access_add -i "UmVzb3VyY2U6MQ==" -g "Engineering,Ops" -p "Strict Policy,Default Policy"
 
 # Add service account access with an expiry date
 tgcli resource access_add -i "UmVzb3VyY2U6MQ==" \
@@ -347,7 +359,14 @@ tgcli resource access_add -i "UmVzb3VyY2U6MQ==" \
 
 # Remove access for a group or service account
 tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ=="
+tgcli resource access_remove -i "UmVzb3VyY2U6MQ==" -g "Engineering" -s "ci-bot"
 ```
+
+**Names or IDs.** `-r`, `-p`, `-g` and `-s` on `resource create` and the three `access_*` commands accept either an ID or the object's **exact name** (capitals matter). Several values can be comma-separated or you can repeat the flag (`-g Engineering -g Ops`).
+- An ID is used as given, with no extra request, so scripts that pass IDs behave exactly as before. A name costs one extra lookup per kind (a fraction of a second).
+- A name that matches nothing, or matches more than one object, is an error and **nothing is changed**. All the problems are listed together, and an ambiguous name shows the matching IDs so you can pick one.
+- A name containing a comma cannot be given by name (the comma splits the list); use its ID.
+- Other commands, including `ssh-resource`, `webapp-resource`, `k8s-resource` and the rest of `resource`, still take IDs only.
 
 **Protocol flags for `resource create`:**
 

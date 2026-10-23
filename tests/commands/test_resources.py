@@ -405,10 +405,10 @@ class TestResourceCreate:
                     "-s", SESSION, "resource", "create",
                     "-a", "app.example.com",
                     "-n", "New Res",
-                    "-r", "rn-1",
+                    "-r", "UmVtb3RlTmV0d29yazox",
                     "-t", "ALLOW_ALL",
                     "-u", "ALLOW_ALL",
-                    "-p", "pol-1",
+                    "-p", "U2VjdXJpdHlQb2xpY3k6MQ==",
                 ],
             )
         assert result.exit_code == 0
@@ -420,11 +420,11 @@ class TestResourceCreate:
                 "-s", SESSION, "resource", "create",
                 "-a", "app.example.com",
                 "-n", "New Res",
-                "-r", "rn-1",
+                "-r", "UmVtb3RlTmV0d29yazox",
                 "-t", "ALLOW_ALL",
                 "-c", "[[22,22]]",  # ALLOW_ALL + non-empty range = invalid
                 "-u", "ALLOW_ALL",
-                "-p", "pol-1",
+                "-p", "U2VjdXJpdHlQb2xpY3k6MQ==",
             ],
         )
         assert result.exit_code != 0
@@ -432,7 +432,7 @@ class TestResourceCreate:
     def test_create_requires_address(self, mock_keyring):
         result = runner.invoke(
             app,
-            ["-s", SESSION, "resource", "create", "-n", "New Res", "-r", "rn-1", "-t", "ALLOW_ALL", "-u", "ALLOW_ALL", "-p", "pol-1"],
+            ["-s", SESSION, "resource", "create", "-n", "New Res", "-r", "UmVtb3RlTmV0d29yazox", "-t", "ALLOW_ALL", "-u", "ALLOW_ALL", "-p", "U2VjdXJpdHlQb2xpY3k6MQ=="],
         )
         assert result.exit_code != 0
 
@@ -448,10 +448,10 @@ class TestResourceCreate:
                     "-s", SESSION, "resource", "create",
                     "-a", "app.example.com",
                     "-n", "New Res",
-                    "-r", "rn-1",
+                    "-r", "UmVtb3RlTmV0d29yazox",
                     "-t", "ALLOW_ALL",
                     "-u", "ALLOW_ALL",
-                    "-p", "pol-1",
+                    "-p", "U2VjdXJpdHlQb2xpY3k6MQ==",
                     "-m", "bypass_twingate",
                 ],
             )
@@ -466,10 +466,10 @@ class TestResourceCreate:
                 "-s", SESSION, "resource", "create",
                 "-a", "app.example.com",
                 "-n", "New Res",
-                "-r", "rn-1",
+                "-r", "UmVtb3RlTmV0d29yazox",
                 "-t", "ALLOW_ALL",
                 "-u", "ALLOW_ALL",
-                "-p", "pol-1",
+                "-p", "U2VjdXJpdHlQb2xpY3k6MQ==",
                 "-m", "sideways",
             ],
         )

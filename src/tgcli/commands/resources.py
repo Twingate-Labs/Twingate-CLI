@@ -6,12 +6,13 @@ from typing import Optional
 
 import typer
 
-from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
+from tgcli.commands._common import get_client, resolve_many_or_exit, run_paginated, run_query, split_ids, split_values
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import resources as t
 from tgcli.pagination import NestedLists
 from tgcli.queries import resources as q
+from tgcli.resolve import GROUP, NETWORK, POLICY, SERVICE_ACCOUNT
 from tgcli.validators.generic import parse_bool_string, validate_routing_mode
 from tgcli.validators.protocol import (
     validate_port_range,
@@ -23,43 +24,43 @@ from tgcli.main import state
 app = typer.Typer(help="Manage Twingate Resources.")
 
 
-def _build_access_array(
-    groupid: str,
-    serviceid: str,
-    policyid: str,
+def _access_inputs(
+    client,
+    groupid: Optional[list[str]],
+    serviceid: Optional[list[str]],
+    policyid: Optional[list[str]],
     autolockdays: Optional[int],
     expiresat: str,
 ) -> list[dict]:
-    """Build the AccessInput array for resourceAccessSet/Add mutations."""
+    """Build the AccessInput array for resourceAccessSet/Add. Groups, policies and service accounts may be IDs or exact names."""
+    groups, services, policies = split_values(groupid), split_values(serviceid), split_values(policyid)
+    if len(policies) > 1 and len(policies) != len(groups):
+        typer.echo(
+            "Error: Number of Policy IDs must be 1 (applied to all Groups) "
+            "or match the number of Group IDs.",
+            err=True,
+        )
+        raise typer.Exit(1)
+    group_ids, service_ids, policy_ids = resolve_many_or_exit(client, (GROUP, groups), (SERVICE_ACCOUNT, services), (POLICY, policies))
+
     access_array: list[dict] = []
 
-    if serviceid:
-        for sid in split_ids(serviceid):
-            entry: dict = {"principalId": sid, "securityPolicyId": None}
-            if autolockdays:
-                entry["usageBasedAutolockDurationDays"] = autolockdays
-            if expiresat:
-                entry["expiresAt"] = expiresat
-            access_array.append(entry)
+    for sid in service_ids:
+        entry: dict = {"principalId": sid, "securityPolicyId": None}
+        if autolockdays:
+            entry["usageBasedAutolockDurationDays"] = autolockdays
+        if expiresat:
+            entry["expiresAt"] = expiresat
+        access_array.append(entry)
 
-    if groupid:
-        gids = split_ids(groupid)
-        pols = split_ids(policyid) if policyid else [""]
-        if len(pols) > 1 and len(pols) != len(gids):
-            typer.echo(
-                "Error: Number of Policy IDs must be 1 (applied to all Groups) "
-                "or match the number of Group IDs.",
-                err=True,
-            )
-            raise typer.Exit(1)
-        for idx, gid in enumerate(gids):
-            pol = pols[idx] if len(pols) > 1 else pols[0]
-            entry = {"principalId": gid, "securityPolicyId": pol or None}
-            if autolockdays:
-                entry["usageBasedAutolockDurationDays"] = autolockdays
-            if expiresat:
-                entry["expiresAt"] = expiresat
-            access_array.append(entry)
+    for idx, gid in enumerate(group_ids):
+        pol = (policy_ids[idx] if len(policy_ids) > 1 else policy_ids[0]) if policy_ids else None
+        entry = {"principalId": gid, "securityPolicyId": pol}
+        if autolockdays:
+            entry["usageBasedAutolockDurationDays"] = autolockdays
+        if expiresat:
+            entry["expiresAt"] = expiresat
+        access_array.append(entry)
 
     return access_array
 
@@ -104,10 +105,13 @@ def resource_show(
 def resource_create(
     address: str = typer.Option(..., "-a", "--address", help="Resource address: CIDR/IP/FQDN."),
     name: str = typer.Option(..., "-n", "--name", help="Resource name."),
-    networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID."),
+    networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID or exact name."),
     alias: str = typer.Option("", "-l", "--alias", help="Resource alias FQDN."),
-    policyid: str = typer.Option(..., "-p", "--policyid", help="Resource Policy ID."),
-    groupids: str = typer.Option("", "-g", "--groupids", help="Comma-separated Group IDs."),
+    policyid: str = typer.Option(..., "-p", "--policyid", help="Resource Policy ID or exact name."),
+    groupids: Optional[list[str]] = typer.Option(
+        None, "-g", "--groupids",
+        help="Group ID or exact name to grant access. Comma-separated, or repeat -g. A name containing a comma needs its ID.",
+    ),
     isvisible: str = typer.Option("True", "-v", "--isvisible", help="Visible in Resource list: true or false."),
     icmp: bool = typer.Option(False, "-i", "--icmp", help="Disallow ICMP protocol."),
     tcppolicy: str = typer.Option("ALLOW_ALL", "-t", "--tcppolicy", help="TCP policy: ALLOW_ALL or RESTRICTED."),
@@ -134,13 +138,19 @@ def resource_create(
     validate_range_with_policy(udp_ports, udp_policy)
     routing_mode = validate_routing_mode(routingmode)
 
+    client = get_client()
+    networks, policies, group_ids = resolve_many_or_exit(
+        client, (NETWORK, [networkid]), (POLICY, [policyid] if policyid else []), (GROUP, split_values(groupids))
+    )
+    network_id, policy_id = networks[0], (policies[0] if policies else None)
+
     variables = {
         "address": address,
         "alias": alias or None,
         "name": name,
-        "remoteNetworkId": networkid,
-        "groupIds": split_ids(groupids),
-        "securityPolicyId": policyid or None,
+        "remoteNetworkId": network_id,
+        "groupIds": group_ids,
+        "securityPolicyId": policy_id,
         "isVisible": visible_bool,
         "routingMode": routing_mode,
         "protocols": {
@@ -149,7 +159,7 @@ def resource_create(
             "udp": {"policy": udp_policy, "ports": udp_ports},
         },
     }
-    run_query(get_client(), q.CREATE_RESOURCE, variables, t.get_create_as_csv)
+    run_query(client, q.CREATE_RESOURCE, variables, t.get_create_as_csv)
 
 
 @app.command("delete")
@@ -288,19 +298,25 @@ def resource_autoapprove(
     )
 
 
+_GROUP_HELP = "Group ID or exact name. Comma-separated, or repeat -g. A name containing a comma needs its ID."
+_SERVICE_HELP = "Service Account ID or exact name. Comma-separated, or repeat -s."
+_POLICY_HELP = "Policy ID or exact name: one for all groups, or one per group in order. Comma-separated, or repeat -p."
+
+
 @app.command("access_set")
 def resource_access_set(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
-    groupid: str = typer.Option("", "-g", "--group", help="Comma-separated group IDs."),
-    policyid: str = typer.Option("", "-p", "--policy", help="Comma-separated policy IDs (1 per group, or 1 for all)."),
-    serviceid: str = typer.Option("", "-s", "--service", help="Comma-separated service account IDs."),
+    groupid: Optional[list[str]] = typer.Option(None, "-g", "--group", help=_GROUP_HELP),
+    policyid: Optional[list[str]] = typer.Option(None, "-p", "--policy", help=_POLICY_HELP),
+    serviceid: Optional[list[str]] = typer.Option(None, "-s", "--service", help=_SERVICE_HELP),
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601, e.g. 2024-03-14T20:20:32-07:00)."),
 ) -> None:
-    """Set Resource access (replaces all existing Group/Service Account relationships)."""
-    access_array = _build_access_array(groupid, serviceid, policyid, autolockdays, expiresat)
+    """Set Resource access. REPLACES all existing Group/Service Account access (use access_add to keep it)."""
+    client = get_client()
+    access_array = _access_inputs(client, groupid, serviceid, policyid, autolockdays, expiresat)
     run_query(
-        get_client(),
+        client,
         q.RESOURCE_ACCESS_SET,
         {"accessids": access_array, "itemid": itemid},
         lambda d: t.get_access_update_as_csv(d, "resourceAccessSet"),
@@ -310,19 +326,45 @@ def resource_access_set(
 @app.command("access_add")
 def resource_access_add(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
-    groupid: str = typer.Option("", "-g", "--group", help="Comma-separated group IDs."),
-    policyid: str = typer.Option("", "-p", "--policy", help="Comma-separated policy IDs."),
-    serviceid: str = typer.Option("", "-s", "--service", help="Comma-separated service account IDs."),
+    groupid: Optional[list[str]] = typer.Option(None, "-g", "--group", help=_GROUP_HELP),
+    policyid: Optional[list[str]] = typer.Option(None, "-p", "--policy", help=_POLICY_HELP),
+    serviceid: Optional[list[str]] = typer.Option(None, "-s", "--service", help=_SERVICE_HELP),
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
     expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601)."),
 ) -> None:
     """Add Group/Service Account access to a Resource (non-destructive)."""
-    access_array = _build_access_array(groupid, serviceid, policyid, autolockdays, expiresat)
+    client = get_client()
+    access_array = _access_inputs(client, groupid, serviceid, policyid, autolockdays, expiresat)
     run_query(
-        get_client(),
+        client,
         q.RESOURCE_ACCESS_ADD,
         {"accessids": access_array, "itemid": itemid},
         lambda d: t.get_access_update_as_csv(d, "resourceAccessAdd"),
+    )
+
+
+@app.command("access_remove")
+def resource_access_remove(
+    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    groupid: Optional[list[str]] = typer.Option(
+        None, "-g", "--groupid",
+        help="Group ID or exact name to remove (an ID may also be a Service Account's). Comma-separated, or repeat -g.",
+    ),
+    serviceid: Optional[list[str]] = typer.Option(None, "-s", "--service", help="Service Account ID or exact name to remove."),
+) -> None:
+    """Remove Group/Service Account access from a Resource."""
+    groups, services = split_values(groupid), split_values(serviceid)
+    if not groups and not services:
+        typer.echo("Error: Provide at least one group (-g) or service account (-s) to remove.", err=True)
+        raise typer.Exit(1)
+    client = get_client()
+    group_ids, service_ids = resolve_many_or_exit(client, (GROUP, groups), (SERVICE_ACCOUNT, services))
+    principal_ids = group_ids + service_ids
+    run_query(
+        client,
+        q.RESOURCE_ACCESS_REMOVE,
+        {"itemid": itemid, "groupid": principal_ids},
+        lambda d: t.get_access_update_as_csv(d, "resourceAccessRemove"),
     )
 
 
@@ -340,18 +382,3 @@ def resource_enable(
 ) -> None:
     """Enable a Resource."""
     run_query(get_client(), q.ENABLE_RESOURCE, {"itemid": itemid}, t.get_active_update_as_csv)
-
-
-@app.command("access_remove")
-def resource_access_remove(
-    itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
-    groupid: str = typer.Option(..., "-g", "--groupid", help="Comma-separated group/service-account IDs to remove."),
-) -> None:
-    """Remove Group/Service Account access from a Resource."""
-    principal_ids = split_ids(groupid)
-    run_query(
-        get_client(),
-        q.RESOURCE_ACCESS_REMOVE,
-        {"itemid": itemid, "groupid": principal_ids},
-        lambda d: t.get_access_update_as_csv(d, "resourceAccessRemove"),
-    )

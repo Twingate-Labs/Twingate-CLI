@@ -9,6 +9,7 @@ from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.main import state
 from tgcli.output.formatter import OutputFormatter
 from tgcli.pagination import NestedLists, PaginationError, complete_nested_lists, strip_markers
+from tgcli.resolve import Kind, ResolveError, resolve
 
 from typing import Any, Callable
 import pandas as pd
@@ -148,6 +149,43 @@ def run_paginated(
     """
     pages = fetch_paginated(client, query, data_key, extra_vars, filter_fn, nested)
     OutputFormatter.print_output(pages, state.output_format, transformer)
+
+
+def split_values(occurrences: list[str] | None) -> list[str]:
+    """Every value from an option that may be repeated and may also be comma-separated (-g A,B -g C)."""
+    return [value for occurrence in occurrences or [] for value in split_ids(occurrence)]
+
+
+def resolve_many_or_exit(client: TwingateClient, *requests: tuple[Kind, list[str]]) -> list[list[str]]:
+    """IDs for several lists of values that may be IDs or exact names, one result per (kind, values) request.
+
+    Every name that cannot be resolved, across all kinds, is reported in one go and the command exits 1, so nothing
+    is written and the user can fix everything at once.
+    """
+    results: list[list[str]] = []
+    problems: list[str] = []
+    try:
+        for kind, values in requests:
+            try:
+                results.append(resolve(client, kind, values))
+            except ResolveError as exc:
+                problems.extend(exc.problems)
+                results.append([])
+    except TwingateAuthError as exc:
+        typer.echo(f"Authentication error: {exc}", err=True)
+        raise typer.Exit(1)
+    except (TwingateAPIError, PaginationError) as exc:
+        typer.echo(f"API error: {exc}", err=True)
+        raise typer.Exit(1)
+    if problems:
+        for problem in problems:
+            typer.echo(f"Error: {problem}", err=True)
+        raise typer.Exit(1)
+    return results
+
+
+def resolve_or_exit(client: TwingateClient, kind: Kind, values: list[str]) -> list[str]:
+    return resolve_many_or_exit(client, (kind, values))[0]
 
 
 def split_ids(csv: str) -> list[str]:
