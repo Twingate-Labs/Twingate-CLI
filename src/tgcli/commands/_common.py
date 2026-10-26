@@ -77,16 +77,28 @@ def complete_or_exit(client: TwingateClient, nodes: list[dict], nested: NestedLi
         typer.echo(f"Warning: ... and {len(problems) - MAX_NESTED_WARNINGS} more", err=True)
 
 
+def write_refused(result: dict | None) -> str | None:
+    """The API's reason when a mutation in ``result`` answered ``ok: false``, otherwise None."""
+    for value in ((result or {}).get("data") or {}).values():
+        if isinstance(value, dict) and value.get("ok") is False:
+            return str(value.get("error") or "the API refused the change")
+    return None
+
+
 def run_query(
     client: TwingateClient,
     query: str,
     variables: dict | None,
     transformer: Callable[..., pd.DataFrame],
     nested: NestedLists | None = None,
+    exit_on_refusal: bool = True,
 ) -> dict:
     """Execute a single GraphQL query, print formatted output and return the response.
 
     ``nested`` completes nested lists on the object at ``data[nested.parent]`` (the API returns at most 50 per page).
+    A write the API refuses (``ok: false``) is still printed, then the command exits 1 with the reason on stderr, so a
+    script can tell a refused change from a made one. A caller that makes several writes passes ``exit_on_refusal=False``
+    and decides for itself with :func:`write_refused`.
     """
     result = execute_query(client, query, variables)
     if nested is not None:
@@ -96,6 +108,10 @@ def run_query(
         if isinstance(node, dict):  # a missing object, or a write that reported ok: false, has nothing to complete
             complete_or_exit(client, [node], nested)
     OutputFormatter.print_output(result, state.output_format, transformer)
+    refusal = write_refused(result)
+    if refusal is not None and exit_on_refusal:
+        typer.echo(f"Error: {refusal}", err=True)
+        raise typer.Exit(1)
     return result
 
 

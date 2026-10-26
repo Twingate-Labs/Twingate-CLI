@@ -161,6 +161,8 @@ tgcli -f CSV resource list       # CSV
 tgcli -f DF resource list        # Pandas DataFrame (tabular, great for terminals)
 ```
 
+**What a command prints, and its exit code.** Standard output is the result alone, so any format can be piped or parsed: progress and advice (such as the reminder after `resource create`, or the steps of `key rotate`) go to standard error. A command exits `0` when it did what you asked. If the API **refuses a change** (it answers `ok: false`, for example a missing ID or a rule such as "Bypass Resource cannot have a Security Policy"), the refusal is still printed in full on standard output, the reason is repeated on standard error as `Error: ...`, and the exit code is `1`, so a script can tell a refused change from a made one. Commands that change several things (`device updateTrust -l`, `group migrate`, `import`) attempt every one, then exit `1` if any failed.
+
 ---
 
 ## Multiple Sessions
@@ -275,7 +277,7 @@ tgcli resource show -i "UmVzb3VyY2U6MQ=="
 tgcli resource list -a false
 tgcli resource list -a true
 
-# Create a resource (-r Remote Network, -p Security Policy — both required; each an ID or an exact name)
+# Create a resource (-r Remote Network is required, -p Security Policy is optional; each an ID or an exact name)
 tgcli resource create \
   -a 10.0.0.0/24 \
   -n "Internal Network" \
@@ -299,12 +301,12 @@ tgcli resource create \
   -c "[[443,443],[8080,8080]]" \
   -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 
-# Create a bypass resource (traffic connects directly, skipping Twingate)
+# Create a bypass resource (traffic connects directly, skipping Twingate).
+# A bypass resource cannot have a Security Policy, so leave out -p (the CLI refuses the combination)
 tgcli resource create \
   -a app.internal.example.com \
   -n "Bypass App" \
   -r "UmVtb3RlTmV0d29yazox" \
-  -p "U2VjdXJpdHlQb2xpY3k6MQ==" \
   -m BYPASS_TWINGATE
 
 # Delete a resource
@@ -324,7 +326,7 @@ tgcli resource alias   -i "UmVzb3VyY2U6MQ==" -a myapp.internal
 # Update security policy
 tgcli resource policy -i "UmVzb3VyY2U6MQ==" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 
-# Update routing mode on an existing resource
+# Update routing mode on an existing resource (the API refuses BYPASS_TWINGATE for a resource that has a Security Policy)
 tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m BYPASS_TWINGATE
 tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m THROUGH_TWINGATE
 
@@ -662,7 +664,7 @@ tgcli key expiring
 tgcli key expiring -d 7
 ```
 
-`key rotate` prints the new key's secret token — save it immediately, it can't be retrieved again. There's no native rotate mutation in the Twingate API; this orchestrates create-then-revoke. If creating the new key fails, the old key is left untouched. If the new key is created but revoking the old one fails, both stay active and the old key's ID is reported so you can revoke it manually.
+`key rotate` prints the new key's secret token on standard output (progress goes to standard error, so `-f json` can be piped) — save it immediately, it can't be retrieved again. There's no native rotate mutation in the Twingate API; this orchestrates create-then-revoke. If creating the new key fails, the old key is left untouched. If the new key is created but revoking the old one fails, both stay active and the old key's ID is reported so you can revoke it manually.
 
 ---
 
@@ -683,6 +685,10 @@ tgcli policy update -i "U2VjdXJpdHlQb2xpY3k6MQ==" --remove-groups "R3JvdXA6Mw=="
 
 # Replace the policy's entire group assignment (cannot be combined with --add-groups/--remove-groups)
 tgcli policy update -i "U2VjdXJpdHlQb2xpY3k6MQ==" --set-groups "R3JvdXA6MQ=="
+
+# Remove EVERY group from the policy. --set-groups needs at least one ID; this is the explicit way to empty it.
+# (The API ignores an empty list, so the CLI reads the policy's current groups and removes each one.)
+tgcli policy update -i "U2VjdXJpdHlQb2xpY3k6MQ==" --clear-groups
 ```
 
 ---

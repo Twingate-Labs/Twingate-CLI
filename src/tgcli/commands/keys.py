@@ -145,9 +145,11 @@ def key_rotate(
 
     new_name = name or f"{old_key['name']} (rotated)"
 
+    # Progress goes to stderr: stdout is the result alone, so `-f json` / `-f csv` output can be piped and parsed.
     typer.echo(
         f"Creating new Key '{new_name}' on Service Account "
-        f"'{service_account.get('name')}' ({service_account_id})..."
+        f"'{service_account.get('name')}' ({service_account_id})...",
+        err=True,
     )
     try:
         create_result = client.execute(
@@ -164,9 +166,9 @@ def key_rotate(
         raise typer.Exit(1)
 
     new_entity = create_data["entity"]
-    typer.echo(f"Created new Key: {new_entity['id']}")
+    typer.echo(f"Created new Key: {new_entity['id']}", err=True)
 
-    typer.echo(f"Revoking old Key '{itemid}'...")
+    typer.echo(f"Revoking old Key '{itemid}'...", err=True)
     try:
         revoke_result = client.execute(q.REVOKE_KEY, {"id": itemid})
     except (TwingateAuthError, TwingateAPIError) as exc:

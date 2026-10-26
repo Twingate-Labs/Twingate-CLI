@@ -131,7 +131,13 @@ def resource_create(
     name: str = typer.Option(..., "-n", "--name", help="Resource name."),
     networkid: str = typer.Option(..., "-r", "--networkid", help="Remote Network ID or exact name."),
     alias: str = typer.Option("", "-l", "--alias", help="Resource alias FQDN."),
-    policyid: str = typer.Option(..., "-p", "--policyid", help="Resource Policy ID or exact name."),
+    policyid: str = typer.Option(
+        "", "-p", "--policyid",
+        help=(
+            "Resource Policy ID or exact name. Optional: leave it out to create the Resource with no explicit Security "
+            "Policy, as the Admin Console allows. A bypass Resource (-m BYPASS_TWINGATE) cannot have one."
+        ),
+    ),
     groupids: Optional[list[str]] = typer.Option(
         None, "-g", "--groupids",
         help="Group ID or exact name to grant access. Comma-separated, or repeat -g. A name containing a comma needs its ID.",
@@ -161,6 +167,13 @@ def resource_create(
     validate_range_with_policy(tcp_ports, tcp_policy)
     validate_range_with_policy(udp_ports, udp_policy)
     routing_mode = validate_routing_mode(routingmode)
+    if routing_mode == "BYPASS_TWINGATE" and policyid:
+        typer.echo(
+            "Error: a bypass Resource (-m BYPASS_TWINGATE) cannot have a Security Policy: the API refuses it. "
+            "Leave out -p.",
+            err=True,
+        )
+        raise typer.Exit(1)
 
     client = get_client()
     networks, policies, group_ids = resolve_many_or_exit(
@@ -174,7 +187,6 @@ def resource_create(
         "name": name,
         "remoteNetworkId": network_id,
         "groupIds": group_ids,
-        "securityPolicyId": policy_id,
         "isVisible": visible_bool,
         "routingMode": routing_mode,
         "protocols": {
@@ -183,6 +195,8 @@ def resource_create(
             "udp": {"policy": udp_policy, "ports": udp_ports},
         },
     }
+    if policy_id:
+        variables["securityPolicyId"] = policy_id  # left out, not sent as null, when there is none
     result = run_query(client, q.CREATE_RESOURCE, variables, t.get_create_as_csv)
     created = ((result or {}).get("data") or {}).get("resourceCreate") or {}
     if created.get("ok") and not group_ids:
@@ -286,7 +300,10 @@ def resource_routing(
         ),
     ),
 ) -> None:
-    """Update the routing mode for a Resource."""
+    """Update the routing mode for a Resource.
+
+    The API does not allow a bypass Resource (BYPASS_TWINGATE) to have a Security Policy, so it refuses this change for a Resource that has one. Create bypass Resources without -p (`resource create -m BYPASS_TWINGATE`).
+    """
     routing_mode = validate_routing_mode(routingmode)
     run_query(
         get_client(),

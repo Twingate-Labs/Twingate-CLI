@@ -6,7 +6,7 @@ from typing import Optional
 
 import typer
 
-from tgcli.commands._common import fetch_paginated, get_client, run_paginated, run_query, split_ids
+from tgcli.commands._common import fetch_paginated, get_client, run_paginated, run_query, split_ids, write_refused
 from tgcli.main import state
 from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import devices as t
@@ -115,13 +115,23 @@ def device_update_trust(
     trust_bool = parse_bool_string(trust)
     ids = split_ids(itemlist) if itemlist else [itemid]
     client = get_client()
+    refused = []
     for device_id in ids:
-        run_query(
+        result = run_query(
             client,
             q.UPDATE_DEVICE_TRUST,
             {"deviceID": device_id, "isTrusted": trust_bool},
             t.get_update_as_csv,
+            exit_on_refusal=False,
         )
+        reason = write_refused(result)
+        if reason is not None:
+            refused.append(f"{device_id}: {reason}")
+    if refused:
+        # Every device was attempted; the exit code says some were not changed.
+        for line in refused:
+            typer.echo(f"Error: {line}", err=True)
+        raise typer.Exit(1)
 
 
 @app.command("block")

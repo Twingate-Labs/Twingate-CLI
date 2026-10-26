@@ -451,13 +451,13 @@ class TestResourceCreate:
                     "-r", "UmVtb3RlTmV0d29yazox",
                     "-t", "ALLOW_ALL",
                     "-u", "ALLOW_ALL",
-                    "-p", "U2VjdXJpdHlQb2xpY3k6MQ==",
                     "-m", "bypass_twingate",
                 ],
             )
             call_kwargs = MockClient.return_value.execute.call_args
         assert result.exit_code == 0
         assert call_kwargs.args[1]["routingMode"] == "BYPASS_TWINGATE"
+        assert "securityPolicyId" not in call_kwargs.args[1]  # the API refuses a Security Policy on a bypass Resource
 
     def test_create_invalid_routing_mode_exits_nonzero(self, mock_keyring):
         result = runner.invoke(

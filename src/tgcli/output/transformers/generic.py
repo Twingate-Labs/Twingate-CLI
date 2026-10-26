@@ -77,7 +77,10 @@ def get_update_as_csv_no_nesting(
 
     for col in columns[2:]:
         if col == "token":
-            continue  # handled separately below
+            # A top-level field of the mutation result, not of its entity. It goes in the position its column has in
+            # the header: appending it after the others shifted every later value one column to the left.
+            datarow.append(item.get("token") if is_ok else None)
+            continue
         if is_ok:
             raw: Any = ""
             if "." in col:
@@ -91,9 +94,6 @@ def get_update_as_csv_no_nesting(
             datarow.append(_normalise_edges(raw))
         else:
             datarow.append(None)
-
-    if "token" in columns:
-        datarow.append(item.get("token"))
 
     data = [datarow]
     if not is_ok:

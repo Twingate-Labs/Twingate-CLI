@@ -125,8 +125,10 @@ class TestEveryWriteCommand:
     def test_a_write_that_reports_failure_has_nothing_to_complete(self, case):
         backend = case.backend({"data": {case.mutation: {"ok": False, "error": "nope", "entity": None}}})
         result = run(case, backend)
-        assert result.exit_code == 0 and backend.followups == []
-        assert case.echoed(result.output) == {"ok": False, "error": "nope", "entity": None}
+        # The refusal is still printed in full on stdout, nothing is fetched to complete it, and the exit code says it failed.
+        assert result.exit_code == 1 and backend.followups == []
+        assert case.echoed(result.stdout) == {"ok": False, "error": "nope", "entity": None}
+        assert "Error: nope" in result.stderr
 
     @pytest.mark.parametrize("error", [TwingateAPIError("boom"), TwingateAuthError("Bad token")], ids=["api error", "auth error"])
     def test_failing_to_read_back_the_rest_warns_but_the_write_still_counts_as_done(self, case, error):

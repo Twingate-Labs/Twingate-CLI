@@ -204,7 +204,7 @@ mutation ObjCreate(
   $remoteNetworkId: ID!
   $groupIds: [ID!]
   $protocols: ProtocolsInput!
-  $securityPolicyId: ID!
+  $securityPolicyId: ID
   $isVisible: Boolean!
   $routingMode: RoutingMode
 ) {
