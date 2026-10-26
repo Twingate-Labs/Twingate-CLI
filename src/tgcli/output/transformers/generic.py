@@ -12,6 +12,8 @@ from typing import Any
 
 import pandas as pd
 
+from tgcli.textio import read_text
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,8 +53,7 @@ def get_ids(json_results: dict, object_name: str) -> list[str]:
 
 def read_ids_file(path: str) -> set[str]:
     """Read IDs from a file: comma-, whitespace- or newline-separated, optionally list-style."""
-    with open(path) as fh:
-        raw = fh.read()
+    raw = read_text(path)
     return {i for i in re.split(r"""[\s,\[\]'"]+""", raw) if i}
 
 

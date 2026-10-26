@@ -9,6 +9,7 @@ import typer
 
 from tgcli import VERSION
 from tgcli.completion import complete_session
+from tgcli.textio import ensure_utf8_output
 
 app = typer.Typer(
     name="tgcli",
@@ -60,6 +61,7 @@ def global_callback(
         typer.echo(f"tgcli version {VERSION}")
         raise typer.Exit()
 
+    ensure_utf8_output()
     state.session = session
     state.output_format = output_format.upper()
     state.log_level = log_level.upper()

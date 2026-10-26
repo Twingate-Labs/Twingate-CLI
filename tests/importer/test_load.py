@@ -255,7 +255,7 @@ class TestFolders:
         (lambda p: write(p / "groups.json", "{not json"), "is not valid JSON"),
         (lambda p: write(p / "groups.json", '{"a": 1}'), "must hold a JSON list"),
         (lambda p: write(p / "groups.json", '["x"]'), "item 1 is not an object"),
-        (lambda p: (p / "groups.json").write_bytes(b"\xff\xfe\x00bad"), "Cannot read"),
+        (lambda p: (p / "groups.json").write_bytes(b"\xc3\x28 bad"), "Cannot read"),
         (lambda p: (p / "groups.csv").write_bytes(b"name\n\xff\xfe\n"), "Cannot read"),
     ])
     def test_unreadable_input_is_an_error_not_a_silent_skip(self, tmp_path, setup, message):

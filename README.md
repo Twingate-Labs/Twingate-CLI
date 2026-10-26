@@ -88,8 +88,9 @@ pip install .
 - **PowerShell blocks `Activate.ps1`?** If it says "running scripts is disabled on this system", allow scripts for the current window only with `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`, then activate again.
 - **Credentials** are kept in Windows Credential Manager (look for entries mentioning `tgcli`), as the Keychain is used on macOS.
 - **The examples in this README are written for bash.** Where a command continues on the next line with `\`, use a backtick `` ` `` at the end of the line in PowerShell, `^` in cmd.exe, or put the command on one line. Commands that use `$(...)`, `head`, `grep` or `cron` need PowerShell equivalents (Task Scheduler instead of cron).
-- **Saving output to a file or piping it (`> file.csv`)?** Set UTF-8 first, in PowerShell `$env:PYTHONUTF8 = "1"` (cmd.exe: `set PYTHONUTF8=1`). Without it, CSV and table output can fail with a `UnicodeEncodeError` when a name contains characters outside your Windows code page (Greek, Cyrillic, Chinese, Japanese, emoji, ...). JSON output is not affected. `tgcli backup` writes its own UTF-8 files and is not affected.
-- **Windows PowerShell 5.1 saves `>` redirection as UTF-16.** For plain UTF-8 files, use PowerShell 7 (`pwsh`), or `| Out-File -Encoding utf8 file.csv` in 5.1.
+- **Output is always UTF-8.** When output is saved to a file or piped (`> file.csv`), `tgcli` writes UTF-8 whatever the Windows code page is, so a name in Greek, Cyrillic, Chinese, Japanese or emoji no longer makes CSV or table output fail with a `UnicodeEncodeError`. Reports (`group migrate`, `import`) and `tgcli backup` files are UTF-8 too.
+- **Windows PowerShell 5.1 re-encodes what it receives.** It reads a program's output using the console code page and saves `>` redirection as UTF-16, so non-English characters can come out wrong. For clean UTF-8 files, use PowerShell 7 (`pwsh`), or in 5.1 run `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8` first and use `| Out-File -Encoding utf8 file.csv`. (This has not been tried on a Windows machine yet.)
+- **Files you give `tgcli` can be UTF-8 (with or without a byte order mark) or UTF-16**, which is what PowerShell 5.1 and `Out-File -Encoding utf8` produce. This covers `device list --fileofids`, `ca create --file` and the files read by `import`.
 - **`scripts/disable_offline_resources.sh`** is a bash script. Run it from Git Bash or WSL.
 
 ---
@@ -509,7 +510,7 @@ tgcli group migrate --execute \
   --report my_report.csv
 ```
 
-`group migrate` creates an empty Manual Group for each active Synced Group (named `<name><suffix>`), then adds the source group's members and resources in batches of 200. It copies the source group's Security Policy unless you pass `--no-copy-security-policy`. It reuses an existing Manual Group if one with the target name already exists (so a re-run does not create duplicates), skips inactive Synced Groups, and writes a timestamped CSV report of every group processed (or use `--report` for a custom path).
+`group migrate` creates an empty Manual Group for each active Synced Group (named `<name><suffix>`), then adds the source group's members and resources in batches of 200. It copies the source group's Security Policy unless you pass `--no-copy-security-policy`. It reuses an existing Manual Group if one with the target name already exists (so a re-run does not create duplicates), skips inactive Synced Groups, and writes a timestamped CSV report of every group processed (or use `--report` for a custom path). The report path is checked before anything is read or created, so a path that cannot be written stops the command with nothing changed.
 
 - A failure on one group is recorded in the report and the rest continue; the command then exits 1.
 - **Not copied:** settings on a group's access to an individual resource (a different policy, access policy or expiry for that grant). Only the resource itself is added, so check any such grants on the new group.
@@ -872,7 +873,7 @@ The input is a folder, or a single file, named `remote-networks`, `groups`, `res
 
 A row with a **warning** still goes ahead, but something optional was left out and the report says what: a member whose email is not in this tenant, access for a group that does not exist, a per-group policy that does not exist (it is not replaced by the default), access that has already expired (it is never restored as permanent access). Warnings do not change the exit code; `blocked` and `error` rows exit 1, also on a dry run, so a script can check before applying.
 
-Every row, with its status, detail, warnings, error, the new ID and where in the file it came from, is written to the CSV report (`--report`, default `import_report_<UTC timestamp>.csv`).
+Every row, with its status, detail, warnings, error, the new ID and where in the file it came from, is written to the CSV report (`--report`, default `import_report_<UTC timestamp>.csv`). The report path is checked before anything is read from or written to the tenant, so a path that cannot be written stops the command with nothing changed.
 
 **CSV columns** (the first row is the header; unknown columns are an error, so a typo cannot silently drop access)
 
@@ -900,7 +901,7 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 
 **Rate limits.** The API typically allows about 20 writes a minute. A dry run tells you how many write requests a large import would make; the run pauses when rate limited, and if it gives up part way, run the same command again to finish.
 
-**Encoding:** reports, and CSV input, are UTF-8. Excel may show non-English characters wrongly if you double-click the report; use Data > From Text/CSV and choose UTF-8.
+**Encoding:** reports are UTF-8, and input files can be UTF-8 (with or without a byte order mark) or UTF-16. Excel may show non-English characters wrongly if you double-click the report; use Data > From Text/CSV and choose UTF-8.
 
 ---
 

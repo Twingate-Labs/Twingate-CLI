@@ -12,6 +12,7 @@ from tgcli.output.formatter import OutputFormatter
 from tgcli.output.transformers import devices as t
 from tgcli.output.transformers import generic
 from tgcli.queries import devices as q
+from tgcli.textio import TextFileError
 from tgcli.validators.generic import parse_bool_string
 
 app = typer.Typer(help="Manage Twingate Devices.")
@@ -81,6 +82,9 @@ def device_list(
         known = generic.read_ids_file(fileofids)
     except OSError as exc:
         typer.echo(f"Error: cannot read {fileofids}: {exc.strerror}", err=True)
+        raise typer.Exit(1)
+    except TextFileError as exc:
+        typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
     diff = {"new": sorted(set(ids) - known), "missing": sorted(known - set(ids))}
     OutputFormatter.print_output(diff, state.output_format, t.get_id_diff_as_df)

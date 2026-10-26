@@ -15,6 +15,7 @@ from tgcli.importer.load import LoadError, load
 from tgcli.importer.plan import BLOCKED, build_plan
 from tgcli.importer.report import write_report
 from tgcli.importer.state import fetch_state
+from tgcli.textio import check_writable
 
 MAX_LISTED = 200  # rows echoed to the terminal; the report always has all of them
 KIND_ORDER = ("remote network", "group", "resource", "device")
@@ -57,6 +58,14 @@ def import_(
     except LoadError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
+    # Checked now, before anything is read from or written to the tenant, so a bad path cannot fail after the changes.
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    report_path = Path(report) if report else Path(f"import_report_{stamp}.csv")
+    try:
+        check_writable(report_path)
+    except OSError as exc:
+        typer.echo(f"Error: cannot write the report to {report_path}: {exc.strerror}. Nothing was changed.", err=True)
+        raise typer.Exit(1)
     typer.echo(f"Read {', '.join(specs.files)}.")
     if specs.ignored:
         typer.echo(f"Not imported (not supported yet): {', '.join(specs.ignored)}.")
@@ -94,9 +103,11 @@ def import_(
         typer.echo(f"  ... and {len(shown) - MAX_LISTED} more (see the report)")
     _summary(rows)
 
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    report_path = Path(report) if report else Path(f"import_report_{stamp}.csv")
-    write_report(report_path, rows)
+    try:
+        write_report(report_path, rows)
+    except OSError as exc:
+        typer.echo(f"\nError: the report could not be written to {report_path}: {exc.strerror}. The summary above is all there is.", err=True)
+        raise typer.Exit(1)
     typer.echo(f"\nReport written to: {report_path}")
 
     failed = [r for r in rows if r.status in FAILED]

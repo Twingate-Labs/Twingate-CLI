@@ -7,16 +7,19 @@ import typer
 from tgcli.commands._common import execute_query, get_client, run_paginated, run_query
 from tgcli.output.transformers import certificate_authorities as t
 from tgcli.queries import certificate_authorities as q
+from tgcli.textio import TextFileError, read_text
 
 app = typer.Typer(help="Manage Twingate Certificate Authorities (X.509 and SSH).")
 
 
 def _read_file(path: str) -> str:
     try:
-        with open(path) as fh:
-            content = fh.read().strip()
+        content = read_text(path).strip()
     except OSError as exc:
         typer.echo(f"Error: cannot read {path}: {exc.strerror}", err=True)
+        raise typer.Exit(1)
+    except TextFileError as exc:
+        typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
     if not content:
         typer.echo(f"Error: {path} is empty.", err=True)

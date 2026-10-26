@@ -10,11 +10,14 @@ reports it as blocked, so nothing disappears silently. Only a file that cannot b
 from __future__ import annotations
 
 import csv
+import io
 import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
+
+from tgcli.textio import TextFileError, read_text
 
 NETWORKS, GROUPS, RESOURCES, DEVICES = "remote-networks", "groups", "resources", "devices"
 KINDS = (NETWORKS, GROUPS, RESOURCES, DEVICES)
@@ -378,8 +381,8 @@ _JSON_PARSERS: dict = {NETWORKS: _network, GROUPS: _group, RESOURCES: _resource,
 
 def _read_json(path: Path, kind: str) -> list:
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError) as exc:
+        data = json.loads(read_text(path))
+    except (OSError, TextFileError) as exc:
         raise LoadError(f"Cannot read {path}: {exc}") from exc
     except json.JSONDecodeError as exc:
         raise LoadError(f"{path} is not valid JSON: {exc}") from exc
@@ -390,11 +393,10 @@ def _read_json(path: Path, kind: str) -> list:
 
 def _read_csv(path: Path, kind: str) -> list:
     try:
-        with open(path, newline="", encoding="utf-8-sig") as handle:
-            reader = csv.DictReader(handle)
-            headers = [(h or "").strip().lower() for h in (reader.fieldnames or [])]
-            rows = [{(k or "").strip().lower(): (v or "") for k, v in row.items() if k is not None} for row in reader]
-    except (OSError, UnicodeDecodeError, csv.Error) as exc:
+        reader = csv.DictReader(io.StringIO(read_text(path), newline=""))
+        headers = [(h or "").strip().lower() for h in (reader.fieldnames or [])]
+        rows = [{(k or "").strip().lower(): (v or "") for k, v in row.items() if k is not None} for row in reader]
+    except (OSError, TextFileError, csv.Error) as exc:
         raise LoadError(f"Cannot read {path}: {exc}") from exc
     unknown = [h for h in headers if h and h not in CSV_COLUMNS[kind]]
     if unknown:

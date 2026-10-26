@@ -15,6 +15,7 @@ from tgcli.commands._common import get_client, run_paginated, run_query, split_i
 from tgcli.output.transformers import groups as t
 from tgcli.pagination import NestedLists
 from tgcli.queries import groups as q
+from tgcli.textio import check_writable
 
 app = typer.Typer(help="Manage Twingate Groups.")
 
@@ -180,6 +181,15 @@ def group_migrate(
     """Migrate active Synced Groups (all, or only those named with --group) to new Manual Groups (dry run by default)."""
     BATCH_SIZE = 200
     client = get_client()
+    # Decided, and checked, before anything is read or created: a report path that cannot be written would otherwise
+    # only be found after the groups were already made.
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    report_path = report or f"group_migration_report_{ts}.csv"
+    try:
+        check_writable(report_path)
+    except OSError as exc:
+        typer.echo(f"Error: cannot write the report to {report_path}: {exc.strerror}. Nothing was changed.", err=True)
+        raise typer.Exit(1)
 
     def paginate_nested(query, variables, path):
         items = []
@@ -318,13 +328,19 @@ def group_migrate(
             "error": "",
         })
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    report_path = report or f"group_migration_report_{ts}.csv"
     if report_rows:
-        with open(report_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=list(report_rows[0].keys()))
-            writer.writeheader()
-            writer.writerows(report_rows)
+        try:
+            with open(report_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=list(report_rows[0].keys()))
+                writer.writeheader()
+                writer.writerows(report_rows)
+        except OSError as exc:
+            typer.echo(
+                f"\nError: the report could not be written to {report_path}: {exc.strerror}. "
+                "The results above are all there is; any group shown as created was created.",
+                err=True,
+            )
+            raise typer.Exit(1)
         typer.echo(f"\nReport written to: {report_path}")
 
     errors = [r for r in report_rows if r["status"] == "error"]
