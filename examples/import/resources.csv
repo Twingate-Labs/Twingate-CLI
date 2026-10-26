@@ -1,0 +1,3 @@
+name,network,address,alias,tcp_ports,udp_ports,allow_icmp,visible,security_policy,groups,routing_mode
+App one,Example Network,app1.example.com,,443,none,false,true,Standard Access,Example Group,
+App two,Example Network,10.0.0.0/24,,80;443;8000-8100,*,true,true,Standard Access,Example Group;Other Group=Strict Policy,

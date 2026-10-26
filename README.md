@@ -851,7 +851,7 @@ tgcli -s staging import ./my-files --report ./plan.csv                          
 tgcli -s staging import ./groups.csv                                             # one file
 ```
 
-The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored. (A backup has no `devices` file; that one you write yourself.)
+The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored. (A backup has no `devices` file; that one you write yourself.) To write the files by hand, copy the templates in [`examples/import`](examples/import) and edit them; only `resources.csv` has example rows, so a copy never creates anything you did not add.
 
 **How it matches things**
 
