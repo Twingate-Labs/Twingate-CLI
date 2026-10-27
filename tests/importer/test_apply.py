@@ -290,3 +290,59 @@ class TestWriteCount:
 def test_every_planned_action_has_a_finished_status(action, status):
     from tgcli.importer.apply import DONE_STATUS, DRY_RUN_STATUS
     assert DONE_STATUS[action] == status and DRY_RUN_STATUS[action] in (f"would-{action}", status)
+
+
+class TestServiceAccountAccess:
+    NETS = [{"id": "N1", "name": "HQ"}]
+    ACCOUNTS = [{"id": "S1", "name": "ci"}, {"id": "S2", "name": "deploy"}]
+
+    def sa(self, name, **kw):
+        return AccessSpec(name, kind="service account", **kw)
+
+    def test_a_service_account_is_granted_with_its_id_and_nothing_else(self):
+        api = FakeApi(networks=self.NETS, service_accounts=self.ACCOUNTS, groups=[{"id": "G1", "name": "Eng", "type": "MANUAL"}])
+        rows = run(api, Specs(resources=[res("Wiki", access=[AccessSpec("Eng"), self.sa("ci"), self.sa("deploy")])]))
+        assert rows[0].status == "created" and not rows[0].error
+        (_, variables), = [w for w in api.writes if w[0] == "importAccess"]
+        assert variables["access"] == [{"principalId": "G1"}, {"principalId": "S1"}, {"principalId": "S2"}]
+
+    def test_a_service_account_whose_entry_carries_settings_is_never_sent_with_them(self):
+        # even if the plan let one through, the grant sent is the bare one the API accepts
+        from tgcli.importer.apply import _grant_input
+        from tgcli.importer.plan import Grant
+        grant = Grant("ci", "S1", "service account", "P1", {"mode": "AUTO_LOCK"}, "AUTOMATIC", "2999-01-01T00:00:00Z")
+        assert _grant_input(grant, "S1") == {"principalId": "S1"}
+
+    def test_a_second_run_finds_the_service_account_already_has_access(self):
+        api = FakeApi(networks=self.NETS, service_accounts=self.ACCOUNTS)
+        specs = Specs(resources=[res("Wiki", access=[self.sa("ci")])])
+        run(api, specs)
+        rows = run(api, specs)
+        assert statuses(rows) == [("resource", "Wiki", "exists")] and api.writes == []
+
+    def test_an_existing_resource_gets_only_the_missing_service_account(self):
+        api = FakeApi(networks=self.NETS, service_accounts=self.ACCOUNTS)
+        run(api, Specs(resources=[res("Wiki", access=[self.sa("ci")])]))
+        rows = run(api, Specs(resources=[res("Wiki", access=[self.sa("ci"), self.sa("deploy")])]))
+        assert statuses(rows) == [("resource", "Wiki", "updated")]
+        (_, variables), = api.writes
+        assert variables["access"] == [{"principalId": "S2"}]
+
+    def test_a_missing_service_account_is_a_warning_in_the_report_and_the_rest_is_still_done(self):
+        api = FakeApi(networks=self.NETS, service_accounts=self.ACCOUNTS)
+        rows = run(api, Specs(resources=[res("Wiki", access=[self.sa("ghost"), self.sa("ci")])]))
+        assert rows[0].status == "created" and len(rows[0].warnings) == 1 and "ghost" in rows[0].warnings[0]
+        assert list(api.resources[0]["access"]) == ["S1"]
+
+    def test_write_count_counts_the_access_request_once_whatever_the_principals(self):
+        api = FakeApi(networks=self.NETS, service_accounts=self.ACCOUNTS)
+        specs = Specs(resources=[res("Wiki", access=[self.sa("ci"), self.sa("deploy")])])
+        assert write_count(build_plan(specs, fetch_state(api, specs))) == 2  # create + one access request
+
+    def test_a_failure_part_way_names_who_it_was_adding(self):
+        accounts = [{"id": f"S{i}", "name": f"sa{i}"} for i in range(150)]
+        api = FakeApi(networks=self.NETS, service_accounts=accounts, groups=[{"id": "G1", "name": "Eng", "type": "MANUAL"}])
+        calls = []
+        api.fail["importAccess"] = lambda v: calls.append(1) or ("nope" if len(calls) == 2 else None)
+        (row,) = run(api, Specs(resources=[res("Wiki", access=[AccessSpec("Eng")] + [self.sa(a["name"]) for a in accounts])]))
+        assert row.status == "error" and row.error.startswith("added access for 100 of 151 groups and service accounts, then: nope")

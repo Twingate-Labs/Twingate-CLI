@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
+from tgcli.importer.load import SERVICE_ACCOUNT
 from tgcli.importer.plan import BLOCKED, CREATE, EXISTS, SKIP, UPDATE, Grant, Row
 from tgcli.queries import importing as q
 
@@ -54,6 +55,8 @@ def _chunks(items: list, size: int):
 
 def _grant_input(grant: Grant, group_id: str) -> dict:
     entry: dict = {"principalId": group_id}
+    if grant.kind == SERVICE_ACCOUNT:
+        return entry  # the API refuses every setting on a service account's grant, even a default one
     if grant.policy_id:
         entry["securityPolicyId"] = grant.policy_id
     if grant.access_policy:
@@ -83,12 +86,13 @@ def _add_access(client: Any, row: Row, resource_id: str, group_ids: dict) -> Non
             row.warnings.append(f"access for group '{grant.group}' not added: the group was not created")
         else:
             grants.append(_grant_input(grant, group_id))
+    who = "groups" if all(g.kind != SERVICE_ACCOUNT for g in row.grants) else "groups and service accounts"
     done = 0
     for chunk in _chunks(grants, ACCESS_BATCH):
         try:
             _call(client, q.ADD_RESOURCE_ACCESS, {"id": resource_id, "access": chunk}, "resourceAccessAdd")
         except (RowError, TwingateAPIError) as exc:
-            raise RowError(f"added access for {done} of {len(grants)} groups, then: {exc}. Run the import again to add the rest.") from exc
+            raise RowError(f"added access for {done} of {len(grants)} {who}, then: {exc}. Run the import again to add the rest.") from exc
         done += len(chunk)
 
 

@@ -49,9 +49,9 @@ def import_(
     execute: bool = typer.Option(False, "--execute", help="Apply the changes. Without this flag, only a dry run is performed."),
     report: Optional[str] = typer.Option(None, "--report", help="Path to write the CSV report."),
 ) -> None:
-    """Create Remote Networks, groups with members, resources with group access, and set device trust, from a file (dry run by default).
+    """Create Remote Networks, groups with members, resources with group and service account access, and set device trust, from a file (dry run by default).
 
-    Anything that already exists is left as it is and only added to (missing members, missing access); Synced Groups are never touched. Group members are matched by email, groups and Remote Networks by exact name, resources by name, Remote Network and address together, and devices by serial number (devices.csv sets trust on devices that have already registered).
+    Anything that already exists is left as it is and only added to (missing members, missing access); Synced Groups are never touched, and service accounts must already exist. Group members are matched by email, groups, service accounts and Remote Networks by exact name, resources by name, Remote Network and address together, and devices by serial number (devices.csv sets trust on devices that have already registered).
     """
     try:
         specs = load(path)

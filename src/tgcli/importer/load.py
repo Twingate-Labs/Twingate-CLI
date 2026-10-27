@@ -36,7 +36,7 @@ CSV_COLUMNS = {
     GROUPS: ("name", "members", "security_policy"),
     RESOURCES: (
         "name", "network", "address", "alias", "tcp_ports", "udp_ports", "allow_icmp", "visible",
-        "security_policy", "groups", "routing_mode",
+        "security_policy", "groups", "service_accounts", "routing_mode",
     ),
     DEVICES: ("serial_number", "trusted"),
 }
@@ -70,9 +70,15 @@ class GroupSpec(Item):
     security_policy: Optional[str] = None  # a name
 
 
+GROUP, SERVICE_ACCOUNT = "group", "service account"
+
+
 @dataclass
 class AccessSpec:
+    """One principal's access to a resource. ``group`` holds the name of a group or of a service account (see ``kind``)."""
+
     group: str
+    kind: str = GROUP
     security_policy: Optional[str] = None
     access_policy: Optional[dict] = None
     approval_mode: Optional[str] = None
@@ -253,25 +259,34 @@ def _group(record: dict, source: str) -> GroupSpec:
     return spec
 
 
+def _principal_kind(type_name: str) -> str:
+    """``group``, ``service account``, or the type's own words (lowercased, spaced) for one that is not imported.
+
+    The backup writes ``Group`` and ``ServiceAccount``; ``SERVICE_ACCOUNT`` and ``service account`` mean the same.
+    """
+    return re.sub(r"[\s_-]+", " ", re.sub(r"(?<=[a-z])(?=[A-Z])", " ", type_name)).lower().strip()
+
+
 def _access(entries: Any, spec: ResourceSpec) -> None:
     seen = set()
     for entry in entries or []:
         principal = entry.get("principal") or {}
         name = _text(principal.get("name"))
-        kind = _text(principal.get("type")) or "Group"
+        kind = _principal_kind(_text(principal.get("type")) or "Group")
         label = name or "(unnamed)"
-        if kind not in ("Group", "GROUP"):
-            spec.notes.append(f"access for {re.sub(r'(?<!^)(?=[A-Z])', ' ', kind).lower()} '{label}' is not imported (only groups are)")
+        if kind not in (GROUP, SERVICE_ACCOUNT):
+            spec.notes.append(f"access for {kind} '{label}' is not imported (only groups and service accounts are)")
             continue
         if not name:
-            spec.problems.append("an access entry has no group name")
+            spec.problems.append(f"an access entry has no {kind} name")
             continue
-        if name in seen:
+        if (kind, name) in seen:
             continue
-        seen.add(name)
+        seen.add((kind, name))
         probs: list = []
         access = AccessSpec(
             group=name,
+            kind=kind,
             security_policy=_name_of(entry.get("securityPolicy")) or None,
             access_policy=_access_policy(entry.get("accessPolicy"), f"access for '{name}' access policy", probs),
             approval_mode=_approval_mode(entry.get("approvalMode"), f"access for '{name}' approval mode", probs),
@@ -360,6 +375,9 @@ def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
         if policy.strip():
             entry["securityPolicy"] = {"name": policy.strip()}
         record["access"].append(entry)
+    # A service account takes no per-grant settings, so there is no `=Policy` form: the whole cell is the name.
+    for name in _split(row.get("service_accounts", "")):
+        record["access"].append({"principal": {"type": "ServiceAccount", "name": name}})
     spec = _resource(record, source)
     # Port lists in a CSV are written as text (`80;443;8000-8100`), so they are parsed here, not from the JSON shape.
     for proto in ("tcp", "udp"):

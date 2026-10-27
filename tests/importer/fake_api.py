@@ -13,8 +13,8 @@ from typing import Any
 from tgcli.client.exceptions import TwingateAPIError
 
 PAGE = 2
-FIELDS = {"networks": ("id", "name"), "groups": ("id", "name", "type"), "users": ("id", "email"), "policies": ("id", "name", "policyType")}
-ROOTS = {"remoteNetworks": "networks", "groups": "groups", "users": "users", "securityPolicies": "policies", "resources": "resources", "devices": "devices"}
+FIELDS = {"networks": ("id", "name"), "service_accounts": ("id", "name"), "groups": ("id", "name", "type"), "users": ("id", "email"), "policies": ("id", "name", "policyType")}
+ROOTS = {"remoteNetworks": "networks", "groups": "groups", "users": "users", "securityPolicies": "policies", "resources": "resources", "devices": "devices", "serviceAccounts": "service_accounts"}
 
 
 def page(items: list, cursor: Any) -> tuple:
@@ -24,12 +24,13 @@ def page(items: list, cursor: Any) -> tuple:
 
 
 class FakeApi:
-    def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=()):
+    def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=(), service_accounts=()):
         self.devices = [{"activeState": "ACTIVE", "user": {"email": "ann@x.com"}, **d} for d in devices]
         self.ignore_trust = False  # the API accepts a trust change but reports the device unchanged
         self.networks = [dict(n) for n in networks]
         self.groups = [{**g, "members": set(g.get("members", ()))} for g in groups]
         self.users = [dict(u) for u in users]
+        self.service_accounts = [dict(a) for a in service_accounts]
         self.policies = [dict(p) for p in policies]
         self.resources = [{**r, "access": dict(r.get("access", {}))} for r in resources]
         self.requests: list = []
@@ -141,7 +142,12 @@ class FakeApi:
     def _do_importAccess(self, v: dict) -> dict:
         res = next(r for r in self.resources if r["id"] == v["id"])
         for entry in v["access"]:
-            assert next((g for g in self.groups if g["id"] == entry["principalId"]), None), "access for a group that does not exist"
+            principal = entry["principalId"]
+            if any(a["id"] == principal for a in self.service_accounts):
+                # what the real API does: a service account's grant takes no settings at all, not even a default one
+                assert set(entry) == {"principalId"}, f"a service account's grant carries settings: {sorted(set(entry) - {'principalId'})}"
+            else:
+                assert next((g for g in self.groups if g["id"] == principal), None), "access for a group that does not exist"
             res["access"][entry["principalId"]] = entry
         return {"id": v["id"]}
 

@@ -118,6 +118,27 @@ class TestExecute:
         assert result.exit_code == 0 and len(api.writes) == count
         assert {r["status"] for r in rows_of(report)} == {"exists"}
 
+    def test_a_csv_with_service_accounts_grants_them_and_a_rerun_does_nothing(self, tmp_path):
+        api = FakeApi(networks=[{"id": "N1", "name": "HQ"}], service_accounts=[{"id": "S1", "name": "ci"}], groups=[{"id": "G1", "name": "Eng", "type": "MANUAL"}])
+        (tmp_path / "resources.csv").write_text(
+            "name,network,address,groups,service_accounts\nWiki,HQ,wiki.internal,Eng,ci;ghost\n", encoding="utf-8")
+        result, report = run(tmp_path, api, "--execute")
+        assert result.exit_code == 0, result.output
+        (row,) = rows_of(report)
+        assert row["status"] == "created" and "access for 1 group and 1 service account" in row["detail"]
+        assert row["warnings"] == "access for service account 'ghost' not added: no such service account in this tenant (the import does not create them)"
+        assert sorted(api.resources[0]["access"]) == ["G1", "S1"]
+        count = len(api.writes)
+        result, report = run(tmp_path, api, "--execute")
+        assert result.exit_code == 0 and len(api.writes) == count
+
+    def test_a_backup_service_account_with_a_setting_the_api_refuses_is_left_out_and_said_so(self, tmp_path):
+        api = FakeApi(networks=[{"id": "N1", "name": "HQ"}], service_accounts=[{"id": "S1", "name": "ci"}])
+        resource = {**RESOURCE, "access": [{"principal": {"type": "ServiceAccount", "name": "ci"}, "expiresAt": "2999-01-01T00:00:00Z"}]}
+        result, report = run(backup(tmp_path, [NETWORK], [], [resource]), api, "--execute")
+        (_, wiki) = rows_of(report)
+        assert wiki["status"] == "created" and "an expiry" in wiki["warnings"] and api.resources[0]["access"] == {}
+
     def test_a_failed_row_gives_exit_code_1_and_the_report_says_why(self, tmp_path):
         api = FakeApi(users=USERS)
         api.fail["importNetwork"] = "name not allowed"

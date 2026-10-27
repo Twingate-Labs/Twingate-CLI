@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from tgcli.importer.load import Specs
+from tgcli.importer.load import GROUP, SERVICE_ACCOUNT, Specs
 from tgcli.pagination import fetch_connection
 from tgcli.queries import importing as q
 from tgcli.resolve import lookup_nodes
@@ -16,6 +16,7 @@ class State:
     networks: dict = field(default_factory=dict)  # name -> [node]
     groups: dict = field(default_factory=dict)  # name -> [node with type]
     users: dict = field(default_factory=dict)  # lowercased email -> [node]
+    service_accounts: dict = field(default_factory=dict)  # name -> [node]
     policies: dict = field(default_factory=dict)  # name -> [node]
     resources: dict = field(default_factory=dict)  # (name, network name, address) -> [node]
     devices: dict = field(default_factory=dict)  # lowercased serial number -> [node with isTrusted, activeState, user]
@@ -32,7 +33,8 @@ def _by(nodes: list, key: Callable[[dict], Any]) -> dict:
 
 def _names(specs: Specs) -> dict:
     networks = {s.name for s in specs.networks} | {r.network for r in specs.resources if r.network}
-    groups = {g.name for g in specs.groups} | {a.group for r in specs.resources for a in r.access}
+    groups = {g.name for g in specs.groups} | {a.group for r in specs.resources for a in r.access if a.kind == GROUP}
+    accounts = {a.group for r in specs.resources for a in r.access if a.kind == SERVICE_ACCOUNT}
     policies = {g.security_policy for g in specs.groups} | {r.security_policy for r in specs.resources}
     policies |= {a.security_policy for r in specs.resources for a in r.access}
     emails = {e for g in specs.groups for e in g.members}
@@ -40,7 +42,7 @@ def _names(specs: Specs) -> dict:
     serials = {d.serial for d in specs.devices}
     clean = lambda values: sorted(v for v in values if v)  # noqa: E731
     return {
-        "networks": clean(networks), "groups": clean(groups), "policies": clean(policies),
+        "networks": clean(networks), "groups": clean(groups), "service_accounts": clean(accounts), "policies": clean(policies),
         "emails": clean(emails), "resources": clean(resources), "serials": clean(serials),
     }
 
@@ -63,6 +65,9 @@ def fetch_state(client: Any, specs: Specs, progress: Callable[[str], None] = lam
     if names["groups"]:
         progress("Looking up groups...")
         state.groups = _by(lookup_nodes(client, "groups", "name", names["groups"], "id name type"), lambda n: n["name"])
+    if names["service_accounts"]:
+        progress("Looking up service accounts...")
+        state.service_accounts = _by(lookup_nodes(client, "serviceAccounts", "name", names["service_accounts"]), lambda n: n["name"])
     if names["emails"]:
         progress(f"Looking up {len(names['emails'])} user email(s)...")
         # The email filter is case-sensitive, so the lowercase form is asked for too and matching is done ignoring case.

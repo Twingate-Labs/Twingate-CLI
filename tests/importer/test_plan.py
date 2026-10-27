@@ -30,9 +30,9 @@ def by_name(*nodes, key="name"):
     return out
 
 
-def state(networks=(), groups=(), users=(), policies=(), resources=(), members=None, access=None):
+def state(networks=(), groups=(), users=(), policies=(), resources=(), members=None, access=None, service_accounts=()):
     return State(
-        networks=by_name(*networks), groups=by_name(*groups), policies=by_name(*policies),
+        networks=by_name(*networks), groups=by_name(*groups), policies=by_name(*policies), service_accounts=by_name(*service_accounts),
         users=by_name(*[{**u, "key": u["email"].lower()} for u in users], key="key"),
         resources={(r["name"], r["network"], r.get("address", "a.internal")): [r] for r in resources},
         group_members=members or {}, resource_access=access or {},
@@ -51,6 +51,7 @@ def only(rows):
 NET_HQ = {"id": "N-HQ", "name": "HQ"}
 G_ENG = {"id": "G-ENG", "name": "Eng", "type": "MANUAL"}
 G_SYNC = {"id": "G-SYNC", "name": "Okta", "type": "SYNCED"}
+SA_CI = {"id": "S-CI", "name": "ci"}
 U_ANN = {"id": "U-ANN", "email": "Ann@x.com"}
 U_BOB = {"id": "U-BOB", "email": "bob@x.com"}
 POL = {"id": "P-STRICT", "name": "Strict"}
@@ -266,6 +267,73 @@ class TestAccess:
         access = [AccessSpec("Eng", access_policy={"mode": "AUTO_LOCK", "durationSeconds": 60}, approval_mode="MANUAL", expires_at="2999-01-01T00:00:00Z")]
         grant = only(plan(Specs(resources=[res("Wiki", access=access)]), self.base(groups=[G_ENG]))).grants[0]
         assert (grant.access_policy, grant.approval_mode, grant.expires_at) == ({"mode": "AUTO_LOCK", "durationSeconds": 60}, "MANUAL", "2999-01-01T00:00:00Z")
+
+
+def sa(name, **kw):
+    return AccessSpec(name, kind="service account", **kw)
+
+
+class TestServiceAccountAccess:
+    def base(self, **kw):
+        return state(networks=[NET_HQ], service_accounts=[SA_CI], **kw)
+
+    def test_an_existing_service_account_is_resolved_to_its_id(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=["Eng", sa("ci")])]), self.base(groups=[G_ENG])))
+        assert [(g.group, g.group_id, g.kind) for g in row.grants] == [("Eng", "G-ENG", "group"), ("ci", "S-CI", "service account")]
+        assert row.warnings == [] and row.detail == "in 'HQ', access for 1 group and 1 service account"
+
+    def test_the_detail_counts_what_there_is(self):
+        assert only(plan(Specs(resources=[res("Wiki", access=[sa("ci")])]), self.base())).detail == "in 'HQ', access for 1 service account"
+        assert only(plan(Specs(resources=[res("Wiki", access=["Eng"])]), self.base(groups=[G_ENG]))).detail == "in 'HQ', access for 1 group"
+
+    def test_a_group_and_a_service_account_with_one_name_are_told_apart(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=["ci", sa("ci")])]), self.base(groups=[{"id": "G-CI", "name": "ci", "type": "MANUAL"}])))
+        assert [(g.kind, g.group_id) for g in row.grants] == [("group", "G-CI"), ("service account", "S-CI")]
+
+    def test_a_service_account_that_does_not_exist_is_left_out_with_a_warning_and_is_never_created(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ghost"), "Eng"])]), self.base(groups=[G_ENG])))
+        assert row.action == CREATE and [g.group for g in row.grants] == ["Eng"]
+        assert row.warnings == ["access for service account 'ghost' not added: no such service account in this tenant (the import does not create them)"]
+
+    def test_a_group_of_that_name_does_not_stand_in_for_a_missing_service_account(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("Eng")])]), self.base(groups=[G_ENG])))
+        assert row.grants == [] and "no such service account" in row.warnings[0]
+
+    def test_an_ambiguous_service_account_is_left_out(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ci")])]), state(networks=[NET_HQ], service_accounts=[SA_CI, {"id": "S2", "name": "ci"}])))
+        assert row.grants == [] and "2 service accounts with that name" in row.warnings[0]
+
+    @pytest.mark.parametrize("settings, words", [
+        ({"security_policy": "Strict"}, "its own Security Policy"),
+        ({"access_policy": {"mode": "AUTO_LOCK", "durationSeconds": 60}}, "an access policy (auto-lock)"),
+        ({"expires_at": "2999-01-01T00:00:00Z"}, "an expiry"),
+        ({"approval_mode": "AUTOMATIC"}, "approval mode AUTOMATIC"),
+    ])
+    def test_a_setting_the_api_refuses_leaves_the_grant_out_rather_than_granting_wider_access(self, settings, words):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ci", **settings)])]), self.base(policies=[POL])))
+        assert row.grants == [] and words in row.warnings[0] and "wider than the file says" in row.warnings[0]
+
+    def test_all_the_refused_settings_are_named_together(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ci", security_policy="Strict", expires_at="2999-01-01T00:00:00Z")])]), self.base()))
+        assert "its own Security Policy, an expiry" in row.warnings[0]
+
+    def test_the_default_manual_approval_mode_is_not_a_setting(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ci", approval_mode="MANUAL")])]), self.base()))
+        assert [g.group for g in row.grants] == ["ci"] and row.warnings == []
+
+    def test_a_service_account_that_already_has_access_is_left_alone(self):
+        wiki = {"id": "R1", "name": "Wiki", "network": "HQ"}
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ci")])]), self.base(resources=[wiki], access={"R1": {"S-CI"}})))
+        assert row.action == EXISTS and row.grants == []
+
+    def test_an_existing_resource_is_given_only_the_service_account_it_lacks(self):
+        wiki = {"id": "R1", "name": "Wiki", "network": "HQ"}
+        row = only(plan(Specs(resources=[res("Wiki", access=["Eng", sa("ci")])]), self.base(groups=[G_ENG], resources=[wiki], access={"R1": {"G-ENG"}})))
+        assert row.action == UPDATE and [g.group for g in row.grants] == ["ci"] and row.detail == "already exists; access to add for 1 service account"
+
+    def test_an_expired_service_account_entry_names_the_refusal_not_a_made_up_expiry_error(self):
+        row = only(plan(Specs(resources=[res("Wiki", access=[sa("ci", expires_at="2001-01-01T00:00:00Z")])]), self.base()))
+        assert row.grants == [] and "an expiry" in row.warnings[0]
 
 
 class TestEdgeCases:

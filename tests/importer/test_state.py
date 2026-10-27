@@ -92,3 +92,18 @@ def test_a_file_with_nothing_to_look_up_makes_no_requests():
     api = FakeApi()
     fetch_state(api, Specs())
     assert api.requests == []
+
+
+def test_service_accounts_are_looked_up_by_name_apart_from_groups():
+    api = FakeApi(groups=[{"id": "G1", "name": "ops", "type": "MANUAL"}], service_accounts=[{"id": "S1", "name": "ci"}, {"id": "S2", "name": "ops"}])
+    access = [AccessSpec("ops"), AccessSpec("ci", kind="service account"), AccessSpec("ops", kind="service account")]
+    state = fetch_state(api, Specs(resources=[ResourceSpec(name="R", network="HQ", address="r", access=access)]))
+    by_root = dict(zip(roots(api), (v["names"] for _, v in api.lookups)))
+    assert by_root["groups"] == ["ops"] and by_root["serviceAccounts"] == ["ci", "ops"]
+    assert [n["id"] for n in state.groups["ops"]] == ["G1"] and sorted(state.service_accounts) == ["ci", "ops"]
+
+
+def test_no_service_account_lookup_when_the_file_names_none():
+    api = FakeApi()
+    fetch_state(api, Specs(resources=[res("Wiki", access=["Eng"])]))
+    assert "serviceAccounts" not in roots(api)

@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from tgcli.importer.load import GroupSpec, ResourceSpec, Specs
+from tgcli.importer.load import GROUP, SERVICE_ACCOUNT, GroupSpec, ResourceSpec, Specs
 from tgcli.importer.state import State
 
 CREATE, UPDATE, EXISTS, SKIP, BLOCKED = "create", "update", "exists", "skip", "blocked"
@@ -23,10 +23,14 @@ CREATE, UPDATE, EXISTS, SKIP, BLOCKED = "create", "update", "exists", "skip", "b
 
 @dataclass
 class Grant:
-    """One group's access to a resource, with the IDs resolved. ``group_id`` is None for a group this import creates."""
+    """One principal's access to a resource, with the IDs resolved. ``group_id`` is None for a group this import creates.
+
+    ``group`` is the name of a group, or of a service account when ``kind`` says so (service accounts are never created).
+    """
 
     group: str
     group_id: Optional[str]
+    kind: str = GROUP
     policy_id: Optional[str] = None
     access_policy: Optional[dict] = None
     approval_mode: Optional[str] = None
@@ -163,9 +167,49 @@ def _plan_groups(specs: list, state: State, rows: list) -> dict:
     return planned
 
 
+def _grant_words(grants: list) -> str:
+    """'2 groups', '1 service account', '1 group and 2 service accounts'."""
+    groups = sum(1 for g in grants if g.kind == GROUP)
+    accounts = len(grants) - groups
+    parts = ([_plural(groups, "group")] if groups or not accounts else []) + ([_plural(accounts, "service account")] if accounts else [])
+    return " and ".join(parts)
+
+
+def _service_account_refusal(entry: Any) -> Optional[str]:
+    """Why the API cannot give this entry to a service account (it takes a plain grant and nothing else), if it cannot."""
+    wanted = []
+    if entry.security_policy:
+        wanted.append("its own Security Policy")
+    if entry.access_policy:
+        wanted.append("an access policy (auto-lock)")
+    if entry.expires_at:
+        wanted.append("an expiry")
+    if entry.approval_mode and entry.approval_mode != "MANUAL":
+        wanted.append(f"approval mode {entry.approval_mode}")
+    if not wanted:
+        return None
+    return f"the API cannot give a service account {', '.join(wanted)}, and a plain grant would be wider than the file says"
+
+
 def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, warnings: list) -> list:
     grants = []
     for entry in spec.access:
+        if entry.kind == SERVICE_ACCOUNT:
+            found = state.service_accounts.get(entry.group, [])
+            label = f"service account '{entry.group}'"
+            if len(found) > 1:
+                warnings.append(f"access for {label} not added: the tenant has {len(found)} service accounts with that name")
+                continue
+            if not found:
+                warnings.append(f"access for {label} not added: no such service account in this tenant (the import does not create them)")
+                continue
+            refusal = _service_account_refusal(entry)
+            if refusal:
+                warnings.append(f"access for {label} not added: {refusal}")
+                continue
+            if found[0]["id"] not in have:
+                grants.append(Grant(entry.group, found[0]["id"], kind=SERVICE_ACCOUNT))
+            continue
         found = state.groups.get(entry.group, [])
         if len(found) > 1:
             warnings.append(f"access for group '{entry.group}' not added: the tenant has {len(found)} groups with that name")
@@ -183,7 +227,7 @@ def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, 
         group_id = found[0]["id"] if found else None
         if group_id is not None and group_id in have:
             continue  # already has access; its existing settings are left as they are
-        grants.append(Grant(entry.group, group_id, policy_id, entry.access_policy, entry.approval_mode, entry.expires_at))
+        grants.append(Grant(entry.group, group_id, GROUP, policy_id, entry.access_policy, entry.approval_mode, entry.expires_at))
     return grants
 
 
@@ -227,11 +271,11 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
         grants = _plan_grants(spec, state, new_groups, have, warnings)
         if existing:
             action = UPDATE if grants else EXISTS
-            detail = f"already exists; access to add for {_plural(len(grants), 'group')}" if grants else "already exists; no access to add"
+            detail = f"already exists; access to add for {_grant_words(grants)}" if grants else "already exists; no access to add"
             rows.append(Row("resource", spec.name, action, spec, detail, warnings, existing[0]["id"], grants=grants, network_id=network_id))
         else:
             rows.append(Row(
-                "resource", spec.name, CREATE, spec, f"in '{spec.network}', access for {_plural(len(grants), 'group')}", warnings,
+                "resource", spec.name, CREATE, spec, f"in '{spec.network}', access for {_grant_words(grants)}", warnings,
                 policy_id=policy_id, network_id=network_id, grants=grants,
             ))
 

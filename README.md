@@ -860,7 +860,7 @@ groups.json  users.json  resources.json  connectors.json  remote-networks.json  
 
 ### import
 
-Create Remote Networks, groups (with their members) and resources (with group access), and set device trust by serial number, from a file. **A dry run by default**: nothing is changed until you add `--execute`.
+Create Remote Networks, groups (with their members) and resources (with group and service account access), and set device trust by serial number, from a file. **A dry run by default**: nothing is changed until you add `--execute`.
 
 ```bash
 tgcli -s staging import ./twingate-backup-acme-20261023T101500Z                  # dry run, writes import_report_<timestamp>.csv
@@ -873,7 +873,7 @@ The input is a folder, or a single file, named `remote-networks`, `groups`, `res
 
 **How it matches things**
 
-- Remote Networks and groups by exact name, group members by **email**, Security Policies by name, and resources by **name, Remote Network and address together**. IDs in a backup belong to the tenant it came from and are never used.
+- Remote Networks, groups and service accounts by exact name, group members by **email**, Security Policies by name, and resources by **name, Remote Network and address together**. IDs in a backup belong to the tenant it came from and are never used.
 - Anything that already exists is **left exactly as it is and only added to**: missing group members, missing resource access. Nothing is ever removed or changed, so you can run the same import again after a failure and it finishes the job, and a second run on a finished import does nothing.
 - **Synced Groups are never created, changed or given members** (their members belong to your identity provider). A resource can still be given access to one.
 - A name that matches more than one object is never guessed: the row is blocked (or, for an optional extra, left out with a warning). Real tenants can hold several resources with the same name, Remote Network and address; those cannot be told apart, so the second and later ones in a file are blocked (create them by hand).
@@ -888,7 +888,7 @@ The input is a folder, or a single file, named `remote-networks`, `groups`, `res
 | `blocked` | Cannot be made correctly, for example its Remote Network or Security Policy does not exist, or a port list is invalid. Nothing is sent for it |
 | `error` / `not-run` | The API refused it, or the run stopped because the credentials were rejected |
 
-A row with a **warning** still goes ahead, but something optional was left out and the report says what: a member whose email is not in this tenant, access for a group that does not exist, a per-group policy that does not exist (it is not replaced by the default), access that has already expired (it is never restored as permanent access). Warnings do not change the exit code; `blocked` and `error` rows exit 1, also on a dry run, so a script can check before applying.
+A row with a **warning** still goes ahead, but something optional was left out and the report says what: a member whose email is not in this tenant, access for a group or service account that does not exist, a per-group policy that does not exist (it is not replaced by the default), access that has already expired (it is never restored as permanent access). Warnings do not change the exit code; `blocked` and `error` rows exit 1, also on a dry run, so a script can check before applying.
 
 Every row, with its status, detail, warnings, error, the new ID and where in the file it came from, is written to the CSV report (`--report`, default `import_report_<UTC timestamp>.csv`). The report path is checked before anything is read from or written to the tenant, so a path that cannot be written stops the command with nothing changed.
 
@@ -899,10 +899,11 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 | `remote-networks.csv` | `name` (required), `location` (`AWS`, `AZURE`, `GOOGLE_CLOUD`, `ON_PREMISE`, `OTHER`), `network_type` (`REGULAR`, `EXIT`), `active` |
 | `groups.csv` | `name` (required), `members` (emails separated by `;`), `security_policy` |
 | `devices.csv` | `serial_number` (required), `trusted` (default `true`) |
-| `resources.csv` | `name`, `network`, `address` (all required), `alias`, `tcp_ports`, `udp_ports`, `allow_icmp`, `visible`, `security_policy`, `groups`, `routing_mode` |
+| `resources.csv` | `name`, `network`, `address` (all required), `alias`, `tcp_ports`, `udp_ports`, `allow_icmp`, `visible`, `security_policy`, `groups`, `service_accounts`, `routing_mode` |
 
 - `tcp_ports` / `udp_ports`: `*` or blank means every port, `none` means no ports, otherwise a list like `80;443;8000-8100`.
 - `groups`: group names separated by `;`, each optionally followed by `=<Security Policy>` for a per-group policy, for example `Engineering=Strict Policy;Ops`. A group name containing `;` or `=` needs the JSON format.
+- `service_accounts`: service account names separated by `;`, for example `ci;deploy`. **They must already exist** (the import never creates service accounts, and a backup does not hold them), and a service account's access takes no per-grant settings: the API refuses a Security Policy, auto-lock, approval mode or expiry on it. A row from a JSON file that does carry one of those for a service account is left out of the grant with a warning, because a plain grant would be wider than the file says.
 - True/false columns accept `true`/`false`, `yes`/`no` and `1`/`0`. Empty cells use the API's defaults.
 
 **Device trust by serial number.** `devices.csv` (or `devices.json` with `serialNumber` and `isTrusted`) sets `trusted` on devices that have **already registered** with the tenant; the serial number is matched ignoring case.
@@ -912,9 +913,9 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 - After each change the API's reply is checked: if it says the device did not end up with the trust you asked for, the row is an `error`.
 - The API refuses to untrust a device whose serial number is **verified** ("Serial number verified Devices cannot be unverified via API"). That row is an `error` showing the API's message, and the device is left as it was.
 
-**Imported from the backup's JSON:** Remote Network location, type and active state; group name, Security Policy and members; for each network resource its address, alias, protocols and ports, visibility, browser shortcut, routing mode, tags, Security Policy, access policy and approval mode, and the access of each group (with its own policy, access policy, approval mode and expiry).
+**Imported from the backup's JSON:** Remote Network location, type and active state; group name, Security Policy and members; for each network resource its address, alias, protocols and ports, visibility, browser shortcut, routing mode, tags, Security Policy, access policy and approval mode, the access of each group (with its own policy, access policy, approval mode and expiry), and the access of each service account.
 
-**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, SSH / web app / Kubernetes resources, service account access, approver groups, device posture checks, security policies, DNS filtering profiles, gateways and certificate authorities.
+**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, SSH / web app / Kubernetes resources, approver groups, device posture checks, security policies, DNS filtering profiles, gateways and certificate authorities.
 
 **Rate limits.** The API typically allows about 20 writes a minute. A dry run tells you how many write requests a large import would make; the run pauses when rate limited, and if it gives up part way, run the same command again to finish.
 

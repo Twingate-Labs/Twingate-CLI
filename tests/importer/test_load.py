@@ -52,15 +52,39 @@ class TestBackupJson:
         assert spec.security_policy == "Strict" and spec.problems == []
         assert spec.access_policy == {"mode": "AUTO_LOCK", "durationSeconds": 3600} and spec.approval_mode == "AUTOMATIC"
 
-    def test_access_keeps_each_groups_own_settings_and_skips_repeats_and_service_accounts(self, tmp_path):
+    def test_access_keeps_each_groups_own_settings_and_skips_repeats(self, tmp_path):
         (spec,) = load_file(dump(tmp_path / "resources.json", [BACKUP_RESOURCE]), "resources")
-        assert [a.group for a in spec.access] == ["Eng", "Ops"]
-        eng, ops = spec.access
+        assert [(a.group, a.kind) for a in spec.access] == [("Eng", "group"), ("Ops", "group"), ("ci", "service account")]
+        eng, ops, ci = spec.access
+        assert (ci.security_policy, ci.access_policy, ci.expires_at) == (None, None, None)
         assert (eng.security_policy, eng.access_policy, eng.approval_mode, eng.expires_at) == ("Lax", None, None, None)
         assert (ops.security_policy, ops.access_policy, ops.approval_mode, ops.expires_at) == (
             None, {"mode": "ACCESS_REQUEST", "durationSeconds": 60}, "MANUAL", "2999-01-01T00:00:00Z")
-        assert "access for service account 'ci' is not imported (only groups are)" in spec.notes
         assert "approver groups are not imported" in spec.notes
+
+    @pytest.mark.parametrize("type_name", ["ServiceAccount", "SERVICE_ACCOUNT", "service account", "serviceAccount"])
+    def test_a_service_account_is_recognised_however_its_type_is_spelled(self, tmp_path, type_name):
+        record = {**BACKUP_RESOURCE, "access": [{"principal": {"type": type_name, "name": "ci"}}]}
+        (spec,) = load_file(dump(tmp_path / "resources.json", [record]), "resources")
+        assert [(a.group, a.kind) for a in spec.access] == [("ci", "service account")] and spec.notes == ["approver groups are not imported"]
+
+    def test_a_group_and_a_service_account_with_the_same_name_are_both_kept(self, tmp_path):
+        access = [{"principal": {"type": "Group", "name": "ops"}}, {"principal": {"type": "ServiceAccount", "name": "ops"}},
+                  {"principal": {"type": "ServiceAccount", "name": "ops"}}]
+        (spec,) = load_file(dump(tmp_path / "resources.json", [{**BACKUP_RESOURCE, "access": access}]), "resources")
+        assert [(a.group, a.kind) for a in spec.access] == [("ops", "group"), ("ops", "service account")]
+
+    def test_a_principal_that_is_neither_is_noted_and_not_imported(self, tmp_path):
+        access = [{"principal": {"type": "User", "name": "ann"}}, {"principal": {"type": "SomeNewKind", "name": "x"}}]
+        (spec,) = load_file(dump(tmp_path / "resources.json", [{**BACKUP_RESOURCE, "access": access}]), "resources")
+        assert spec.access == []
+        assert "access for user 'ann' is not imported (only groups and service accounts are)" in spec.notes
+        assert "access for some new kind 'x' is not imported (only groups and service accounts are)" in spec.notes
+
+    def test_a_service_account_entry_without_a_name_is_a_problem(self, tmp_path):
+        access = [{"principal": {"type": "ServiceAccount"}}]
+        (spec,) = load_file(dump(tmp_path / "resources.json", [{**BACKUP_RESOURCE, "access": access}]), "resources")
+        assert spec.problems == ["an access entry has no service account name"]
 
     def test_a_manual_access_policy_is_the_default_and_is_not_sent(self, tmp_path):
         record = {**BACKUP_RESOURCE, "accessPolicy": {"mode": "MANUAL", "durationSeconds": None}}
@@ -164,8 +188,8 @@ class TestCsv:
 
     def test_resources_with_ports_visibility_and_per_group_policies(self, tmp_path):
         f = write(tmp_path / "resources.csv",
-                  "name,network,address,alias,tcp_ports,udp_ports,allow_icmp,visible,security_policy,groups,routing_mode\n"
-                  'Wiki,HQ,wiki.internal,wiki.corp,80;443;8000-8100,none,false,no,Strict,"Eng=Lax;Ops, EMEA;Dev",bypass-twingate\n')
+                  "name,network,address,alias,tcp_ports,udp_ports,allow_icmp,visible,security_policy,groups,service_accounts,routing_mode\n"
+                  'Wiki,HQ,wiki.internal,wiki.corp,80;443;8000-8100,none,false,no,Strict,"Eng=Lax;Ops, EMEA;Dev",,bypass-twingate\n')
         (spec,) = load_file(f, "resources")
         assert spec.problems == []
         assert spec.protocols == {
@@ -233,6 +257,27 @@ class TestCsv:
         problems: list = []
         result = parse_ports(text, "tcp_ports", problems)
         assert (result["policy"], result["ports"]) == expected and problems == []
+
+
+class TestCsvServiceAccounts:
+    HEADER = "name,network,address,groups,service_accounts\n"
+
+    def test_service_accounts_are_split_on_semicolons_and_keep_commas_and_equals_in_their_names(self, tmp_path):
+        f = write(tmp_path / "resources.csv", self.HEADER + 'Wiki,HQ,wiki.internal,Eng,"ci; deploy, prod; a=b"\n')
+        (spec,) = load_file(f, "resources")
+        assert spec.problems == []
+        assert [(a.group, a.kind, a.security_policy) for a in spec.access] == [
+            ("Eng", "group", None), ("ci", "service account", None), ("deploy, prod", "service account", None), ("a=b", "service account", None)]
+
+    def test_the_column_is_optional_and_empty_adds_nothing(self, tmp_path):
+        (spec,) = load_file(write(tmp_path / "resources.csv", self.HEADER + "Wiki,HQ,wiki.internal,Eng,\n"), "resources")
+        assert [a.kind for a in spec.access] == ["group"]
+        (spec,) = load_file(write(tmp_path / "other.csv", "name,network,address\nWiki,HQ,wiki.internal\n"), "resources")
+        assert spec.access == []
+
+    def test_a_service_account_named_twice_is_kept_once(self, tmp_path):
+        (spec,) = load_file(write(tmp_path / "resources.csv", self.HEADER + "Wiki,HQ,wiki.internal,,ci;ci\n"), "resources")
+        assert [a.group for a in spec.access] == ["ci"]
 
 
 class TestFolders:
