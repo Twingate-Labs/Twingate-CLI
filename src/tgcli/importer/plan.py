@@ -2,6 +2,7 @@
 
 Rules that hold throughout:
   * an object that already exists is never changed. It is only added to: missing group members, missing resource access.
+    (With ``sync`` it is also brought in line with what the file states; with ``prune`` it also loses what the file omits.)
   * Synced Groups are never modified (their members belong to the identity provider).
   * a reference that cannot be resolved to exactly one object is never guessed. If the row cannot be made correctly
     without it (its Remote Network, its Security Policy) the row is blocked; if only an optional extra is lost (a member
@@ -17,6 +18,7 @@ from typing import Any, Optional
 
 from tgcli.importer.load import GROUP, SERVICE_ACCOUNT, GroupSpec, ResourceSpec, Specs
 from tgcli.importer.state import State
+from tgcli.importer.sync import grant_changes, resource_changes
 
 CREATE, UPDATE, EXISTS, SKIP, BLOCKED = "create", "update", "exists", "skip", "blocked"
 
@@ -51,6 +53,12 @@ class Row:
     member_ids: list = field(default_factory=list)  # users to add
     grants: list = field(default_factory=list)  # Grants to add
     device_ids: list = field(default_factory=list)  # devices whose trust is to be changed
+    # --sync / --prune, existing objects only:
+    group_policy_id: Optional[str] = None  # a group's Security Policy to set
+    remove_member_ids: list = field(default_factory=list)  # users to take out of a group
+    resource_update: dict = field(default_factory=dict)  # resourceUpdate variables (what differs)
+    grant_updates: list = field(default_factory=list)  # Grants whose settings change (only the changed ones are set)
+    remove_access_ids: list = field(default_factory=list)  # principals whose access is removed
     # filled in by apply
     status: str = ""
     id: str = ""
@@ -110,7 +118,7 @@ def _plan_networks(specs: list, state: State, rows: list) -> dict:
     return planned
 
 
-def _plan_group(spec: GroupSpec, state: State) -> Row:
+def _plan_group(spec: GroupSpec, state: State, sync: bool = False, prune: bool = False) -> Row:
     if spec.type == "SYNCED":
         return Row("group", spec.name, SKIP, spec, "Synced Group: its members come from your identity provider, so it is never created or changed")
     if spec.type != "MANUAL":
@@ -141,13 +149,30 @@ def _plan_group(spec: GroupSpec, state: State) -> Row:
             member_ids.append(next(iter(found)))
     member_ids = list(dict.fromkeys(member_ids))
     if manual:
-        action = UPDATE if member_ids else EXISTS
-        detail = f"already exists; {_plural(len(member_ids), 'member')} to add" if member_ids else "already exists; no members to add"
-        return Row("group", spec.name, action, spec, detail, warnings, manual[0]["id"], member_ids=member_ids)
+        group_id = manual[0]["id"]
+        policy_change = policy_id if sync and "security_policy" in spec.given and policy_id != (manual[0].get("securityPolicy") or {}).get("id") else None
+        removals: list = []
+        if sync and prune and "members" in spec.given:
+            keep = set().union(*(found for _, found in candidates))
+            removals = sorted(have - keep)
+        parts = []
+        if member_ids:
+            parts.append(f"{_plural(len(member_ids), 'member')} to add")
+        if policy_change:
+            parts.append("Security Policy to change")
+        if removals:
+            emails = state.member_emails.get(group_id, {})
+            parts.append(f"{_plural(len(removals), 'member')} to remove ({', '.join(emails.get(u, u) for u in removals)})")
+        action = UPDATE if parts else EXISTS
+        detail = "already exists; " + ("; ".join(parts) if parts else "no members to add")
+        return Row(
+            "group", spec.name, action, spec, detail, warnings, group_id, member_ids=member_ids,
+            group_policy_id=policy_change, remove_member_ids=removals,
+        )
     return Row("group", spec.name, CREATE, spec, _plural(len(member_ids), "member"), warnings, policy_id=policy_id, member_ids=member_ids)
 
 
-def _plan_groups(specs: list, state: State, rows: list) -> dict:
+def _plan_groups(specs: list, state: State, rows: list, sync: bool = False, prune: bool = False) -> dict:
     """Returns name -> True for groups this plan creates."""
     seen: dict = {}
     planned: dict = {}
@@ -160,7 +185,7 @@ def _plan_groups(specs: list, state: State, rows: list) -> dict:
             rows.append(_blocked("group", spec, [f"same name as {seen[key]}"]))
             continue
         seen[key] = spec.source
-        row = _plan_group(spec, state)
+        row = _plan_group(spec, state, sync, prune)
         if row.action == CREATE:
             planned[spec.name] = True
         rows.append(row)
@@ -191,8 +216,10 @@ def _service_account_refusal(entry: Any) -> Optional[str]:
     return f"the API cannot give a service account {', '.join(wanted)}, and a plain grant would be wider than the file says"
 
 
-def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, warnings: list) -> list:
+def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, warnings: list, edges: Optional[dict] = None) -> tuple:
+    """(grants to add, grants whose settings change). ``edges`` (what each principal has now) is only known for a sync."""
     grants = []
+    updates = []
     for entry in spec.access:
         if entry.kind == SERVICE_ACCOUNT:
             found = state.service_accounts.get(entry.group, [])
@@ -221,17 +248,38 @@ def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, 
         if problem:
             warnings.append(f"access for group '{entry.group}' not added: {problem}")
             continue
-        if entry.expires_at and _expired(entry.expires_at):
+        group_id = found[0]["id"] if found else None
+        has_access = group_id is not None and group_id in have
+        expired = bool(entry.expires_at and _expired(entry.expires_at))
+        if has_access and edges is not None:
+            settings, _, warning = grant_changes(entry, edges.get(group_id, {}), policy_id, expired)
+            if warning:
+                warnings.append(warning)
+            if settings:
+                updates.append(Grant(
+                    entry.group, group_id, GROUP, settings.get("policy_id"), settings.get("access_policy"),
+                    settings.get("approval_mode"), settings.get("expires_at"),
+                ))
+            continue
+        if expired:
             warnings.append(f"access for group '{entry.group}' not added: it expired on {entry.expires_at}")
             continue
-        group_id = found[0]["id"] if found else None
-        if group_id is not None and group_id in have:
-            continue  # already has access; its existing settings are left as they are
+        if has_access:
+            continue  # already has access; its existing settings are left as they are (unless --sync)
         grants.append(Grant(entry.group, group_id, GROUP, policy_id, entry.access_policy, entry.approval_mode, entry.expires_at))
-    return grants
+    return grants, updates
 
 
-def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: dict, rows: list) -> None:
+def _extra_access(spec: ResourceSpec, state: State, edges: Optional[dict]) -> list:
+    """Principals that have access now but are not named by any access entry in the file (every same-named one counts as named)."""
+    named: set = set()
+    for entry in spec.access:
+        pool = state.groups if entry.kind == GROUP else state.service_accounts
+        named |= {n["id"] for n in pool.get(entry.group, [])}
+    return sorted(i for i in (edges or {}) if i not in named)
+
+
+def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: dict, rows: list, sync: bool = False, prune: bool = False) -> None:
     seen: dict = {}
     for spec in specs:
         if spec.type != "NETWORK":
@@ -268,11 +316,27 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
             continue
         warnings = list(spec.notes)
         have = state.resource_access.get(existing[0]["id"], set()) if existing else set()
-        grants = _plan_grants(spec, state, new_groups, have, warnings)
+        edges = state.grants.get(existing[0]["id"], {}) if existing and sync else None
+        grants, updates = _plan_grants(spec, state, new_groups, have, warnings, edges)
         if existing:
-            action = UPDATE if grants else EXISTS
-            detail = f"already exists; access to add for {_grant_words(grants)}" if grants else "already exists; no access to add"
-            rows.append(Row("resource", spec.name, action, spec, detail, warnings, existing[0]["id"], grants=grants, network_id=network_id))
+            variables, words = resource_changes(spec, existing[0], policy_id, prune) if sync else ({}, [])
+            removals = _extra_access(spec, state, edges) if sync and prune and "access" in spec.given else []
+            parts = []
+            if grants:
+                parts.append(f"access to add for {_grant_words(grants)}")
+            if words:
+                parts.append("change " + ", ".join(words))
+            if updates:
+                parts.append(f"access settings to change for {_plural(len(updates), 'group')}")
+            if removals:
+                names = [(edges.get(i) or {}).get("name") or i for i in removals]
+                parts.append(f"access to remove for {_plural(len(removals), 'principal')} ({', '.join(names)})")
+            action = UPDATE if parts else EXISTS
+            detail = "already exists; " + ("; ".join(parts) if parts else "no access to add")
+            rows.append(Row(
+                "resource", spec.name, action, spec, detail, warnings, existing[0]["id"], grants=grants, network_id=network_id,
+                resource_update=variables, grant_updates=updates, remove_access_ids=removals,
+            ))
         else:
             rows.append(Row(
                 "resource", spec.name, CREATE, spec, f"in '{spec.network}', access for {_grant_words(grants)}", warnings,
@@ -314,11 +378,15 @@ def _plan_devices(specs: list, state: State, rows: list) -> None:
             rows.append(Row("device", spec.serial, EXISTS, spec, f"already {word} ({_plural(len(live), 'device')}){note}"))
 
 
-def build_plan(specs: Specs, state: State) -> list:
-    """Every row of the file, as a Row: networks, groups, resources, then devices (the order they are applied in)."""
+def build_plan(specs: Specs, state: State, sync: bool = False, prune: bool = False) -> list:
+    """Every row of the file, as a Row: networks, groups, resources, then devices (the order they are applied in).
+
+    ``sync`` also brings existing groups and resources in line with what the file states; ``prune`` (with ``sync``) also
+    removes the members, access and tags the file leaves out. ``state`` must have been read with ``sync`` too.
+    """
     rows: list = []
     new_networks = _plan_networks(specs.networks, state, rows)
-    new_groups = _plan_groups(specs.groups, state, rows)
-    _plan_resources(specs.resources, state, new_networks, new_groups, rows)
+    new_groups = _plan_groups(specs.groups, state, rows, sync, prune)
+    _plan_resources(specs.resources, state, new_networks, new_groups, rows, sync, prune)
     _plan_devices(specs.devices, state, rows)
     return rows

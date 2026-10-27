@@ -867,6 +867,8 @@ tgcli -s staging import ./twingate-backup-acme-20261023T101500Z                 
 tgcli -s staging import ./twingate-backup-acme-20261023T101500Z --execute        # apply it
 tgcli -s staging import ./my-files --report ./plan.csv                           # files you wrote yourself
 tgcli -s staging import ./groups.csv                                             # one file
+tgcli -s staging import ./my-files --sync                                        # also bring what already exists in line with the file
+tgcli -s staging import ./my-files --sync --prune                                # ... and remove what the file leaves out
 ```
 
 The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored. (A backup has no `devices` file; that one you write yourself.) To write the files by hand, copy the templates in [`examples/import`](examples/import) and edit them; only `resources.csv` has example rows, so a copy never creates anything you did not add.
@@ -874,15 +876,27 @@ The input is a folder, or a single file, named `remote-networks`, `groups`, `res
 **How it matches things**
 
 - Remote Networks, groups and service accounts by exact name, group members by **email**, Security Policies by name, and resources by **name, Remote Network and address together**. IDs in a backup belong to the tenant it came from and are never used.
-- Anything that already exists is **left exactly as it is and only added to**: missing group members, missing resource access. Nothing is ever removed or changed, so you can run the same import again after a failure and it finishes the job, and a second run on a finished import does nothing.
+- Anything that already exists is **left exactly as it is and only added to**: missing group members, missing resource access. Nothing is ever removed or changed (unless you add `--sync`, below), so you can run the same import again after a failure and it finishes the job, and a second run on a finished import does nothing.
 - **Synced Groups are never created, changed or given members** (their members belong to your identity provider). A resource can still be given access to one.
 - A name that matches more than one object is never guessed: the row is blocked (or, for an optional extra, left out with a warning). Real tenants can hold several resources with the same name, Remote Network and address; those cannot be told apart, so the second and later ones in a file are blocked (create them by hand).
+
+**Bringing what exists in line with the file: `--sync`, and `--prune`**
+
+By default an import only adds. `--sync` also **changes** an existing group, resource or grant to match what the file says; `--prune` (which needs `--sync`) also **removes** what the file leaves out. Both are dry runs until you add `--execute`, and a dry run with `--prune` prints how many members and access grants it would remove.
+
+- **Only what the file states is compared.** A blank CSV cell, a CSV column you left out, or a JSON key that is missing says nothing about that setting, so `--sync` leaves it alone. In particular a blank `tcp_ports` is not "all ports" here (write `*` to say that), and a backup that has no Security Policy for a resource does not take the tenant's policy away. Settings are only ever **set to what the file says, never cleared**.
+- **Resources** (found by name, Remote Network and address, so those never change): alias, TCP and UDP ports, ICMP, visibility, browser shortcut, routing mode, Security Policy, access policy and approval mode. Only the settings that differ are sent. Changing the access policy also re-sends the approval mode, because the API can reset it to `MANUAL` otherwise.
+- **A group's access to a resource** that already exists: its own Security Policy, access policy, approval mode and expiry, for the settings the file states (JSON file, or `Group=Policy` in a CSV). A past expiry is a warning, never applied. Service accounts' access has no settings, so there is nothing to sync.
+- **Groups**: a Manual group's Security Policy. Members are still only added. Synced Groups are never changed, with or without these flags.
+- **`--prune`** removes, for a group whose members the file lists, the members it leaves out; for a resource whose access the file lists, the group and service account access it leaves out; and for a resource whose tags the file lists, the other tags (without `--prune` tags are only added or updated). A blank members or groups cell in a CSV lists nothing, so it removes nothing; in a JSON file, `"users": []` or `"access": []` does mean "nobody", so under `--prune` it empties the group or the resource's access. An access entry or member that the file names is never removed, even when it could not be added (an expired grant, an ambiguous name). Within a row things are added or changed before anything is removed, so a run that stops part way never leaves less access than the file describes.
+- `--prune` **never deletes** a group, resource, Remote Network or user. It removes group members, resource access and tags only.
+- A dry run with `--sync` reads each existing resource's settings and access, so it makes more requests (and takes longer on a big file) than one without.
 
 **What a row can end up as**
 
 | Status | Meaning |
 |---|---|
-| `would-create` / `would-update` (dry run), `created` / `updated` | What was, or would be, done |
+| `would-create` / `would-update` (dry run), `created` / `updated` | What was, or would be, done (the detail says what: members or access to add, settings to change, access or members to remove) |
 | `exists` | Already there, nothing to add |
 | `skipped` | Deliberately not imported (Synced and System groups, SSH / web app / Kubernetes resources) |
 | `blocked` | Cannot be made correctly, for example its Remote Network or Security Policy does not exist, or a port list is invalid. Nothing is sent for it |

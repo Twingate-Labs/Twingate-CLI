@@ -17,6 +17,20 @@ FIELDS = {"networks": ("id", "name"), "service_accounts": ("id", "name"), "group
 ROOTS = {"remoteNetworks": "networks", "groups": "groups", "users": "users", "securityPolicies": "policies", "resources": "resources", "devices": "devices", "serviceAccounts": "service_accounts"}
 
 
+ALL_PORTS = {"policy": "ALLOW_ALL", "ports": []}
+
+
+def resource_detail(obj: dict) -> dict:
+    """The settings of a fake resource in the shape the API returns them, with the API's defaults for what a test left out."""
+    return {
+        "alias": obj.get("alias"), "isVisible": obj.get("isVisible", True), "isBrowserShortcutEnabled": obj.get("isBrowserShortcutEnabled", True),
+        "approvalMode": obj.get("approvalMode", "MANUAL"), "securityPolicy": obj.get("securityPolicy"),
+        "accessPolicy": obj.get("accessPolicy", {"mode": "MANUAL", "durationSeconds": None}),
+        "protocols": obj.get("protocols", {"allowIcmp": True, "tcp": ALL_PORTS, "udp": ALL_PORTS}),
+        "tags": obj.get("tags", []), "routingMode": obj.get("routingMode", "THROUGH_TWINGATE"),
+    }
+
+
 def page(items: list, cursor: Any) -> tuple:
     start = 0 if cursor is None else int(cursor[1:])
     more = start + PAGE < len(items)
@@ -81,10 +95,14 @@ class FakeApi:
                     assert "address { value }" in query, "resources are matched by address too"
                     node = {"id": obj["id"], "name": obj["name"], "remoteNetwork": {"name": obj["network"]},
                             "address": {"value": obj.get("address", f"{obj['name'].lower()}.internal")}}
+                    if "alias isVisible" in query:
+                        node.update(resource_detail(obj))
                 elif kind == "devices":
                     node = {k: obj[k] for k in ("id", "serialNumber", "isTrusted", "activeState", "user") if k in query.split("node {", 1)[1] or k == "id"}
                 else:
                     node = {k: obj[k] for k in FIELDS[kind] if k in query.split("node {", 1)[1] and k in obj}
+                    if kind == "groups" and "securityPolicy { id }" in query:
+                        node["securityPolicy"] = {"id": obj["securityPolicyId"]} if obj.get("securityPolicyId") else None
                 nodes.append(node)
             chunk, info = page(nodes, cursor)
             return {"data": {root: {"pageInfo": info, "edges": [{"node": n} for n in chunk]}}}
@@ -93,13 +111,30 @@ class FakeApi:
             if group is None:
                 return {"data": {"group": None}}
             chunk, info = page(sorted(group["members"]), cursor)
-            return {"data": {"group": {"users": {"pageInfo": info, "edges": [{"node": {"id": u}} for u in chunk]}}}}
+            if "email" in query:
+                nodes = [{"id": u, "email": next(x["email"] for x in self.users if x["id"] == u)} for u in chunk]
+            else:
+                nodes = [{"id": u} for u in chunk]
+            return {"data": {"group": {"users": {"pageInfo": info, "edges": [{"node": n} for n in nodes]}}}}
         if "resource(id: $id)" in query:
             res = next((r for r in self.resources if r["id"] == variables["id"]), None)
             if res is None:
                 return {"data": {"resource": None}}
             chunk, info = page(sorted(res["access"]), cursor)
-            return {"data": {"resource": {"access": {"pageInfo": info, "edges": [{"node": {"id": g}} for g in chunk]}}}}
+            if "approvalMode expiresAt" in query:
+                edges = []
+                for principal in chunk:
+                    entry = res["access"][principal]
+                    who = next(x for x in self.groups + self.service_accounts if x["id"] == principal)
+                    edges.append({
+                        "node": {"id": principal, "name": who["name"]},
+                        "securityPolicy": {"id": entry["securityPolicyId"]} if entry.get("securityPolicyId") else None,
+                        "accessPolicy": entry.get("accessPolicy"), "approvalMode": entry.get("approvalMode", "MANUAL"),
+                        "expiresAt": entry.get("expiresAt"),
+                    })
+            else:
+                edges = [{"node": {"id": g}} for g in chunk]
+            return {"data": {"resource": {"access": {"pageInfo": info, "edges": edges}}}}
         raise AssertionError(f"unrecognised query: {query[:100]}")
 
     # ------------------------------------------------------------------ writes
@@ -108,7 +143,8 @@ class FakeApi:
         declared = set(re.findall(r"\$(\w+):", query.split(")", 1)[0]))
         assert set(variables) <= declared, f"{name} sent undeclared variables {set(variables) - declared}"
         field = {"importNetwork": "remoteNetworkCreate", "importGroup": "groupCreate", "importGroupUsers": "groupUpdate",
-                 "importResource": "resourceCreate", "importAccess": "resourceAccessAdd", "importDeviceTrust": "deviceUpdate"}[name]
+                 "importResource": "resourceCreate", "importAccess": "resourceAccessAdd", "importDeviceTrust": "deviceUpdate",
+                 "importResourceUpdate": "resourceUpdate", "importAccessRemove": "resourceAccessRemove", "importGroupSync": "groupUpdate"}[name]
         problem = self.fail.get(name)
         if callable(problem):
             problem = problem(variables)
@@ -136,6 +172,11 @@ class FakeApi:
     def _do_importResource(self, v: dict) -> dict:
         network = next(n for n in self.networks if n["id"] == v["remoteNetworkId"])
         res = {"id": self._new_id("res"), "name": v["name"], "network": network["name"], "address": v["address"], "access": {}, "variables": v}
+        for key in ("alias", "isVisible", "isBrowserShortcutEnabled", "approvalMode", "accessPolicy", "protocols", "tags", "routingMode"):
+            if key in v:
+                res[key] = v[key]
+        if v.get("securityPolicyId"):
+            res["securityPolicy"] = {"id": v["securityPolicyId"]}
         self.resources.append(res)
         return {"id": res["id"], "name": res["name"]}
 
@@ -148,8 +189,38 @@ class FakeApi:
                 assert set(entry) == {"principalId"}, f"a service account's grant carries settings: {sorted(set(entry) - {'principalId'})}"
             else:
                 assert next((g for g in self.groups if g["id"] == principal), None), "access for a group that does not exist"
-            res["access"][entry["principalId"]] = entry
+            # an existing grant keeps whatever the call does not mention (the real API does), a new one starts from the call
+            res["access"][principal] = {**res["access"].get(principal, {}), **entry}
         return {"id": v["id"]}
+
+    def _do_importResourceUpdate(self, v: dict) -> dict:
+        res = next(r for r in self.resources if r["id"] == v["id"])
+        for key, value in v.items():
+            if key == "id":
+                continue
+            if key == "securityPolicyId":
+                res["securityPolicy"] = {"id": value} if value else None
+            else:
+                res[key] = value
+        if "accessPolicy" in v and "approvalMode" not in v:
+            res["approvalMode"] = "MANUAL"  # what the real API does: changing the access policy alone resets the approval mode
+        res.setdefault("updates", []).append(v)
+        return {"id": res["id"]}
+
+    def _do_importAccessRemove(self, v: dict) -> dict:
+        res = next(r for r in self.resources if r["id"] == v["id"])
+        for principal in v["principalIds"]:
+            assert principal in res["access"], "removing access that is not there"
+            del res["access"][principal]
+        return {"id": res["id"]}
+
+    def _do_importGroupSync(self, v: dict) -> dict:
+        group = next(g for g in self.groups if g["id"] == v["id"])
+        assert len(v.get("removedUserIds") or []) <= 200
+        if "securityPolicyId" in v:
+            group["securityPolicyId"] = v["securityPolicyId"]
+        group["members"].difference_update(v.get("removedUserIds") or [])
+        return {"id": group["id"]}
 
     def _do_importDeviceTrust(self, v: dict) -> dict:
         device = next(d for d in self.devices if d["id"] == v["id"])

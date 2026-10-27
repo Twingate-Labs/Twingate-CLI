@@ -68,6 +68,7 @@ class GroupSpec(Item):
     type: str = "MANUAL"
     members: list = field(default_factory=list)  # emails, in file order, without repeats
     security_policy: Optional[str] = None  # a name
+    given: set = field(default_factory=set)  # what the file actually says ("members", "security_policy"); a blank is not a statement
 
 
 GROUP, SERVICE_ACCOUNT = "group", "service account"
@@ -83,6 +84,7 @@ class AccessSpec:
     access_policy: Optional[dict] = None
     approval_mode: Optional[str] = None
     expires_at: Optional[str] = None
+    given: set = field(default_factory=set)  # which of the four settings the file states (so `access_policy=None` can mean MANUAL)
 
 
 @dataclass
@@ -101,6 +103,9 @@ class ResourceSpec(Item):
     approval_mode: Optional[str] = None
     routing_mode: Optional[str] = None
     access: list = field(default_factory=list)
+    # What the file actually states. A blank CSV cell or a missing JSON key is not a statement, so --sync leaves that alone;
+    # the fields above hold the API's defaults for such a field, which is what a create uses but a sync must not apply.
+    given: set = field(default_factory=set)
 
 
 @dataclass
@@ -128,6 +133,11 @@ class Specs:
 
 def _text(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
+
+
+def _stated(value: Any) -> bool:
+    """Whether a field says anything: present, and not a blank cell or null."""
+    return value.strip() != "" if isinstance(value, str) else value is not None
 
 
 def _name_of(value: Any) -> str:
@@ -256,6 +266,10 @@ def _group(record: dict, source: str) -> GroupSpec:
             seen.add(email.lower())
             spec.members.append(email)
     spec.security_policy = _name_of(record.get("securityPolicy")) or None
+    if spec.security_policy:
+        spec.given.add("security_policy")
+    if isinstance(record.get("users"), list):
+        spec.given.add("members")
     return spec
 
 
@@ -292,6 +306,14 @@ def _access(entries: Any, spec: ResourceSpec) -> None:
             approval_mode=_approval_mode(entry.get("approvalMode"), f"access for '{name}' approval mode", probs),
             expires_at=_text(entry.get("expiresAt")) or None,
         )
+        if access.security_policy:
+            access.given.add("security_policy")
+        if isinstance(entry.get("accessPolicy"), dict) and entry["accessPolicy"].get("mode"):
+            access.given.add("access_policy")
+        if access.approval_mode:
+            access.given.add("approval_mode")
+        if access.expires_at:
+            access.given.add("expires_at")
         spec.problems.extend(probs)
         spec.access.append(access)
 
@@ -324,6 +346,17 @@ def _resource(record: dict, source: str) -> ResourceSpec:
     if record.get("approverGroups"):
         spec.notes.append("approver groups are not imported")
     _access(record.get("access"), spec)
+    protocols = record.get("protocols") if isinstance(record.get("protocols"), dict) else {}
+    stated = {
+        "alias": _stated(record.get("alias")), "icmp": _stated(protocols.get("allowIcmp")),
+        "tcp": isinstance(protocols.get("tcp"), dict), "udp": isinstance(protocols.get("udp"), dict),
+        "visible": _stated(record.get("isVisible")), "browser_shortcut": _stated(record.get("isBrowserShortcutEnabled")),
+        "tags": isinstance(record.get("tags"), list), "security_policy": bool(spec.security_policy),
+        "access_policy": isinstance(record.get("accessPolicy"), dict) and bool(record["accessPolicy"].get("mode")),
+        "approval_mode": bool(spec.approval_mode), "routing_mode": bool(spec.routing_mode),
+        "access": isinstance(record.get("access"), list),
+    }
+    spec.given = {name for name, yes in stated.items() if yes}
     return spec
 
 
@@ -355,6 +388,13 @@ def _csv_group(row: dict) -> dict:
     return record
 
 
+def _csv_group_spec(row: dict, source: str) -> GroupSpec:
+    spec = _group(_csv_group(row), source)
+    if not spec.members:
+        spec.given.discard("members")  # a blank members cell is not a statement that the group is empty
+    return spec
+
+
 def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
     record: dict = {
         "type": "NETWORK",
@@ -382,12 +422,16 @@ def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
     # Port lists in a CSV are written as text (`80;443;8000-8100`), so they are parsed here, not from the JSON shape.
     for proto in ("tcp", "udp"):
         spec.protocols[proto] = parse_ports(row.get(f"{proto}_ports", ""), f"{proto}_ports", spec.problems)
+        if _text(row.get(f"{proto}_ports")):
+            spec.given.add(proto)
+    if not record["access"]:
+        spec.given.discard("access")  # no groups and no service accounts named: the cell is blank, not an empty list
     return spec
 
 
 _CSV_ADAPTERS: dict = {
     NETWORKS: lambda row, source: _network(_csv_network(row), source),
-    GROUPS: lambda row, source: _group(_csv_group(row), source),
+    GROUPS: lambda row, source: _csv_group_spec(row, source),
     RESOURCES: _resource_from_csv,
     DEVICES: lambda row, source: _device({"serial_number": row.get("serial_number"), "trusted": row.get("trusted")}, source),
 }

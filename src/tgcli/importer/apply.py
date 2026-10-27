@@ -1,5 +1,8 @@
 """Carry out a plan against the tenant: Remote Networks, then groups and their members, then resources and their access.
 
+Within a row, things are added or changed before anything is removed, so a run that stops part way never leaves less access
+than the file describes.
+
 One row failing never stops the others (the report says which failed), with one exception: when the API rejects the
 credentials there is no point trying the rest, so the remaining rows are marked not-run.
 """
@@ -14,7 +17,7 @@ from tgcli.importer.plan import BLOCKED, CREATE, EXISTS, SKIP, UPDATE, Grant, Ro
 from tgcli.queries import importing as q
 
 BATCH_SIZE = 200  # users per groupUpdate
-ACCESS_BATCH = 100  # grants per resourceAccessAdd
+ACCESS_BATCH = 100  # grants per resourceAccessAdd (and principals per resourceAccessRemove)
 
 DRY_RUN_STATUS = {CREATE: "would-create", UPDATE: "would-update", EXISTS: "exists", SKIP: "skipped", BLOCKED: "blocked"}
 DONE_STATUS = {CREATE: "created", UPDATE: "updated", EXISTS: "exists", SKIP: "skipped", BLOCKED: "blocked"}
@@ -31,10 +34,16 @@ def write_count(rows: list) -> int:
         elif row.kind == "device":
             total += len(row.device_ids)
         elif row.kind == "group":
-            total += (row.action == CREATE) + -(-len(row.member_ids) // BATCH_SIZE)
+            total += (row.action == CREATE) + -(-len(row.member_ids) // BATCH_SIZE) + _sync_group_calls(row)
         else:
-            total += (row.action == CREATE) + -(-len(row.grants) // ACCESS_BATCH)
+            total += (row.action == CREATE) + bool(row.resource_update) + -(-(len(row.grants) + len(row.grant_updates)) // ACCESS_BATCH)
+            total += -(-len(row.remove_access_ids) // ACCESS_BATCH)
     return total
+
+
+def _sync_group_calls(row: Row) -> int:
+    """A group's Security Policy change rides with its first batch of removals; with none it is a call of its own."""
+    return max(-(-len(row.remove_member_ids) // BATCH_SIZE), 1 if row.group_policy_id else 0)
 
 
 class RowError(Exception):
@@ -78,21 +87,53 @@ def _add_members(client: Any, row: Row, group_id: str) -> None:
         done += len(chunk)
 
 
+def _sync_group(client: Any, row: Row, group_id: str) -> None:
+    """Change an existing group's Security Policy and take out the members the file leaves out."""
+    chunks = list(_chunks(row.remove_member_ids, BATCH_SIZE)) or [[]]
+    done = 0
+    for index, chunk in enumerate(chunks):
+        variables: dict = {"id": group_id}
+        if index == 0 and row.group_policy_id:
+            variables["securityPolicyId"] = row.group_policy_id
+        if chunk:
+            variables["removedUserIds"] = chunk
+        try:
+            _call(client, q.SYNC_GROUP, variables, "groupUpdate")
+        except (RowError, TwingateAPIError) as exc:
+            raise RowError(f"removed {done} of {len(row.remove_member_ids)} members, then: {exc}. Run the import again to finish.") from exc
+        done += len(chunk)
+
+
+def _update_resource(client: Any, row: Row, resource_id: str) -> None:
+    _call(client, q.UPDATE_RESOURCE, {"id": resource_id, **row.resource_update}, "resourceUpdate")
+
+
+def _remove_access(client: Any, row: Row, resource_id: str) -> None:
+    done = 0
+    for chunk in _chunks(row.remove_access_ids, ACCESS_BATCH):
+        try:
+            _call(client, q.REMOVE_RESOURCE_ACCESS, {"id": resource_id, "principalIds": chunk}, "resourceAccessRemove")
+        except (RowError, TwingateAPIError) as exc:
+            raise RowError(f"removed access for {done} of {len(row.remove_access_ids)} principals, then: {exc}. Run the import again to finish.") from exc
+        done += len(chunk)
+
+
 def _add_access(client: Any, row: Row, resource_id: str, group_ids: dict) -> None:
     grants = []
-    for grant in row.grants:
+    for grant in row.grants + row.grant_updates:
         group_id = grant.group_id or group_ids.get(grant.group)
         if group_id is None:
             row.warnings.append(f"access for group '{grant.group}' not added: the group was not created")
         else:
             grants.append(_grant_input(grant, group_id))
     who = "groups" if all(g.kind != SERVICE_ACCOUNT for g in row.grants) else "groups and service accounts"
+    did = "added or changed access" if row.grant_updates else "added access"
     done = 0
     for chunk in _chunks(grants, ACCESS_BATCH):
         try:
             _call(client, q.ADD_RESOURCE_ACCESS, {"id": resource_id, "access": chunk}, "resourceAccessAdd")
         except (RowError, TwingateAPIError) as exc:
-            raise RowError(f"added access for {done} of {len(grants)} {who}, then: {exc}. Run the import again to add the rest.") from exc
+            raise RowError(f"{did} for {done} of {len(grants)} {who}, then: {exc}. Run the import again to add the rest.") from exc
         done += len(chunk)
 
 
@@ -113,8 +154,8 @@ def _resource_variables(row: Row, network_id: str) -> dict:
         variables["securityPolicyId"] = row.policy_id
     if not spec.is_visible:
         variables["isVisible"] = False
-    if spec.browser_shortcut:
-        variables["isBrowserShortcutEnabled"] = True
+    if "browser_shortcut" in spec.given or spec.browser_shortcut:
+        variables["isBrowserShortcutEnabled"] = spec.browser_shortcut  # the API's own default is True, so a stated False must be sent
     if spec.routing_mode == "BYPASS_TWINGATE":
         variables["routingMode"] = "BYPASS_TWINGATE"
     if spec.tags:
@@ -159,6 +200,8 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
         else:
             row.id = row.existing_id
         _add_members(client, row, row.id)
+        if row.group_policy_id or row.remove_member_ids:
+            _sync_group(client, row, row.id)
     else:
         if row.action == CREATE:
             network_id = row.network_id or ids["network"].get(spec.network)
@@ -168,8 +211,12 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
             row.id = result["entity"]["id"]
         else:
             row.id = row.existing_id
-        if row.grants:
+            if row.resource_update:
+                _update_resource(client, row, row.id)
+        if row.grants or row.grant_updates:
             _add_access(client, row, row.id, ids["group"])
+        if row.remove_access_ids:
+            _remove_access(client, row, row.id)
 
 
 def apply_plan(client: Any, rows: list, progress: Callable[[Row], None] = lambda row: None) -> None:

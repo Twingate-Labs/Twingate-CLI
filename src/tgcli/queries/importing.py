@@ -20,6 +20,33 @@ query($id: ID!, $cursor: String) {
 }
 """
 
+# What --sync compares an existing resource with. Looked up with the name filter, like everything else.
+RESOURCE_DETAIL = """id name address { value } remoteNetwork { name } alias isVisible isBrowserShortcutEnabled approvalMode
+  securityPolicy { id } accessPolicy { mode durationSeconds } protocols { allowIcmp tcp { policy ports { start end } } udp { policy ports { start end } } }
+  tags { key value } ... on NetworkResource { routingMode }"""
+
+GROUP_DETAIL = "id name type securityPolicy { id }"
+
+GROUP_USERS_DETAIL = """
+query($id: ID!, $cursor: String) {
+  group(id: $id) { users(after: $cursor) { pageInfo { hasNextPage endCursor } edges { node { id email } } } }
+}
+"""
+
+RESOURCE_GRANTS = """
+query($id: ID!, $cursor: String) {
+  resource(id: $id) {
+    access(after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      edges {
+        node { ... on Group { id name } ... on ServiceAccount { id name } }
+        securityPolicy { id } accessPolicy { mode durationSeconds } approvalMode expiresAt
+      }
+    }
+  }
+}
+"""
+
 CREATE_NETWORK = """
 mutation importNetwork($name: String!, $location: RemoteNetworkLocation, $networkType: RemoteNetworkType, $isActive: Boolean) {
   remoteNetworkCreate(name: $name, location: $location, networkType: $networkType, isActive: $isActive) {
@@ -63,5 +90,30 @@ mutation importAccess($id: ID!, $access: [AccessInput!]!) {
 UPDATE_DEVICE_TRUST = """
 mutation importDeviceTrust($id: ID!, $isTrusted: Boolean!) {
   deviceUpdate(id: $id, isTrusted: $isTrusted) { ok error entity { id isTrusted } }
+}
+"""
+
+UPDATE_RESOURCE = """
+mutation importResourceUpdate(
+  $id: ID!, $alias: String, $protocols: ProtocolsInput, $securityPolicyId: ID, $isVisible: Boolean, $isBrowserShortcutEnabled: Boolean,
+  $routingMode: RoutingMode, $tags: [TagInput!], $accessPolicy: AccessPolicyInput, $approvalMode: AccessApprovalMode
+) {
+  resourceUpdate(
+    id: $id, alias: $alias, protocols: $protocols, securityPolicyId: $securityPolicyId, isVisible: $isVisible,
+    isBrowserShortcutEnabled: $isBrowserShortcutEnabled, routingMode: $routingMode, tags: $tags, accessPolicy: $accessPolicy,
+    approvalMode: $approvalMode
+  ) { ok error entity { id } }
+}
+"""
+
+REMOVE_RESOURCE_ACCESS = """
+mutation importAccessRemove($id: ID!, $principalIds: [ID!]!) {
+  resourceAccessRemove(resourceId: $id, principalIds: $principalIds) { ok error entity { id } }
+}
+"""
+
+SYNC_GROUP = """
+mutation importGroupSync($id: ID!, $securityPolicyId: ID, $removedUserIds: [ID]) {
+  groupUpdate(id: $id, securityPolicyId: $securityPolicyId, removedUserIds: $removedUserIds) { ok error entity { id } }
 }
 """

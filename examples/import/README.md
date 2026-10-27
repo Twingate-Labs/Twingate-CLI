@@ -12,4 +12,6 @@ tgcli -s <session> import ./your-copy --execute    # apply it
 - A resource's `groups` cell is group names separated by `;`; `Group=Policy` gives that group its own Security Policy. `service_accounts` is service account names separated by `;` (they must already exist, and take no per-grant policy, auto-lock or expiry).
 - `tcp_ports` / `udp_ports`: `*` or blank is every port, `none` is no ports, otherwise a list like `80;443;8000-8100`.
 
+- By default an import only adds to what exists. `--sync` also changes existing resources, grants and group policies to match the file, and `--prune` (with `--sync`) removes the access, members and tags the file leaves out. A **blank cell states nothing**, so `--sync` leaves that setting alone; both are dry runs until `--execute`.
+
 Every column is explained in the `import` section of the main README.

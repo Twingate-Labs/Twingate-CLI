@@ -239,3 +239,43 @@ class TestDevices:
     def test_a_serial_that_has_not_registered_is_not_a_failure(self, tmp_path):
         result, _ = run(self.folder(tmp_path, "serial_number\nNEW\n"), FakeApi(), "--execute")
         assert result.exit_code == 0
+
+
+class TestSync:
+    TENANT = dict(
+        networks=[{"id": "N1", "name": "HQ"}], users=USERS, groups=[{"id": "G1", "name": "Eng", "type": "MANUAL"}, {"id": "G2", "name": "Ops", "type": "MANUAL"}],
+        resources=[{"id": "R1", "name": "Wiki", "network": "HQ", "alias": "old", "access": {"G2": {"principalId": "G2"}}}],
+    )
+
+    def files(self, tmp_path):
+        return backup(tmp_path, resources=[{**RESOURCE, "alias": "wiki", "access": [{"principal": {"type": "Group", "name": "Eng"}}]}])
+
+    def test_prune_without_sync_is_refused_before_anything_is_read(self, tmp_path):
+        api = FakeApi(**self.TENANT)
+        result, _ = run(self.files(tmp_path), api, "--prune")
+        assert result.exit_code == 1 and "only works together with --sync" in result.output
+        assert api.requests == []
+
+    def test_a_dry_run_says_what_prune_would_remove_and_changes_nothing(self, tmp_path):
+        api = FakeApi(**self.TENANT)
+        result, report = run(self.files(tmp_path), api, "--sync", "--prune")
+        assert result.exit_code == 0 and "DRY RUN" in result.output
+        assert "--prune would REMOVE 0 group member(s) and 1 resource access grant(s)" in result.output
+        assert api.writes == []
+        (row,) = rows_of(report)
+        assert row["status"] == "would-update" and row["detail"] == "already exists; access to add for 1 group; change alias; access to remove for 1 principal (Ops)"
+
+    def test_without_sync_the_same_file_only_adds(self, tmp_path):
+        api = FakeApi(**self.TENANT)
+        result, report = run(self.files(tmp_path), api, "--execute")
+        assert result.exit_code == 0 and "REMOVE" not in result.output
+        assert set(api.resources[0]["access"]) == {"G1", "G2"} and api.resources[0]["alias"] == "old"
+
+    def test_execute_changes_adds_and_removes_and_the_report_says_so(self, tmp_path):
+        api = FakeApi(**self.TENANT)
+        result, report = run(self.files(tmp_path), api, "--sync", "--prune", "--execute")
+        assert result.exit_code == 0, result.output
+        assert set(api.resources[0]["access"]) == {"G1"} and api.resources[0]["alias"] == "wiki"
+        assert rows_of(report)[0]["status"] == "updated"
+        again, _ = run(self.files(tmp_path), api, "--sync", "--prune", "--execute")
+        assert again.exit_code == 0 and "REMOVE" not in again.output
