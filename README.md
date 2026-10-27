@@ -265,8 +265,10 @@ Manage Twingate resources and their access controls.
 ```bash
 # List / show. Both have a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES.
 # `show` (and `list --detail`) add, after the original columns: the access policy (mode, duration), the
-# approval mode, approver groups (IDs, plus names in the same order) and, for Gateway-backed types, the
-# gateway, upstream/downstream ports (plus TLS modes for web apps) and the cluster ref (Kubernetes).
+# approval mode, approver groups (IDs, plus names in the same order), who has access (`accessNames`) and
+# when each grant expires (`accessExpiresAt`, `None` for access that never does; both in the same order as
+# `access.edges`) and, for Gateway-backed types, the gateway, upstream/downstream ports (plus TLS modes for
+# web apps) and the cluster ref (Kubernetes). `show` also has `access.edges`, as `list` does.
 # Columns that don't apply to a resource's type are blank. `list` leaves the extras out by default because
 # they make it slower on large tenants (about 13% at 144 resources).
 tgcli resource list
@@ -388,9 +390,18 @@ tgcli -s acme resource access add -i <the id it printed> -g "Engineering" -p "St
 tgcli -s acme resource access add -i <the id it printed> -g "Ops" -e "2026-12-31T23:59:59Z"
 ```
 
-If `resource create` is run without `-g`, it prints a reminder to **stderr** (so piped JSON/CSV on stdout is unaffected) with the exact `access add` command for the new resource. To find a resource's ID later, use `tgcli resource list`; `tgcli resource show -i <id>` lists who has access.
+If `resource create` is run without `-g`, it prints a reminder to **stderr** (so piped JSON/CSV on stdout is unaffected) with the exact `access add` command for the new resource. To find a resource's ID later, use `tgcli resource list`; `tgcli resource show -i <id>` lists who has access and when each grant expires.
 
 **Auto-lock and the access policy.** Auto-lock is set through the API's `accessPolicy` (mode `AUTO_LOCK`, duration in seconds; `resource autolock` and `access add|set -a` convert your days for you). It replaces the API's deprecated `usageBasedAutolockDurationDays`, which this CLI no longer sends or selects, so `resource list` and `resource show` JSON no longer contain that key: read `accessPolicy.mode` and `accessPolicy.durationSeconds` (`resource show` and `resource list --detail` have them; the default `list` leaves them out to stay fast). `-a` must be 1 to 365 days (the API silently stores anything longer as 365, so the CLI refuses it); `0`, negative numbers and anything over 365 are refused (`resource autolock -a -1` turns auto-lock off). **Auto-lock (`-a`) and expiry (`-e`) apply to groups only**: the API rejects both for a service account, so the CLI refuses the call instead of sending it (add the service account in its own call without them). The CLI only sets `AUTO_LOCK`; other modes the API has (`ACCESS_REQUEST`) are not yet settable here.
+
+**Expiring access.** A group's access to a resource can be given an expiry, after which the access ends by itself:
+
+```bash
+tgcli resource access add -i "UmVzb3VyY2U6MQ==" -g "Contractors" -e "2026-12-31T23:59:59Z"
+```
+
+- The expiry must be in the future and **less than a year away** (the API refuses anything else), and it applies to **groups only**: the API refuses an expiry, and auto-lock, for a service account, so the CLI refuses the combination before sending it. Running `access add -e` again for a group that already has access sets or changes that group's expiry; running it without `-e` leaves the existing expiry alone. To take an expiry off, remove the group's access (`access remove`) and add it again without `-e`.
+- To see it, use `tgcli resource show -i <id>` (or `resource list --detail`): `accessNames` and `accessExpiresAt` are lists in the same order, and `-f json` has `expiresAt` on each entry of `access.edges`. The default `resource list` shows each grant's expiry inside its `access.edges` column too.
 
 **Changing access safely.** `access add` only adds. `access set` **replaces** the whole list, so anything you leave out loses access; to protect against a typo it refuses to run when you name nobody, and removing everyone's access takes the explicit `--clear`. `access add` and `access remove` likewise require at least one group (`-g`) or service account (`-s`). The older spellings `access_add`, `access_set` and `access_remove` still work (they are the same commands, no longer shown in `--help`), so existing scripts keep running.
 

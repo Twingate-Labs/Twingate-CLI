@@ -361,7 +361,7 @@ def resource_access_set(
     policyid: Optional[list[str]] = typer.Option(None, "-p", "--policy", help=_POLICY_HELP),
     serviceid: Optional[list[str]] = typer.Option(None, "-s", "--service", help=_SERVICE_HELP),
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
-    expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601, e.g. 2024-03-14T20:20:32-07:00)."),
+    expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry for each group's access (ISO8601, e.g. 2026-12-31T23:59:59Z): must be in the future and less than a year away. Groups only; the API refuses it for a service account."),
     clear: bool = typer.Option(False, "--clear", help="Remove ALL access (the only way to set an empty list). Cannot be combined with -g or -s."),
 ) -> None:
     """Set Resource access. REPLACES all existing Group/Service Account access: anything not listed loses access. Use 'access add' to keep what is there."""
@@ -393,7 +393,7 @@ def resource_access_add(
     policyid: Optional[list[str]] = typer.Option(None, "-p", "--policy", help=_POLICY_HELP),
     serviceid: Optional[list[str]] = typer.Option(None, "-s", "--service", help=_SERVICE_HELP),
     autolockdays: Optional[int] = typer.Option(None, "-a", "--autolock", help="Autolock days (1–365)."),
-    expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry (ISO8601)."),
+    expiresat: str = typer.Option("", "-e", "--expiresat", help="Expiry for each group's access (ISO8601, e.g. 2026-12-31T23:59:59Z): must be in the future and less than a year away. Groups only; the API refuses it for a service account."),
 ) -> None:
     """Add Group/Service Account access to a Resource (non-destructive)."""
     if not split_values(groupid) and not split_values(serviceid):

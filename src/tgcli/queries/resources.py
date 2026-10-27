@@ -77,7 +77,7 @@ _TYPE_SPECIFIC_TEMPLATE = """
 # The API returns at most 50 items per page, so the resource commands follow each nested list to its end.
 RESOURCE_TYPES = ("NetworkResource", "SSHResource", "WebAppResource", "KubernetesResource")
 _APPROVER_EDGE = "node { id name }"
-_ACCESS_EDGE = "node { ... on Group { id name } ... on ServiceAccount { id name } } securityPolicy { id name }"
+_ACCESS_EDGE = "node { ... on Group { id name } ... on ServiceAccount { id name } } securityPolicy { id name } expiresAt"
 _TYPE_SPECIFIC_FIELDS = _TYPE_SPECIFIC_TEMPLATE.replace("@@APPROVERS@@", connection("approverGroups", _APPROVER_EDGE))
 
 _LIST_RESOURCES_TEMPLATE = """
@@ -154,7 +154,7 @@ LIST_RESOURCES_DETAIL = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _TYP
 _APPROVERS_CONTINUATION = continuation("resource", "approverGroups", _APPROVER_EDGE, on=RESOURCE_TYPES)
 RESOURCE_LIST_CONTINUATIONS = {"access": continuation("resource", "access", _ACCESS_EDGE)}
 RESOURCE_DETAIL_CONTINUATIONS = {**RESOURCE_LIST_CONTINUATIONS, "approverGroups": _APPROVERS_CONTINUATION}
-RESOURCE_SHOW_CONTINUATIONS = {"approverGroups": _APPROVERS_CONTINUATION}
+RESOURCE_SHOW_CONTINUATIONS = {**RESOURCE_LIST_CONTINUATIONS, "approverGroups": _APPROVERS_CONTINUATION}
 
 SHOW_RESOURCE = """
 query getResource($itemID: ID!) {
@@ -192,6 +192,7 @@ query getResource($itemID: ID!) {
         }
       }
     }
+    """ + connection("access", _ACCESS_EDGE) + """
   }
 }
 """

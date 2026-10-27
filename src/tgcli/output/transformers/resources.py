@@ -49,6 +49,25 @@ def _approver_names_of(resource: dict | None) -> list[str] | None:
     return [edge["node"]["name"] for edge in edges]
 
 
+def _access_edges_of(resource: dict | None) -> list[dict]:
+    return ((resource or {}).get("access") or {}).get("edges") or []
+
+
+def _access_names_of(resource: dict | None) -> list[str] | None:
+    """Names of the groups and service accounts with access (None when there is no resource), in the order of the
+    access.edges column."""
+    if resource is None:
+        return None
+    return [(edge.get("node") or {}).get("name") for edge in _access_edges_of(resource)]
+
+
+def _access_expiries_of(resource: dict | None) -> list[str | None] | None:
+    """When each grant expires (None for a grant that never does), in the order of the access.edges column."""
+    if resource is None:
+        return None
+    return [edge.get("expiresAt") for edge in _access_edges_of(resource)]
+
+
 _LIST_COLUMNS = [
     "id", "name", "isActive", "remoteNetwork.id",
     "address.type", "address.value", "access.edges",
@@ -63,10 +82,14 @@ def get_list_as_csv(json_results: list) -> pd.DataFrame:
 
 
 def get_list_detail_as_csv(json_results: list) -> pd.DataFrame:
-    """The default list columns plus everything in _TYPE_AND_EXTRA_COLUMNS and the approver group names."""
+    """The default list columns plus everything in _TYPE_AND_EXTRA_COLUMNS, the approver group names, and for each
+    grant (in the order of the access.edges IDs) the name of who has access and when that access expires."""
     df = _keep_ints(_label_type(generic.get_list_as_csv(json_results, _LIST_COLUMNS + _TYPE_AND_EXTRA_COLUMNS)))
     # One entry per row, in the same order generic.get_list_as_csv emits them (including null nodes).
-    df["approverGroupNames"] = [_approver_names_of(edge["node"]) for page in json_results for edge in page]
+    nodes = [edge["node"] for page in json_results for edge in page]
+    df["approverGroupNames"] = [_approver_names_of(node) for node in nodes]
+    df["accessNames"] = [_access_names_of(node) for node in nodes]
+    df["accessExpiresAt"] = [_access_expiries_of(node) for node in nodes]
     return df
 
 
@@ -78,7 +101,13 @@ def get_show_as_csv(json_results: dict) -> pd.DataFrame:
         "isVisible", "isBrowserShortcutEnabled", "routingMode",
     ]
     df = _keep_ints(_label_type(generic.get_show_as_csv_no_nesting(json_results, "resource", columns + _TYPE_AND_EXTRA_COLUMNS)))
-    df["approverGroupNames"] = [_approver_names_of((json_results.get("data") or {}).get("resource"))]
+    resource = (json_results.get("data") or {}).get("resource")
+    df["approverGroupNames"] = [_approver_names_of(resource)]
+    # The same grants `resource list` shows in its access.edges column (each with its policy and expiry), then the names
+    # and the expiries on their own, in the same order.
+    df["access.edges"] = [None if resource is None else _access_edges_of(resource)]
+    df["accessNames"] = [_access_names_of(resource)]
+    df["accessExpiresAt"] = [_access_expiries_of(resource)]
     return df
 
 

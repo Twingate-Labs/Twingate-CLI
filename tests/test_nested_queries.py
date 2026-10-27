@@ -29,7 +29,11 @@ CASES = {
         resources.LIST_RESOURCES_DETAIL, resources.RESOURCE_DETAIL_CONTINUATIONS,
         {"access": resources._ACCESS_EDGE, "approverGroups": resources._APPROVER_EDGE},
     ),
-    "resource show": (resources.SHOW_RESOURCE, resources.RESOURCE_SHOW_CONTINUATIONS, {"approverGroups": resources._APPROVER_EDGE}),
+    "resource show": (
+        resources.SHOW_RESOURCE,
+        resources.RESOURCE_SHOW_CONTINUATIONS,
+        {"access": resources._ACCESS_EDGE, "approverGroups": resources._APPROVER_EDGE},
+    ),
     "group create": (groups.CREATE_GROUP, groups.GROUP_CONTINUATIONS, groups._NESTED),
     "group addUsers": (groups.ADD_USERS_TO_GROUP, groups.GROUP_USERS_CONTINUATIONS, {"users": groups._NESTED["users"]}),
     "group removeUsers": (groups.REMOVE_USERS_FROM_GROUP, groups.GROUP_USERS_CONTINUATIONS, {"users": groups._NESTED["users"]}),

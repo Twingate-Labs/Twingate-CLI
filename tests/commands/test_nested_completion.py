@@ -65,7 +65,8 @@ CASES = [
     Case("resource list", ["resource", "list"], "list", "resource", {"access": edges("a", LONG, securityPolicy={"id": "sp", "name": "S"})}, {}),
     Case("resource list --detail", ["resource", "list", "--detail"], "list", "resource",
          {"access": edges("a", LONG, securityPolicy={"id": "sp", "name": "S"}), "approverGroups": R("g", LONG)}, {}),
-    Case("resource show", ["resource", "show", "-i", "p1"], "show", "resource", {"approverGroups": R("g", LONG)}, {"__typename": "SSHResource"}),
+    Case("resource show", ["resource", "show", "-i", "p1"], "show", "resource",
+         {"access": edges("a", LONG, securityPolicy={"id": "sp", "name": "S"}, expiresAt=None), "approverGroups": R("g", LONG)}, {"__typename": "SSHResource"}),
 ]
 ids = [c.id for c in CASES]
 

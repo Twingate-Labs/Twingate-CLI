@@ -125,7 +125,7 @@ class TestResourceList:
     DETAIL_COLUMNS = [
         "accessPolicy.mode", "accessPolicy.durationSeconds", "gateway.id", "gateway.address", "clusterRef",
         "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode",
-        "approvalMode", "approverGroups", "approverGroupNames",
+        "approvalMode", "approverGroups", "approverGroupNames", "accessNames", "accessExpiresAt",
     ]
 
     def test_list_default_has_only_the_original_columns_plus_type(self, mock_keyring):
@@ -141,7 +141,7 @@ class TestResourceList:
     def test_list_short_flag_d_is_detail(self, mock_keyring):
         edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
         output, _ = self._csv_rows([edge], ["-d"])
-        assert output.splitlines()[0].split(",")[-1] == "approverGroupNames"
+        assert output.splitlines()[0].split(",")[-1] == "accessExpiresAt"
 
     def _sent_query(self, args):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
@@ -380,7 +380,8 @@ class TestResourceShow:
         resource = {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource", "approvalMode": "MANUAL", "approverGroups": {"edges": []}}
         output, _ = self._show_rows(resource)
         header = output.splitlines()[0].split(",")
-        assert header[:13][-1] == "type" and header[-3:] == ["approvalMode", "approverGroups", "approverGroupNames"]
+        assert header[:13][-1] == "type"
+        assert header[-6:] == ["approvalMode", "approverGroups", "approverGroupNames", "access.edges", "accessNames", "accessExpiresAt"]
 
     def test_show_unknown_id_prints_blank_row_without_crashing(self, mock_keyring):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
