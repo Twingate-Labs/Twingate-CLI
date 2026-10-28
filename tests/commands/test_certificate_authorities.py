@@ -126,7 +126,7 @@ class TestDelete:
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             inst = MockClient.return_value
             inst.execute.side_effect = execute
-            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "ca", "delete", "-i", "ca-1"])
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "ca", "delete", "-i", "ca-1", "--yes"])
         return result, inst
 
     def test_x509_uses_x509_mutation(self):

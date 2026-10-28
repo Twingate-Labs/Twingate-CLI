@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from tgcli.commands._common import get_client, run_paginated, run_query
+from tgcli.commands._common import YES_OPTION, confirm_delete, get_client, run_paginated, run_query
 from tgcli.output.transformers import networks as t
 from tgcli.pagination import NestedLists
 from tgcli.queries import networks as q
@@ -54,9 +54,12 @@ def network_create(
 @app.command("delete")
 def network_delete(
     id: str = typer.Option(..., "-i", "--id", help="Remote Network ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a Remote Network."""
-    run_query(get_client(), q.DELETE_NETWORK, {"id": id}, t.get_delete_as_csv)
+    client = get_client()
+    confirm_delete("Remote Network", id, yes)
+    run_query(client, q.DELETE_NETWORK, {"id": id}, t.get_delete_as_csv)
 
 
 @app.command("updateState")

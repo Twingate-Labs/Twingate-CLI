@@ -11,7 +11,7 @@ import typer
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.completion import complete_migratable_groups
-from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
+from tgcli.commands._common import YES_OPTION, confirm_delete, get_client, run_paginated, run_query, split_ids
 from tgcli.importer.state import resource_grants
 from tgcli.importer.sync import MANUAL, is_past
 from tgcli.output.transformers import groups as t
@@ -67,9 +67,12 @@ def group_create(
 @app.command("delete")
 def group_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Group ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a Group."""
-    run_query(get_client(), q.DELETE_GROUP, {"groupId": itemid}, t.get_delete_as_csv)
+    client = get_client()
+    confirm_delete("Group", itemid, yes)
+    run_query(client, q.DELETE_GROUP, {"groupId": itemid}, t.get_delete_as_csv)
 
 
 @app.command("addUsers")

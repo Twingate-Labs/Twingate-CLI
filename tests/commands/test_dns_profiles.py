@@ -61,7 +61,7 @@ class TestDelete:
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             inst = MockClient.return_value
             inst.execute.side_effect = execute
-            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "dns-profile", "delete", "-i", "p-1"])
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "dns-profile", "delete", "-i", "p-1", "--yes"])
         return result, inst
 
     def test_deletes_an_existing_profile(self):

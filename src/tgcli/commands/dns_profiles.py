@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from tgcli.commands._common import execute_query, get_client, run_query
+from tgcli.commands._common import YES_OPTION, confirm_delete, execute_query, get_client, run_query
 from tgcli.output.transformers import dns_profiles as t
 from tgcli.pagination import NestedLists
 from tgcli.queries import dns_profiles as q
@@ -40,10 +40,12 @@ def dns_profile_create(
 @app.command("delete")
 def dns_profile_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="DNS Filtering Profile ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a DNS Filtering profile. Groups assigned to it lose its filtering. Cannot be undone."""
     client = get_client()
     if execute_query(client, q.FIND_DNS_PROFILE, {"itemID": itemid})["data"]["dnsFilteringProfile"] is None:
         typer.echo(f"Error: DNS Filtering profile {itemid} not found.", err=True)
         raise typer.Exit(1)
+    confirm_delete("DNS Filtering profile", itemid, yes, "Groups assigned to it lose its filtering. This cannot be undone.")
     run_query(client, q.DELETE_DNS_PROFILE, {"id": itemid}, t.get_delete_as_csv)

@@ -25,7 +25,7 @@ class TestConnectorDelete:
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             inst = MockClient.return_value
             inst.execute.return_value = {"data": {"connectorDelete": payload}}
-            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "connector", "delete", "-i", "conn-1"])
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "connector", "delete", "-i", "conn-1", "--yes"])
         return result, inst
 
     def test_sends_connector_id_to_delete_mutation(self):
@@ -49,5 +49,5 @@ class TestConnectorDelete:
     def test_auth_error_exits_nonzero(self):
         with patch("tgcli.commands._common.TwingateClient") as MockClient:
             MockClient.return_value.execute.side_effect = TwingateAuthError("Bad token")
-            result = runner.invoke(app, ["-s", SESSION, "connector", "delete", "-i", "conn-1"])
+            result = runner.invoke(app, ["-s", SESSION, "connector", "delete", "-i", "conn-1", "--yes"])
         assert result.exit_code != 0

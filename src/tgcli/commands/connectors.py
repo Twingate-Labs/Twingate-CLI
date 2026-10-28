@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from tgcli.commands._common import get_client, run_paginated, run_query
+from tgcli.commands._common import YES_OPTION, confirm_delete, get_client, run_paginated, run_query
 from tgcli.output.transformers import connectors as t
 from tgcli.queries import connectors as q
 from tgcli.validators.generic import parse_bool_string
@@ -54,9 +54,12 @@ def connector_rename(
 @app.command("delete")
 def connector_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Connector ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a Connector. A deployed Connector stops working and cannot be restored."""
-    run_query(get_client(), q.DELETE_CONNECTOR, {"id": itemid}, t.get_delete_as_csv)
+    client = get_client()
+    confirm_delete("Connector", itemid, yes)
+    run_query(client, q.DELETE_CONNECTOR, {"id": itemid}, t.get_delete_as_csv)
 
 
 @app.command("generateTokens")

@@ -7,6 +7,8 @@ from typing import Optional
 import typer
 
 from tgcli.commands._common import (
+    YES_OPTION,
+    confirm_delete,
     get_client,
     require_session,
     resolve_many_or_exit,
@@ -211,9 +213,12 @@ def resource_create(
 @app.command("delete")
 def resource_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Resource ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a Resource."""
-    run_query(get_client(), q.DELETE_RESOURCE, {"id": itemid}, t.get_delete_as_csv)
+    client = get_client()
+    confirm_delete("Resource", itemid, yes)
+    run_query(client, q.DELETE_RESOURCE, {"id": itemid}, t.get_delete_as_csv)
 
 
 @app.command("assignNetwork")

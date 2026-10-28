@@ -115,16 +115,16 @@ class TestKeyCreateAlignment:
 
 REFUSED_COMMANDS = [
     ["network", "updateName", "-i", "n1", "-n", "x"],
-    ["network", "delete", "-i", "n1"],
-    ["resource", "delete", "-i", "r1"],
+    ["network", "delete", "-i", "n1", "--yes"],
+    ["resource", "delete", "-i", "r1", "--yes"],
     ["resource", "disable", "-i", "r1"],
     ["resource", "alias", "-i", "r1", "-a", "a.example"],
     ["resource", "create", "-a", "a.example", "-n", "x", "-r", NET, "-p", POLICY],
     ["resource", "access", "add", "-i", "r1", "-g", GROUP],
-    ["group", "delete", "-i", "g1"],
+    ["group", "delete", "-i", "g1", "--yes"],
     ["group", "addUsers", "-g", "g1", "-u", "u1"],
-    ["key", "delete", "-i", "k1"],
-    ["key", "revoke", "-i", "k1"],
+    ["key", "delete", "-i", "k1", "--yes"],
+    ["key", "revoke", "-i", "k1", "--yes"],
     ["user", "role", "-i", "u1", "-r", "MEMBER"],
     ["user", "state", "-i", "u1", "-s", "ACTIVE"],
     ["connector", "rename", "-i", "c1", "-n", "x"],
@@ -132,7 +132,7 @@ REFUSED_COMMANDS = [
     ["device", "updateTrust", "-i", "d1", "-t", "True"],
     ["account", "rename", "-i", "a1", "-n", "x"],
     ["policy", "update", "-i", "p1", "-a", "g1"],
-    ["dns-profile", "delete", "-i", "p1"],
+    ["dns-profile", "delete", "-i", "p1", "--yes"],
 ]
 
 
@@ -152,14 +152,14 @@ class TestRefusedWritesExitNonZero:
         assert result.stderr == "" or "Note:" in result.stderr  # only create's advice about access may appear
 
     def test_json_output_of_a_refused_write_is_still_complete_json(self):
-        result = invoke(FakeApi(ok=False, error="nope"), "network", "delete", "-i", "n1", fmt="json")
+        result = invoke(FakeApi(ok=False, error="nope"), "network", "delete", "-i", "n1", "--yes", fmt="json")
         assert result.exit_code == 1
         assert json.loads(result.stdout)["data"]["remoteNetworkDelete"]["ok"] is False
 
     def test_a_refusal_without_a_reason_still_says_something(self):
         api = FakeApi(ok=False)
         api.error = None
-        result = invoke(api, "network", "delete", "-i", "n1")
+        result = invoke(api, "network", "delete", "-i", "n1", "--yes")
         assert result.exit_code == 1 and "Error: the API refused the change" in result.stderr
 
     def test_a_list_of_devices_attempts_every_one_then_exits_1_naming_each_refusal(self):

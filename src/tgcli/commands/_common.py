@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import typer
 
 from tgcli.client.client import TwingateClient
@@ -33,6 +35,31 @@ def require_session() -> str:
 def get_client() -> TwingateClient:
     """Return a TwingateClient for the current session."""
     return TwingateClient(require_session())
+
+
+#: The option every delete command takes to skip the question.
+YES_OPTION = typer.Option(False, "-y", "--yes", help="Do not ask for confirmation.")
+
+
+def _at_a_terminal() -> bool:
+    return sys.stdin.isatty()
+
+
+def confirm_delete(what: str, itemid: str, yes: bool, consequence: str = "This cannot be undone.", verb: str = "delete") -> None:
+    """Ask before something irreversible is deleted (or revoked: ``verb``); exit 1, having changed nothing, unless the answer is yes.
+
+    ``yes`` (the ``--yes`` flag) skips the question. With no terminal to ask on (a script, cron, a pipe) the
+    command refuses instead of guessing, so a script has to say ``--yes`` to delete. The question goes to standard
+    error, so standard output stays the result alone.
+    """
+    if yes:
+        return
+    if not _at_a_terminal():
+        typer.echo(f"Error: refusing to {verb} {what} {itemid} without confirmation: there is no terminal to ask on. Pass --yes to {verb} it.", err=True)
+        raise typer.Exit(1)
+    if not typer.confirm(f"{verb.capitalize()} {what} {itemid}? {consequence}", default=False, err=True):
+        typer.echo(f"Nothing was {verb}d.", err=True)
+        raise typer.Exit(1)
 
 
 def execute_query(client: TwingateClient, query: str, variables: dict | None) -> dict:

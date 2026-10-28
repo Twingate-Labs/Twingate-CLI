@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from tgcli.commands._common import execute_query, get_client, run_paginated, run_query
+from tgcli.commands._common import YES_OPTION, confirm_delete, execute_query, get_client, run_paginated, run_query
 from tgcli.output.transformers import certificate_authorities as t
 from tgcli.queries import certificate_authorities as q
 from tgcli.textio import TextFileError, read_text
@@ -63,6 +63,7 @@ def ca_create(
 @app.command("delete")
 def ca_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Certificate Authority ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a Certificate Authority (X.509 or SSH, detected automatically). Cannot be undone."""
     client = get_client()
@@ -70,6 +71,7 @@ def ca_delete(
     if found is None:
         typer.echo(f"Error: Certificate Authority {itemid} not found.", err=True)
         raise typer.Exit(1)
+    confirm_delete("Certificate Authority", itemid, yes)
     if found["__typename"] == "X509CertificateAuthority":
         run_query(client, q.DELETE_X509_CA, {"id": itemid}, t.get_delete_x509_as_csv)
     else:

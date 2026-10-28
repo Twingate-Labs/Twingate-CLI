@@ -503,7 +503,7 @@ class TestResourceDelete:
             MockClient.return_value.execute.return_value = {
                 "data": {"resourceDelete": {"ok": True, "error": None}}
             }
-            result = runner.invoke(app, ["-s", SESSION, "resource", "delete", "-i", "res-1"])
+            result = runner.invoke(app, ["-s", SESSION, "resource", "delete", "-i", "res-1", "--yes"])
         assert result.exit_code == 0
 
 

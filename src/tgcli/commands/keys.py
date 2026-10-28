@@ -9,7 +9,7 @@ import pandas as pd
 import typer
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
-from tgcli.commands._common import get_client, run_paginated, run_query
+from tgcli.commands._common import YES_OPTION, confirm_delete, get_client, run_paginated, run_query
 from tgcli.main import state
 from tgcli.output.transformers import keys as t
 from tgcli.pagination import NestedLists
@@ -46,17 +46,23 @@ def key_create(
 @app.command("delete")
 def key_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Key ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Permanently delete a Service Account Key."""
-    run_query(get_client(), q.DELETE_KEY, {"id": itemid}, t.get_delete_as_csv)
+    client = get_client()
+    confirm_delete("Service Account Key", itemid, yes)
+    run_query(client, q.DELETE_KEY, {"id": itemid}, t.get_delete_as_csv)
 
 
 @app.command("revoke")
 def key_revoke(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Key ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Revoke a Service Account Key."""
-    run_query(get_client(), q.REVOKE_KEY, {"id": itemid}, t.get_revoke_as_csv)
+    client = get_client()
+    confirm_delete("Service Account Key", itemid, yes, "A revoked key stops working for good.", verb="revoke")
+    run_query(client, q.REVOKE_KEY, {"id": itemid}, t.get_revoke_as_csv)
 
 
 @app.command("rename")

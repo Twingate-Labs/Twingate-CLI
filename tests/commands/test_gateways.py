@@ -165,14 +165,14 @@ class TestGatewayUpdate(_Mutation):
 
 class TestGatewayDelete(_Mutation):
     def test_sends_id_and_reports_ok(self):
-        result, inst = self._invoke(["delete", "-i", "gw-1"], "gatewayDelete", {"ok": True, "error": None})
+        result, inst = self._invoke(["delete", "-i", "gw-1", "--yes"], "gatewayDelete", {"ok": True, "error": None})
         assert result.exit_code == 0
         query, variables = inst.execute.call_args.args
         assert "gatewayDelete(id: $id)" in query and variables == {"id": "gw-1"}
         assert result.output.split() == ["ok,error", "True,"]
 
     def test_reports_api_error(self):
-        result, _ = self._invoke(["delete", "-i", "gw-1"], "gatewayDelete", {"ok": False, "error": "Gateway is in use"})
+        result, _ = self._invoke(["delete", "-i", "gw-1", "--yes"], "gatewayDelete", {"ok": False, "error": "Gateway is in use"})
         assert "False" in result.output and "in use" in result.output
 
     def test_requires_id(self):

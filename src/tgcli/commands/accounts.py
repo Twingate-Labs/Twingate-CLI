@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
+from tgcli.commands._common import YES_OPTION, confirm_delete, get_client, run_paginated, run_query, split_ids
 from tgcli.output.transformers import accounts as t
 from tgcli.pagination import NestedLists
 from tgcli.queries import accounts as q
@@ -46,9 +46,12 @@ def account_create(
 @app.command("delete")
 def account_delete(
     itemid: str = typer.Option(..., "-i", "--itemid", help="Service Account ID."),
+    yes: bool = YES_OPTION,
 ) -> None:
     """Delete a service account."""
-    run_query(get_client(), q.DELETE_ACCOUNT, {"id": itemid}, t.get_delete_as_csv)
+    client = get_client()
+    confirm_delete("service account", itemid, yes)
+    run_query(client, q.DELETE_ACCOUNT, {"id": itemid}, t.get_delete_as_csv)
 
 
 @app.command("addResources")
