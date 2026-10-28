@@ -40,6 +40,12 @@ def _when(text: Optional[str]) -> Optional[datetime]:
     return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
 
 
+def is_past(text: Optional[str]) -> bool:
+    """True when an expiry time has already gone by."""
+    when = _when(text)
+    return when is not None and when <= datetime.now(timezone.utc)
+
+
 def _same_time(wanted: Optional[str], have: Optional[str]) -> bool:
     a, b = _when(wanted), _when(have)
     return a == b if a and b else wanted == have

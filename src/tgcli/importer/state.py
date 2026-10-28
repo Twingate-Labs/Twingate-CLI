@@ -55,7 +55,8 @@ def _ids(client: Any, query: str, variables: dict, path: list) -> set:
     return {edge["node"]["id"] for edge in edges if edge.get("node")}
 
 
-def _grants(client: Any, resource_id: str) -> dict:
+def resource_grants(client: Any, resource_id: str) -> dict:
+    """Who has access to a resource, by principal ID, with the settings of each grant."""
     edges, _, _ = fetch_connection(client, q.RESOURCE_GRANTS, {"id": resource_id}, ["resource", "access"])
     out: dict = {}
     for edge in edges:
@@ -119,7 +120,7 @@ def fetch_state(client: Any, specs: Specs, progress: Callable[[str], None] = lam
         if (resource.access or (sync and "access" in resource.given)) and len(matches) == 1 and matches[0]["id"] not in state.resource_access:
             progress(f"Reading the access of '{resource.name}'...")
             if sync:
-                state.grants[matches[0]["id"]] = _grants(client, matches[0]["id"])
+                state.grants[matches[0]["id"]] = resource_grants(client, matches[0]["id"])
                 state.resource_access[matches[0]["id"]] = set(state.grants[matches[0]["id"]])
             else:
                 state.resource_access[matches[0]["id"]] = _ids(client, q.RESOURCE_ACCESS, {"id": matches[0]["id"]}, ["resource", "access"])

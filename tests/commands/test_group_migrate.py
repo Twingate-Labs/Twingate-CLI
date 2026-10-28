@@ -33,11 +33,17 @@ class Api:
     Only fields the query actually selects are returned, so a query that forgets one is noticed.
     """
 
-    def __init__(self, groups, users=None, resources=None, page=2):
+    def __init__(self, groups, users=None, resources=None, page=2, grants=None):
         self.groups, self.users, self.resources, self.page = groups, users or {}, resources or {}, page
+        # resource ID -> {principal ID: the settings of that grant, in the API's edge shape}. A group with no entry has a plain grant.
+        self.grants = grants or {}
+        self.grant_sets: list[tuple[str, dict]] = []
+        self.grant_error: str | None = None
+        self.grant_reads: list[str] = []
         self.calls: list[tuple[str, dict]] = []
         self.created: list[dict] = []
         self.user_chunks: list[tuple[str, list]] = []
+        self.added: dict[str, list] = {}
         self.resource_chunks: list[tuple[str, list]] = []
         self.create_error = self.users_error = self.resources_error = None
         self.raise_on: tuple[str, Exception] | None = None
@@ -55,11 +61,34 @@ class Api:
         more = start + self.page < len(ids)
         return {field: {
             "pageInfo": {"hasNextPage": more, "endCursor": f"c{start + self.page}" if more else None},
-            "edges": [{"node": {"id": i}} for i in ids[start : start + self.page]],
+            "edges": [{"node": {"id": i, "name": f"name-{i}", "email": f"{i}@x.test"}} for i in ids[start : start + self.page]],
         }}
+
+    def _access(self, resource_id, after):
+        edges = []
+        for gid in self.groups_with_access(resource_id):
+            edge = {"node": {"id": gid, "name": f"group-{gid}"}, "securityPolicy": None, "accessPolicy": None, "approvalMode": "MANUAL", "expiresAt": None}
+            edge.update(self.grants.get(resource_id, {}).get(gid, {}))
+            edges.append(edge)
+        start = 0 if after is None else int(after[1:])
+        more = start + self.page < len(edges)
+        return {"data": {"resource": {"access": {
+            "pageInfo": {"hasNextPage": more, "endCursor": f"c{start + self.page}" if more else None},
+            "edges": edges[start : start + self.page],
+        }}}}
+
+    def groups_with_access(self, resource_id):
+        """Every group the fake has the resource in, plus the new groups that were given it."""
+        return [gid for gid, ids in {**self.resources, **self.added}.items() if resource_id in ids]
 
     def execute(self, query, variables=None):
         variables = variables or {}
+        if "access(after" in query:  # the importer's anonymous query for the grants on a resource
+            self.grant_reads.append(variables["id"])
+            self.calls.append(("resourceGrants", variables))
+            if self.raise_on and self.raise_on[0] == "resourceGrants":
+                raise self.raise_on[1]
+            return self._access(variables["id"], variables.get("cursor"))
         name = re.search(r"(?:query|mutation) (\w+)", query).group(1)
         self.calls.append((name, variables))
         if self.raise_on and self.raise_on[0] == name:
@@ -80,12 +109,19 @@ class Api:
             (self.user_chunks if name == "addUsersToGroup" else self.resource_chunks).append(
                 (variables["groupID"], variables["userIDS" if name == "addUsersToGroup" else "resourceIDS"])
             )
+            if name == "addResToGroup":
+                self.added.setdefault(variables["groupID"], []).extend(variables["resourceIDS"])
             return {"data": {"groupUpdate": {"ok": True, "error": None, "entity": {"id": variables["groupID"]}}}}
+        if name == "migrateGrant":
+            if self.grant_error:
+                return {"data": {"resourceAccessAdd": {"ok": False, "error": self.grant_error, "entity": None}}}
+            self.grant_sets.append((variables["id"], variables["access"]))
+            return {"data": {"resourceAccessAdd": {"ok": True, "error": None, "entity": {"id": variables["id"]}}}}
         raise AssertionError(f"unexpected request: {name}")
 
     @property
     def writes(self):
-        return [n for n, _ in self.calls if n in ("createGroup", "addUsersToGroup", "addResToGroup")]
+        return [n for n, _ in self.calls if n in ("createGroup", "addUsersToGroup", "addResToGroup", "migrateGrant")]
 
 
 def migrate(api, tmp_path, *args):
@@ -283,6 +319,145 @@ class TestFailures:
         assert by["s1"]["status"] == "error" and "read failed" in by["s1"]["error"]
         assert by["s2"]["status"] == "success"
         assert result.exit_code == 1 and [c["groupName"] for c in api.created] == ["Ops (Manual)"]  # nothing half-made for s1
+
+
+FUTURE = "2099-01-01T00:00:00+00:00"
+PAST = "2020-01-01T00:00:00+00:00"
+STRICT = {"securityPolicy": {"id": "pol-grant"}}
+AUTOLOCK = {"accessPolicy": {"mode": "AUTO_LOCK", "durationSeconds": 3600}}
+
+
+def grant_api(grants, **kw):
+    return Api([group("s1", "Eng"), group("s2", "Ops")], users={"s1": ["u1"], "s2": ["u2"]},
+               resources={"s1": ["r1", "r2", "r3"], "s2": ["r1"]}, grants=grants, **kw)
+
+
+class TestGrantSettings:
+    """The source group's own settings on a resource (not just the resource) are put on the new group's grant."""
+
+    def test_a_plain_grant_needs_no_extra_call(self, tmp_path):
+        api = grant_api({})
+        result, rows = migrate(api, tmp_path, "--execute")
+        assert result.exit_code == 0 and api.grant_sets == []
+        assert {r["source_group_id"]: r["grants_with_settings"] for r in rows if r["status"] == "success"} == {"s1": "0", "s2": "0"}
+
+    def test_a_grants_own_policy_is_copied_to_the_new_group(self, tmp_path):
+        api = grant_api({"r2": {"s1": STRICT}})
+        result, rows = migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert result.exit_code == 0, result.output
+        assert api.grant_sets == [("r2", [{"principalId": "new-1", "securityPolicyId": "pol-grant"}])]
+        assert rows[0]["grants_with_settings"] == "1"
+
+    def test_only_the_resources_with_their_own_settings_get_a_call(self, tmp_path):
+        api = grant_api({"r1": {"s1": STRICT}, "r3": {"s1": {"approvalMode": "ACCESS_REQUEST"}}})
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert sorted(r for r, _ in api.grant_sets) == ["r1", "r3"]
+
+    def test_the_access_policy_expiry_and_approval_mode_are_all_copied(self, tmp_path):
+        every = {"securityPolicy": {"id": "pol-grant"}, "accessPolicy": {"mode": "AUTO_LOCK", "durationSeconds": 3600},
+                 "approvalMode": "ACCESS_REQUEST", "expiresAt": FUTURE}
+        api = grant_api({"r1": {"s1": every}})
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert api.grant_sets == [("r1", [{
+            "principalId": "new-1", "securityPolicyId": "pol-grant", "accessPolicy": {"mode": "AUTO_LOCK", "durationSeconds": 3600},
+            "approvalMode": "ACCESS_REQUEST", "expiresAt": FUTURE}])]
+
+    def test_an_access_policy_alone_also_sends_the_approval_mode_so_the_api_cannot_reset_it(self, tmp_path):
+        api = grant_api({"r1": {"s1": AUTOLOCK}})
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert api.grant_sets == [("r1", [{"principalId": "new-1", "accessPolicy": {"mode": "AUTO_LOCK", "durationSeconds": 3600}, "approvalMode": "MANUAL"}])]
+
+    def test_another_groups_settings_are_not_copied(self, tmp_path):
+        api = grant_api({"r1": {"s2": STRICT}})  # Ops has its own policy on r1; Eng does not
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert api.grant_sets == []
+
+    def test_the_no_copy_flag_leaves_out_a_grants_policy_but_keeps_the_rest(self, tmp_path):
+        api = grant_api({"r1": {"s1": {**STRICT, "approvalMode": "ACCESS_REQUEST"}}, "r2": {"s1": STRICT}})
+        migrate(api, tmp_path, "--execute", "--group", "s1", "--no-copy-security-policy")
+        assert api.grant_sets == [("r1", [{"principalId": "new-1", "approvalMode": "ACCESS_REQUEST"}])]
+
+    def test_it_is_set_after_the_resources_are_added_to_the_group(self, tmp_path):
+        api = grant_api({"r1": {"s1": STRICT}})
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        order = [n for n, _ in api.calls if n in ("addResToGroup", "migrateGrant")]
+        assert order == ["addResToGroup", "migrateGrant"]
+
+    def test_a_dry_run_counts_them_and_writes_nothing(self, tmp_path):
+        api = grant_api({"r1": {"s1": STRICT}, "r2": {"s1": AUTOLOCK}})
+        result, rows = migrate(api, tmp_path, "--group", "s1")
+        assert result.exit_code == 0 and api.writes == []
+        assert "with their own access settings: 2" in result.output and rows[0]["grants_with_settings"] == "2"
+
+    def test_a_resource_shared_by_groups_is_read_once(self, tmp_path):
+        api = grant_api({})
+        migrate(api, tmp_path)
+        assert sorted(api.grant_reads) == ["r1", "r2", "r3"]
+
+    def test_the_grant_is_found_whichever_page_of_the_access_list_it_is_on(self, tmp_path):
+        api = Api([group("s9", "Late")], resources={"s9": ["r1"]}, page=1, grants={"r1": {"s9": STRICT}})
+        api.groups_with_access = lambda rid: ["a", "b", "c", "s9"]  # three other groups first, so the page size of 1 pushes s9 to the 4th page
+        migrate(api, tmp_path, "--execute")
+        assert api.grant_sets == [("r1", [{"principalId": "new-1", "securityPolicyId": "pol-grant"}])]
+
+    def test_a_resource_the_group_has_no_edge_on_is_still_added_plainly(self, tmp_path):
+        api = grant_api({})
+        api.groups_with_access = lambda rid: []  # e.g. the grant went away between the two reads
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert api.resource_chunks == [("new-1", ["r1", "r2", "r3"])] and api.grant_sets == []
+
+    def test_an_existing_manual_group_gets_the_settings_too(self, tmp_path):
+        api = Api([group("s1", "Eng"), group("m9", "Eng (Manual)", "MANUAL")], resources={"s1": ["r1"]}, grants={"r1": {"s1": STRICT}})
+        migrate(api, tmp_path, "--execute")
+        assert api.grant_sets == [("r1", [{"principalId": "m9", "securityPolicyId": "pol-grant"}])]
+
+
+class TestExpiredGrants:
+    def test_a_resource_whose_access_has_expired_is_not_given_to_the_new_group(self, tmp_path):
+        api = grant_api({"r2": {"s1": {"expiresAt": PAST}}})
+        result, rows = migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert result.exit_code == 0, result.output
+        assert api.resource_chunks == [("new-1", ["r1", "r3"])] and api.grant_sets == []
+        assert "name-r2" in rows[0]["warnings"] and "expired" in rows[0]["warnings"]
+        assert "WARNING" in result.output
+
+    def test_a_future_expiry_is_copied_not_skipped(self, tmp_path):
+        api = grant_api({"r2": {"s1": {"expiresAt": FUTURE}}})
+        migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert api.resource_chunks == [("new-1", ["r1", "r2", "r3"])]
+        assert api.grant_sets == [("r2", [{"principalId": "new-1", "expiresAt": FUTURE}])]
+
+    def test_a_dry_run_warns_about_it_too(self, tmp_path):
+        api = grant_api({"r2": {"s1": {"expiresAt": PAST}}})
+        result, rows = migrate(api, tmp_path, "--group", "s1")
+        assert api.writes == [] and "name-r2" in rows[0]["warnings"]
+
+
+class TestGrantFailures:
+    def test_a_refused_setting_fails_the_group_and_names_the_resource_but_tries_the_rest(self, tmp_path):
+        api = grant_api({"r1": {"s1": STRICT}, "r2": {"s1": AUTOLOCK}})
+        api.grant_error = "Security Policy not allowed"
+        result, rows = migrate(api, tmp_path, "--execute", "--group", "s1")
+        assert result.exit_code == 1
+        assert rows[0]["status"] == "error"
+        assert "2 of 2" in rows[0]["error"] and "name-r1 (Security Policy not allowed)" in rows[0]["error"] and "name-r2" in rows[0]["error"]
+        assert rows[0]["target_group_id"] == "new-1"  # the group, its members and resources are there; the report says where
+
+    def test_an_error_reading_a_resources_access_is_recorded_before_anything_is_created(self, tmp_path):
+        api = grant_api({})
+        api.raise_on = ("resourceGrants", TwingateAPIError("read failed"))
+        result, rows = migrate(api, tmp_path, "--execute")
+        assert result.exit_code == 1 and api.created == [] and all(r["status"] == "error" for r in rows if r["source_group_id"])
+        assert "reading group failed: read failed" in rows[0]["error"]
+
+
+class TestGrantSettingsOf:
+    def test_a_plain_grant_has_none(self):
+        from tgcli.commands.groups import _grant_settings
+        edge = {"policy_id": None, "access_policy": None, "approval_mode": "MANUAL", "expires_at": None}
+        assert _grant_settings(edge, True) == {}
+        assert _grant_settings({"access_policy": {"mode": "MANUAL", "durationSeconds": None}}, True) == {}
+        assert _grant_settings({}, True) == {}
 
 
 def multi_api(**kw):

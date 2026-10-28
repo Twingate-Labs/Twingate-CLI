@@ -212,6 +212,14 @@ query listGroupsForMigrate($cursor: String!) {
 }
 """
 
+# `group migrate` puts the source group's own settings for one resource (policy, access policy, approval mode,
+# expiry) on the new group's grant. resourceAccessAdd on a grant that exists changes only what it is sent.
+SET_GRANT_SETTINGS = """
+mutation migrateGrant($id: ID!, $access: [AccessInput!]!) {
+  resourceAccessAdd(resourceId: $id, access: $access) { ok error entity { id } }
+}
+"""
+
 ASSIGN_POLICY_TO_GROUP = f"""
 mutation assignPolicyToGrp($groupID: ID!, $policyID: ID!) {{
   groupUpdate(id: $groupID, securityPolicyId: $policyID) {{

@@ -12,6 +12,8 @@ import typer
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.completion import complete_migratable_groups
 from tgcli.commands._common import get_client, run_paginated, run_query, split_ids
+from tgcli.importer.state import resource_grants
+from tgcli.importer.sync import MANUAL, is_past
 from tgcli.output.transformers import groups as t
 from tgcli.pagination import NestedLists
 from tgcli.queries import groups as q
@@ -163,6 +165,27 @@ def _select_groups(all_groups: list[dict], selectors: list[str]) -> tuple[list[d
     return chosen, problems
 
 
+def _grant_settings(edge: dict, copy_policy: bool) -> dict:
+    """The settings on a group's access to one resource that differ from a plain grant, in the shape resourceAccessAdd takes.
+
+    A plain grant has no Security Policy of its own, no access policy (manual), manual approval and no expiry; those
+    are what adding the resource to the group already gives, so only what differs needs to be copied.
+    """
+    settings: dict = {}
+    if copy_policy and edge.get("policy_id"):
+        settings["securityPolicyId"] = edge["policy_id"]
+    access_policy = edge.get("access_policy")
+    if access_policy and access_policy.get("mode") != MANUAL["mode"]:
+        settings["accessPolicy"] = {k: v for k, v in access_policy.items() if v is not None}
+    if (edge.get("approval_mode") or "MANUAL") != "MANUAL":
+        settings["approvalMode"] = edge["approval_mode"]
+    elif "accessPolicy" in settings:
+        settings["approvalMode"] = "MANUAL"  # changing the access policy alone can reset the approval mode, so it is sent too
+    if edge.get("expires_at"):
+        settings["expiresAt"] = edge["expires_at"]
+    return settings
+
+
 @app.command("migrate")
 def group_migrate(
     execute: bool = typer.Option(False, "--execute", help="Apply changes. Without this flag, only a dry run is performed."),
@@ -210,6 +233,14 @@ def group_migrate(
         for i in range(0, len(seq), size):
             yield seq[i:i + size]
 
+    # Who has access to a resource, read once however many of the groups share it.
+    grants_by_resource: dict = {}
+
+    def grants_of(resource_id):
+        if resource_id not in grants_by_resource:
+            grants_by_resource[resource_id] = resource_grants(client, resource_id)
+        return grants_by_resource[resource_id]
+
     typer.echo("Fetching all groups...")
     try:
         pages = client.paginate(q.LIST_GROUPS_FOR_MIGRATE, lambda c: {"cursor": c}, "groups")
@@ -255,13 +286,28 @@ def group_migrate(
             "target_group_name": new_name,
             "user_count": "",
             "resource_count": "",
+            "grants_with_settings": "",
             "target_group_id": "",
             "status": "",
             "error": "",
+            "warnings": "",
         }
         try:
             users = paginate_nested(q.LIST_GROUP_USERS, {"id": g["id"]}, ["group", "users"])
             resources = paginate_nested(q.LIST_GROUP_RESOURCES, {"id": g["id"]}, ["group", "resources"])
+            # The group's own settings for each resource (a different policy, access policy, approval mode or expiry)
+            # live on the resource's access list, not on the group, so they are read from there.
+            custom, lapsed = {}, []
+            for r in resources:
+                edge = grants_of(r["id"]).get(g["id"])
+                if edge is None:
+                    continue
+                if is_past(edge.get("expires_at")):
+                    lapsed.append(r)
+                    continue
+                settings = _grant_settings(edge, not no_copy_policy)
+                if settings:
+                    custom[r["id"]] = settings
         except (TwingateAuthError, TwingateAPIError) as e:
             # Nothing has been created for this group yet. Record it and carry on, so one failed read does not
             # lose the report of the groups already migrated.
@@ -270,9 +316,18 @@ def group_migrate(
             typer.echo(f"  ERROR: {e}", err=True)
             report_rows.append(row)
             continue
-        typer.echo(f"  members: {len(users)}   resources: {len(resources)}")
+        lapsed_ids = {r["id"] for r in lapsed}
+        resources_to_add = [r for r in resources if r["id"] not in lapsed_ids]
+        names = {r["id"]: r["name"] for r in resources}
+        typer.echo(f"  members: {len(users)}   resources: {len(resources)}   with their own access settings: {len(custom)}")
+        if lapsed:
+            # A grant whose time is up gives no access. Adding the resource would give the new group access that
+            # does not expire, which the source group no longer has.
+            row["warnings"] = "not migrated, because the source group's access to them has expired: " + ", ".join(r["name"] for r in lapsed)
+            typer.echo(f"  WARNING: {row['warnings']}")
         row["user_count"] = len(users)
         row["resource_count"] = len(resources)
+        row["grants_with_settings"] = len(custom)
         row["status"] = "dry-run" if not execute else ""
 
         if execute:
@@ -303,10 +358,22 @@ def group_migrate(
                     if not res["ok"]:
                         raise RuntimeError(f"adding users failed: {res['error']}")
 
-                for chunk in chunked([r["id"] for r in resources], BATCH_SIZE):
+                for chunk in chunked([r["id"] for r in resources_to_add], BATCH_SIZE):
                     res = client.execute(q.ADD_RESOURCES_TO_GROUP, {"groupID": new_id, "resourceIDS": chunk})["data"]["groupUpdate"]
                     if not res["ok"]:
                         raise RuntimeError(f"adding resources failed: {res['error']}")
+
+                # Adding a resource to a group gives a plain grant; put the source group's own settings on it.
+                failed = []
+                for resource_id, settings in custom.items():
+                    try:
+                        res = client.execute(q.SET_GRANT_SETTINGS, {"id": resource_id, "access": [{"principalId": new_id, **settings}]})["data"]["resourceAccessAdd"]
+                        if not res["ok"]:
+                            raise RuntimeError(res["error"])
+                    except (TwingateAPIError, RuntimeError) as exc:
+                        failed.append(f"{names[resource_id]} ({exc})")
+                if failed:
+                    raise RuntimeError(f"access settings not copied for {len(failed)} of {len(custom)} resource(s): " + "; ".join(failed))
 
                 row["status"] = "success"
             except Exception as e:
@@ -323,9 +390,11 @@ def group_migrate(
             "target_group_name": "",
             "user_count": "",
             "resource_count": "",
+            "grants_with_settings": "",
             "target_group_id": "",
             "status": "skipped-inactive",
             "error": "",
+            "warnings": "",
         })
 
     if report_rows:
