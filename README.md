@@ -860,7 +860,38 @@ manifest.json
 - **Privacy.** The files contain user names and emails, and device names, host names, user names and serial numbers. On macOS and Linux the directory is created readable by you only (`0700`/`0600`). **On Windows those permission bits do not apply**, so the files simply inherit the folder's access rights: save backups to a folder only you can read. Keep backups somewhere appropriate.
 - **Safe to run unattended.** It never overwrites: an existing output directory is refused. Files are written to `<dir>.partial` and renamed once complete, so an interrupted run leaves no half-finished backup.
 - **Not a transaction.** Pages are read one after another, so changes made while it runs may or may not be included. Connector `lastHeartbeatAt` changes about once a minute, so backups taken minutes apart can differ there even if nothing was edited.
-- **Not included:** the device serial number allowlist, access requests and tenant-wide settings. A backup is a full snapshot every time: there is no incremental backup, no diff between two backups and no restore of the newer types (see the import section for what a backup can rebuild).
+- **Not included:** the device serial number allowlist, access requests and tenant-wide settings. A backup is a full snapshot every time: there is no incremental backup, and no restore of the newer types (see the import section for what a backup can rebuild). To see what changed between two backups, use `tgcli backup diff` below.
+
+
+#### backup diff
+
+Compare two backups of the same tenant: what was added, removed or changed between them. It works on the folders `tgcli backup` wrote, offline, so it needs no session and makes no API calls.
+
+```bash
+tgcli backup                                   # run weekly, for example from cron
+tgcli backup diff ./twingate-backup-acme-20261001T090000Z ./twingate-backup-acme-20261008T090000Z
+tgcli backup diff old new --json               # the same, as JSON
+tgcli backup diff old new --exit-code          # exit 1 when they differ (0 when they match)
+```
+
+```
+groups: 0 added, 0 removed, 2 changed
+  ~ Contractors
+      + users: new.person@example.com
+      - resources: Wiki
+resources: 1 added, 0 removed, 1 changed
+  + Build server
+  ~ Wiki
+      ~ access[Contractors].approvalMode: MANUAL -> AUTOMATIC
+      + tags: owner=it
+```
+
+- **Matched by ID.** A renamed group is one change to its name, not one group removed and another added. Lists inside an object (a group's members, a resource's access, its tags) are matched the same way, so a different order is not a change and a changed setting is reported on the grant it belongs to. A name that two objects share is shown with its ID.
+- **Fields that change on their own are left out:** `updatedAt`, a connector's last heartbeat and a device's last login. A real change always shows in some other field. `--include-volatile` compares them anyway.
+- **It compares state, not events.** It cannot say who made a change or when, and something changed and changed back between two backups does not appear. The Admin Console's audit log is the place for that.
+- **Both folders must be backups of the same tenant.** It warns when a backup was not fully verified, when a file no longer matches its checksum in the manifest, or when the folders are given newest first. A type only one backup holds (an older backup has no `devices.json`, for example) is named as not compared.
+- **Exit codes.** `0` when the comparison ran. With `--exit-code`, `1` when the backups differ. `2` when the folders cannot be compared (not a backup, different tenants, unreadable files). The report goes to standard output and warnings to standard error.
+- The report contains user emails and device details, like the backups, so keep it somewhere appropriate.
 
 ---
 
