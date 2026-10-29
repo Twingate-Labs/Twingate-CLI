@@ -66,6 +66,8 @@ pip install .
 
 The `tgcli` command is now available in your shell.
 
+To install a tagged release instead of the latest `main`, use `pip install "git+https://github.com/Twingate-Labs/Twingate-CLI.git@v3.0.0"`. What changed in each release, and anything that breaks existing scripts, is in [CHANGELOG.md](CHANGELOG.md). `tgcli -v` shows the version you have.
+
 > **Linux headless / CI environments**
 > `tgcli` stores credentials in your OS keychain via the `keyring` library. On headless Linux you may need a fallback backend:
 > ```bash
@@ -102,7 +104,7 @@ pip install .
 tgcli auth login -a tgp_xxxxxxxxxxxxxxxxxxxx -t acme -s acme
 
 # Verify it worked
-tgcli -v                       # tgcli version 2.0.0
+tgcli -v                       # tgcli version 3.0.0
 tgcli -s acme resource list    # list all resources
 ```
 

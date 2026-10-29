@@ -23,6 +23,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from tgcli import VERSION
 from tgcli.client.exceptions import (
     TwingateAPIError,
     TwingateAuthError,
@@ -30,7 +31,7 @@ from tgcli.client.exceptions import (
 )
 from tgcli.client.session import SessionManager
 
-USER_AGENT = "TwingatePythonCLI/2.0.0"
+USER_AGENT = f"TwingatePythonCLI/{VERSION}"
 
 #: Number of *retries* after the first throttled attempt (total calls = +1).
 THROTTLE_MAX_RETRIES: int = 3
