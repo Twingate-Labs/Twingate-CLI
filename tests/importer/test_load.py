@@ -290,6 +290,45 @@ class TestFolders:
         assert [g.name for g in specs.groups] == ["Eng"] and [n.name for n in specs.networks] == ["HQ"] and specs.resources == []
         assert specs.files == ["remote-networks.csv", "groups.json"] and specs.ignored == ["users.json", "manifest.json"]
 
+    BACKUP_FILES = ("users", "connectors", "devices", "service-accounts", "security-policies", "dns-profiles", "gateways",
+                    "certificate-authorities")
+
+    def test_every_file_a_backup_writes_is_known_to_the_importer(self, tmp_path):
+        from tgcli.queries.backup import ENTITIES
+
+        used = {"remote-networks.json", "groups.json", "resources.json"}
+        for entity in ENTITIES:
+            dump(tmp_path / entity.file, [])
+        dump(tmp_path / "manifest.json", {})
+        specs = load(tmp_path)
+        assert set(specs.files) == used
+        assert set(specs.ignored) == {e.file for e in ENTITIES} - used | {"manifest.json"}
+
+    def test_a_backups_device_list_is_not_read_as_device_trust(self, tmp_path):
+        dump(tmp_path / "groups.json", [{"name": "Eng"}])
+        dump(tmp_path / "devices.json", [{"serialNumber": None, "isTrusted": False}, {"serialNumber": "S1", "isTrusted": True}])
+        dump(tmp_path / "manifest.json", {})
+        specs = load(tmp_path)
+        assert specs.devices == [] and "devices.json" not in specs.files and "devices.json" in specs.ignored
+
+    def test_a_devices_csv_added_to_a_backup_is_still_used_and_does_not_clash_with_its_inventory(self, tmp_path):
+        dump(tmp_path / "groups.json", [])
+        dump(tmp_path / "devices.json", [{"serialNumber": "S1", "isTrusted": False}])
+        write(tmp_path / "devices.csv", "serial_number,trusted\nS2,true\n")
+        dump(tmp_path / "manifest.json", {})
+        specs = load(tmp_path)
+        assert [d.serial for d in specs.devices] == ["S2"] and specs.files == ["groups.json", "devices.csv"]
+
+    def test_a_devices_json_in_a_folder_that_is_not_a_backup_is_still_read(self, tmp_path):
+        dump(tmp_path / "devices.json", [{"serialNumber": "S1", "isTrusted": True}])
+        specs = load(tmp_path)
+        assert [d.serial for d in specs.devices] == ["S1"] and specs.ignored == []
+
+    def test_a_devices_json_named_on_its_own_is_still_read_even_with_a_manifest_beside_it(self, tmp_path):
+        dump(tmp_path / "manifest.json", {})
+        specs = load(dump(tmp_path / "devices.json", [{"serialNumber": "S1", "isTrusted": True}]))
+        assert [d.serial for d in specs.devices] == ["S1"]
+
     def test_one_file_is_read_by_its_name(self, tmp_path):
         specs = load(dump(tmp_path / "groups.json", [{"name": "Eng"}]))
         assert [g.name for g in specs.groups] == ["Eng"] and specs.networks == [] and specs.ignored == []

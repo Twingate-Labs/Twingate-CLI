@@ -10,6 +10,7 @@ from tgcli.queries import backup as q
 PAGE = 2
 ROOTS = {e.root: e.key for e in q.ENTITIES}
 PARENTS = {e.parent: e.key for e in q.ENTITIES}
+UNPAGED = {e.root: e.key for e in q.ENTITIES if not e.paged}
 NESTED = {e.key: e.nested for e in q.ENTITIES}
 
 
@@ -54,6 +55,21 @@ class FakeTenant:
         if self.error is not None and (self.fail_after is None or len(self.calls) > self.fail_after):
             raise self.error
         cursor = variables.get("cursor")
+
+        plain = re.match(r"query \{ (\w+) \{ id \}", query)
+        if plain:  # a root field that is a plain list of summaries, not a connection
+            return {"data": {plain.group(1): [{"id": item["id"]} for item in self.data[UNPAGED[plain.group(1)]]]}}
+
+        detail = re.match(r"query\(\$id: ID!\) \{ (\w+)\(id: \$id\)", query)
+        if detail:
+            key = PARENTS[detail.group(1)]
+            item = next((i for i in self.data[key] if i["id"] == variables["id"]), None)
+            if item is None or variables["id"] in self.vanished:
+                return {"data": {detail.group(1): None}}
+            node = {k: v for k, v in item.items() if k not in NESTED[key]}
+            for name in NESTED[key]:
+                node[name] = self._connection(key, name, item.get(name, []), None, True)
+            return {"data": {detail.group(1): node}}
 
         top = re.match(r"query\(\$cursor: String\) \{ (\w+)\(after: \$cursor\)", query)
         if top:

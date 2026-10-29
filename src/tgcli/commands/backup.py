@@ -1,4 +1,4 @@
-"""Backup command: save the tenant's current groups, users, resources, connectors and remote networks."""
+"""Backup command: save the tenant's current objects (groups, users, resources, devices, policies and more)."""
 
 from __future__ import annotations
 
@@ -25,9 +25,9 @@ def backup(
         help="Directory to create (must not exist). Default: ./twingate-backup-<tenant>-<UTC timestamp>.",
     ),
 ) -> None:
-    """Back up the tenant's groups, users, resources, connectors and remote networks as JSON files.
+    """Back up the tenant's groups, users, resources, devices, policies and more as JSON files.
 
-    Read-only. Writes one JSON file per type plus a manifest with counts and checksums. Secrets (connector tokens, service account keys) are never included. The files contain user emails: on macOS and Linux they are created readable by you only; on Windows they inherit the folder's permissions, so choose a private folder.
+    Read-only. Writes one JSON file per type (groups, users, resources, connectors, remote networks, devices, service accounts with their keys' metadata, security policies, DNS filtering profiles, gateways, certificate authorities) plus a manifest with counts and checksums. Secrets (connector tokens, service account keys) are never included. The files contain user emails and device details: on macOS and Linux they are created readable by you only; on Windows they inherit the folder's permissions, so choose a private folder.
     """
     client = get_client()
     out_dir = Path(output) if output else default_output_path(client)
@@ -46,11 +46,14 @@ def backup(
 
     typer.echo(f"Backup written to {result.path}")
     for entity in ENTITIES:
-        typer.echo(f"  {entity.label:<16}{result.counts[entity.key]:>6}")
+        if entity.key in result.counts:
+            typer.echo(f"  {entity.label:<26}{result.counts[entity.key]:>6}")
+        else:
+            typer.echo(f"  {entity.label:<26}{'NOT READ':>8}")
     if result.problems:
         typer.echo(
-            f"\nWarning: {len(result.problems)} count mismatch(es), so this backup could not be fully verified. "
-            "Data may have changed while it ran; run it again.",
+            f"\nWarning: {len(result.problems)} problem(s), so this backup could not be fully verified. "
+            "Data may have changed while it ran, or a type could not be read; run it again.",
             err=True,
         )
         for problem in result.problems[:MAX_PROBLEMS_SHOWN]:

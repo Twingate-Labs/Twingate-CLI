@@ -836,7 +836,7 @@ tgcli mappings resource-connectivity --offline-only
 
 ### backup
 
-Save the tenant's current state — groups, users, resources, connectors and remote networks — as JSON files. Read-only.
+Save the tenant's current state — groups, users, resources, connectors, remote networks, devices, service accounts (with their keys' metadata), Security Policies, DNS Filtering profiles, Gateways and Certificate Authorities — as JSON files. Read-only.
 
 ```bash
 tgcli backup                         # ./twingate-backup-<tenant>-<UTC timestamp>/
@@ -847,17 +847,20 @@ tgcli -s staging backup              # another saved session
 It writes one file per type plus a manifest:
 
 ```
-groups.json  users.json  resources.json  connectors.json  remote-networks.json  manifest.json
+groups.json  users.json  resources.json  connectors.json  remote-networks.json
+devices.json  service-accounts.json  security-policies.json  dns-profiles.json  gateways.json  certificate-authorities.json
+manifest.json
 ```
 
 - **Complete lists.** The API returns at most 50 items per page, so every list, including nested ones such as a group's resources or a resource's access, is followed to its end. Each count is then checked against the API's own total; the manifest records the result, and the command exits non-zero if anything doesn't add up (the files are still written).
 - **Relationships are saved from both sides** (a group lists its users and each user lists its groups), and IDs are kept, so a backup can be compared against a later one or used to rebuild state.
 - **Resources** include their type, protocols, tags, access (groups and service accounts with their policy, access policy, approval mode and expiry), approver groups, and gateway/ports/cluster ref for Gateway-backed types. Deprecated API fields are not included.
-- **Secrets are never included.** The API does not return connector tokens or service account keys.
-- **Privacy.** The files contain user names and emails. On macOS and Linux the directory is created readable by you only (`0700`/`0600`). **On Windows those permission bits do not apply**, so the files simply inherit the folder's access rights: save backups to a folder only you can read. Keep backups somewhere appropriate.
+- **The newer types** are devices (every state: active, archived and blocked, with their user's email and serial number), service accounts (with their resources and each key's name, status and dates), Security Policies (with the groups they apply to), DNS Filtering profiles (domain lists, category settings and groups), Gateways (with their Remote Network and CAs) and Certificate Authorities (`type` is `x509` or `ssh`, with the fingerprint). If the API refuses one of them (a tenant without the feature, an API key without the right), that type is left out, the others are still written, the command names it as `NOT READ` and exits non-zero, and the manifest records the problem.
+- **Secrets are never included.** The API does not return connector tokens or service account keys, and a key is listed by name, status and dates only.
+- **Privacy.** The files contain user names and emails, and device names, host names, user names and serial numbers. On macOS and Linux the directory is created readable by you only (`0700`/`0600`). **On Windows those permission bits do not apply**, so the files simply inherit the folder's access rights: save backups to a folder only you can read. Keep backups somewhere appropriate.
 - **Safe to run unattended.** It never overwrites: an existing output directory is refused. Files are written to `<dir>.partial` and renamed once complete, so an interrupted run leaves no half-finished backup.
 - **Not a transaction.** Pages are read one after another, so changes made while it runs may or may not be included. Connector `lastHeartbeatAt` changes about once a minute, so backups taken minutes apart can differ there even if nothing was edited.
-- **Not included:** devices, service accounts and their keys, security policies, DNS filtering profiles, gateways and certificate authorities (gateways appear only as references on remote networks).
+- **Not included:** the device serial number allowlist, access requests and tenant-wide settings. A backup is a full snapshot every time: there is no incremental backup, no diff between two backups and no restore of the newer types (see the import section for what a backup can rebuild).
 
 ---
 
@@ -874,7 +877,7 @@ tgcli -s staging import ./my-files --sync                                       
 tgcli -s staging import ./my-files --sync --prune                                # ... and remove what the file leaves out
 ```
 
-The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; `users.json`, `connectors.json` and the manifest are ignored. (A backup has no `devices` file; that one you write yourself.) To write the files by hand, copy the templates in [`examples/import`](examples/import) and edit them; only `resources.csv` has example rows, so a copy never creates anything you did not add.
+The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; the other files in it (users, connectors, service accounts, Security Policies, DNS Filtering profiles, Gateways, Certificate Authorities and the manifest) are ignored and listed as not imported. A backup's `devices.json` is an inventory, so it is ignored too: it would otherwise block on devices that have no serial number and change trust in another tenant. To set device trust, write your own `devices.csv` (or point `import` at a `devices.json` file by itself). To write the files by hand, copy the templates in [`examples/import`](examples/import) and edit them; only `resources.csv` has example rows, so a copy never creates anything you did not add.
 
 **How it matches things**
 

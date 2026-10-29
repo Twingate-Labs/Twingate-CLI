@@ -22,7 +22,12 @@ from tgcli.textio import TextFileError, read_text
 NETWORKS, GROUPS, RESOURCES, DEVICES = "remote-networks", "groups", "resources", "devices"
 KINDS = (NETWORKS, GROUPS, RESOURCES, DEVICES)
 # Files a backup holds that an import has no use for yet.
-IGNORED_FILES = ("users.json", "connectors.json", "manifest.json")
+MANIFEST = "manifest.json"
+BACKUP_DEVICES = "devices.json"  # in a backup (a folder with a manifest) it is an inventory, not trust to apply
+IGNORED_FILES = (
+    "users.json", "connectors.json", BACKUP_DEVICES, "service-accounts.json", "security-policies.json",
+    "dns-profiles.json", "gateways.json", "certificate-authorities.json", MANIFEST,
+)
 
 LOCATIONS = ("AWS", "AZURE", "GOOGLE_CLOUD", "ON_PREMISE", "OTHER")
 NETWORK_TYPES = ("REGULAR", "EXIT")
@@ -506,14 +511,21 @@ def load(path: Path) -> Specs:
         found = {kind_of(path): path}
     else:
         found = {}
+        is_backup = (path / MANIFEST).is_file()
         for kind in KINDS:
             candidates = [path / f"{kind}.json", path / f"{kind}.csv"]
+            if is_backup and kind == DEVICES:
+                # A backup lists every device it saw. Reading that as trust to set would block on devices with no
+                # serial number and change trust in another tenant, so only a devices.csv added by hand is used.
+                candidates = [c for c in candidates if c.name != BACKUP_DEVICES]
             present = [c for c in candidates if c.is_file()]
             if len(present) > 1:
                 raise LoadError(f"{path} has both {present[0].name} and {present[1].name}; keep one.")
             if present:
                 found[kind] = present[0]
-        specs.ignored = [name for name in IGNORED_FILES if (path / name).is_file()]
+        specs.ignored = [
+            name for name in IGNORED_FILES if (path / name).is_file() and (name != BACKUP_DEVICES or is_backup)
+        ]
     if not found:
         raise LoadError(f"{path} has none of: {', '.join(k + '.json or .csv' for k in KINDS)}.")
     for kind, file in found.items():

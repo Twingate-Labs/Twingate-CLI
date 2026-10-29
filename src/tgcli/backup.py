@@ -1,4 +1,4 @@
-"""Tenant backup: collect groups, users, resources, connectors and remote networks and write them to disk."""
+"""Tenant backup: collect the tenant's objects (see ``queries.backup.ENTITIES``) and write them to disk."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from tgcli import VERSION
+from tgcli.client.exceptions import TwingateAPIError, TwingateThrottleError
 from tgcli.pagination import PaginationError, fetch_connection
 from tgcli.output.transformers.resources import TYPE_LABELS
 from tgcli.queries import backup as q
@@ -20,6 +21,8 @@ from tgcli.queries import backup as q
 MANIFEST_FILE = "manifest.json"
 MANIFEST_FORMAT = 1
 MAX_PROBLEMS_SHOWN = 10
+# Certificate authorities are a GraphQL union; the backup says which kind each is the way `ca create -t` does.
+CA_TYPES = {"X509CertificateAuthority": "x509", "SSHCertificateAuthority": "ssh"}
 
 
 class BackupError(Exception):
@@ -30,6 +33,7 @@ class BackupError(Exception):
 class Collected:
     items: dict[str, list[dict]] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
+    unreadable: dict[str, str] = field(default_factory=dict)  # entity key -> why it is not in the backup at all
 
 
 @dataclass
@@ -80,21 +84,54 @@ def _complete_nested(client: Any, entity: q.Entity, item: dict, name: str, probl
     item[name] = [_flatten_edge(entity.key, name, edge) for edge in edges]
 
 
-def collect(client: Any, progress: Callable[[str], None] = lambda message: None) -> Collected:
-    """Read every entity in full. Nothing is written; mismatches against the API's own counts become problems."""
-    collected = Collected()
-    for entity in q.ENTITIES:
-        progress(f"Reading {entity.label}...")
+def _read_entity(client: Any, entity: q.Entity, problems: list[str]) -> list[dict]:
+    """Every item of one entity, nested lists completed. Raises on an API error; the caller decides what that means."""
+    if entity.paged:
         edges, expected, _ = _fetch_connection(client, q.LIST_QUERIES[entity.key], {}, [entity.root])
         items = [edge["node"] for edge in edges if edge.get("node")]
         if expected is not None and len(items) != expected:
-            collected.problems.append(f"{entity.label}: API reports {expected}, backed up {len(items)}")
-        for item in items:
-            for name in entity.nested:
-                _complete_nested(client, entity, item, name, collected.problems)
-            if entity.key == "resources":
-                typename = item.pop("__typename", None)
-                item["type"] = TYPE_LABELS.get(typename, typename)
+            problems.append(f"{entity.label}: API reports {expected}, backed up {len(items)}")
+    else:
+        items = []
+        for summary in client.execute(q.LIST_QUERIES[entity.key]).get("data", {}).get(entity.root) or []:
+            full = client.execute(q.DETAIL_QUERIES[entity.key], {"id": summary["id"]}).get("data", {}).get(entity.parent)
+            if full is None:
+                problems.append(f"{entity.label} {summary['id']}: disappeared while it was being read")
+            else:
+                items.append(full)
+    for item in items:
+        for name in entity.nested:
+            _complete_nested(client, entity, item, name, problems)
+        if entity.key == "resources":
+            typename = item.pop("__typename", None)
+            item["type"] = TYPE_LABELS.get(typename, typename)
+        elif entity.key == "certificate_authorities":
+            typename = item.pop("__typename", None)
+            item["type"] = CA_TYPES.get(typename, typename)
+    return items
+
+
+def collect(client: Any, progress: Callable[[str], None] = lambda message: None) -> Collected:
+    """Read every entity in full. Nothing is written; mismatches against the API's own counts become problems.
+
+    An optional entity the API refuses to return (a tenant without the feature, a key without the right) is
+    recorded in ``unreadable`` and left out of the backup, instead of failing everything that could be read.
+    Rate limiting, a failed login and a broken page cursor still stop the backup.
+    """
+    collected = Collected()
+    for entity in q.ENTITIES:
+        progress(f"Reading {entity.label}...")
+        problems: list[str] = []
+        try:
+            items = _read_entity(client, entity, problems)
+        except TwingateAPIError as exc:
+            if not entity.optional or isinstance(exc, TwingateThrottleError):
+                raise  # being rate limited says nothing about the entity: run the backup again
+            collected.unreadable[entity.key] = str(exc)
+            collected.problems.append(f"{entity.label}: could not be read, so they are not in this backup ({exc})")
+            progress(f"  {entity.label} could not be read")
+            continue
+        collected.problems.extend(problems)
         collected.items[entity.key] = items
         progress(f"  {len(items)} {entity.label}")
     return collected
@@ -130,6 +167,8 @@ def write_backup(
         files: dict[str, dict] = {}
         counts: dict[str, int] = {}
         for entity in q.ENTITIES:
+            if entity.key in collected.unreadable:
+                continue
             items = collected.items[entity.key]
             data = (json.dumps(items, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
             _write_private(partial / entity.file, data)
@@ -148,8 +187,8 @@ def write_backup(
                 "Pages are read one after another, not as a single transaction, so changes made while the backup "
                 "ran may or may not be included.",
                 "Secrets are never included: the API does not return connector tokens or service account keys.",
-                "Not included: devices, service accounts and keys, security policies, DNS filtering profiles, "
-                "gateways and certificate authorities (gateways appear only as references on remote networks).",
+                "Service account keys are listed by name, status and dates only. Not included: the device serial number "
+                "allowlist, access requests, and tenant-wide settings.",
             ],
         }
         _write_private(partial / MANIFEST_FILE, (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode())
