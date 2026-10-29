@@ -58,6 +58,14 @@ query getGateway($itemID: ID!) {
 }
 """
 
+FIND_GATEWAY = """
+query findGateway($itemID: ID!) {
+  gateway(id: $itemID) {
+    id
+  }
+}
+"""
+
 CREATE_GATEWAY = """
 mutation createGateway($address: String!, $remoteNetworkId: ID!, $x509CAId: ID!, $sshCAId: ID) {
   gatewayCreate(address: $address, remoteNetworkId: $remoteNetworkId, x509CAId: $x509CAId, sshCAId: $sshCAId) {

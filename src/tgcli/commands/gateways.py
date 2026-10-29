@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from tgcli.commands._common import YES_OPTION, confirm_delete, get_client, run_paginated, run_query
+from tgcli.commands._common import YES_OPTION, confirm_delete, execute_query, get_client, run_paginated, run_query
 from tgcli.output.transformers import gateways as t
 from tgcli.queries import gateways as q
 
@@ -66,5 +66,9 @@ def gateway_delete(
 ) -> None:
     """Delete a Gateway. Cannot be undone."""
     client = get_client()
+    # The API answers a delete of an ID that does not exist with ok: true, so look first rather than report a delete that did nothing.
+    if execute_query(client, q.FIND_GATEWAY, {"itemID": itemid})["data"]["gateway"] is None:
+        typer.echo(f"Error: Gateway {itemid} not found.", err=True)
+        raise typer.Exit(1)
     confirm_delete("Gateway", itemid, yes)
     run_query(client, q.DELETE_GATEWAY, {"id": itemid}, t.get_delete_as_csv)

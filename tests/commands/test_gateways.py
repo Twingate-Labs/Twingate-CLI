@@ -164,12 +164,35 @@ class TestGatewayUpdate(_Mutation):
 
 
 class TestGatewayDelete(_Mutation):
+    def _invoke(self, args, key, payload, exists=True):
+        """The lookup that comes first gets a gateway (or null); the mutation gets ``payload``."""
+        def execute(query, variables=None):
+            if "findGateway" in query:
+                return {"data": {"gateway": {"id": variables["itemID"]} if exists else None}}
+            return {"data": {key: payload}}
+
+        with patch("tgcli.commands._common.TwingateClient") as MockClient:
+            inst = MockClient.return_value
+            inst.execute.side_effect = execute
+            result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "gateway", *args])
+        return result, inst
+
     def test_sends_id_and_reports_ok(self):
         result, inst = self._invoke(["delete", "-i", "gw-1", "--yes"], "gatewayDelete", {"ok": True, "error": None})
         assert result.exit_code == 0
         query, variables = inst.execute.call_args.args
         assert "gatewayDelete(id: $id)" in query and variables == {"id": "gw-1"}
         assert result.output.split() == ["ok,error", "True,"]
+
+    def test_looks_the_gateway_up_before_deleting_it(self):
+        _, inst = self._invoke(["delete", "-i", "gw-1", "--yes"], "gatewayDelete", {"ok": True, "error": None})
+        (first, first_vars), (second, _) = (c.args for c in inst.execute.call_args_list)
+        assert "gateway(id: $itemID)" in first and first_vars == {"itemID": "gw-1"} and "gatewayDelete" in second
+
+    def test_an_id_that_does_not_exist_is_an_error_and_nothing_is_deleted(self):
+        result, inst = self._invoke(["delete", "-i", "gw-9", "--yes"], "gatewayDelete", {"ok": True, "error": None}, exists=False)
+        assert result.exit_code == 1 and "Gateway gw-9 not found" in result.stderr
+        assert len(inst.execute.call_args_list) == 1 and "gatewayDelete" not in inst.execute.call_args.args[0]
 
     def test_reports_api_error(self):
         result, _ = self._invoke(["delete", "-i", "gw-1", "--yes"], "gatewayDelete", {"ok": False, "error": "Gateway is in use"})

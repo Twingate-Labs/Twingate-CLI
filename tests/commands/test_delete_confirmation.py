@@ -47,7 +47,7 @@ class Api:
         if query.lstrip().startswith("query"):
             self.reads += 1
             found = {"__typename": "X509CertificateAuthority", "id": "x1"} if self.exists else None
-            return {"data": {"certificateAuthority": found, "dnsFilteringProfile": found}}
+            return {"data": {"certificateAuthority": found, "dnsFilteringProfile": found, "gateway": found}}
         self.writes.append(variables)
         return {"data": {name: {"ok": True, "error": None, "entity": {"id": "x1"}} for name in (
             "serviceAccountDelete", "connectorDelete", "groupDelete", "gatewayDelete", "remoteNetworkDelete", "userDelete",
@@ -125,7 +125,10 @@ class TestWording:
 
 
 class TestOrder:
-    @pytest.mark.parametrize("argv", [["ca", "delete", "-i", "x1"], ["dns-profile", "delete", "-i", "x1"]], ids=["ca", "dns-profile"])
+    @pytest.mark.parametrize(
+        "argv", [["ca", "delete", "-i", "x1"], ["dns-profile", "delete", "-i", "x1"], ["gateway", "delete", "-i", "x1"]],
+        ids=["ca", "dns-profile", "gateway"],
+    )
     def test_a_missing_object_is_reported_before_any_question(self, argv):
         api = Api(exists=False)
         result = run(api, argv, True, None)
