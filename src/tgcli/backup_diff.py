@@ -37,6 +37,7 @@ class Backup:
     manifest: dict
     items: dict[str, list]  # entity key -> the objects in its file
     warnings: list[str] = field(default_factory=list)
+    changed_files: list[str] = field(default_factory=list)  # files whose checksum is not the one in the manifest
 
     @property
     def tenant(self) -> str:
@@ -117,6 +118,7 @@ def load_backup(path: Path) -> Backup:
         data = file.read_bytes()
         recorded = (manifest.get("files") or {}).get(entity.file, {}).get("sha256")
         if recorded and recorded != hashlib.sha256(data).hexdigest():
+            backup.changed_files.append(entity.file)
             backup.warnings.append(
                 f"{file} does not match the checksum in its manifest, so it may have been changed since the backup was made."
             )

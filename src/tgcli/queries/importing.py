@@ -95,11 +95,11 @@ mutation importDeviceTrust($id: ID!, $isTrusted: Boolean!) {
 
 UPDATE_RESOURCE = """
 mutation importResourceUpdate(
-  $id: ID!, $alias: String, $protocols: ProtocolsInput, $securityPolicyId: ID, $isVisible: Boolean, $isBrowserShortcutEnabled: Boolean,
+  $id: ID!, $name: String, $address: String, $remoteNetworkId: ID, $isActive: Boolean, $alias: String, $protocols: ProtocolsInput, $securityPolicyId: ID, $isVisible: Boolean, $isBrowserShortcutEnabled: Boolean,
   $routingMode: RoutingMode, $tags: [TagInput!], $accessPolicy: AccessPolicyInput, $approvalMode: AccessApprovalMode
 ) {
   resourceUpdate(
-    id: $id, alias: $alias, protocols: $protocols, securityPolicyId: $securityPolicyId, isVisible: $isVisible,
+    id: $id, name: $name, address: $address, remoteNetworkId: $remoteNetworkId, isActive: $isActive, alias: $alias, protocols: $protocols, securityPolicyId: $securityPolicyId, isVisible: $isVisible,
     isBrowserShortcutEnabled: $isBrowserShortcutEnabled, routingMode: $routingMode, tags: $tags, accessPolicy: $accessPolicy,
     approvalMode: $approvalMode
   ) { ok error entity { id } }
@@ -113,7 +113,13 @@ mutation importAccessRemove($id: ID!, $principalIds: [ID!]!) {
 """
 
 SYNC_GROUP = """
-mutation importGroupSync($id: ID!, $securityPolicyId: ID, $removedUserIds: [ID]) {
-  groupUpdate(id: $id, securityPolicyId: $securityPolicyId, removedUserIds: $removedUserIds) { ok error entity { id } }
+mutation importGroupSync($id: ID!, $name: String, $isActive: Boolean, $securityPolicyId: ID, $removedUserIds: [ID]) {
+  groupUpdate(id: $id, name: $name, isActive: $isActive, securityPolicyId: $securityPolicyId, removedUserIds: $removedUserIds) { ok error entity { id } }
+}
+"""
+
+UPDATE_NETWORK = """
+mutation importNetworkUpdate($id: ID!, $name: String, $location: RemoteNetworkLocation, $isActive: Boolean) {
+  remoteNetworkUpdate(id: $id, name: $name, location: $location, isActive: $isActive) { ok error entity { id } }
 }
 """

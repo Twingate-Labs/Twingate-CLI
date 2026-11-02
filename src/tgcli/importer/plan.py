@@ -59,6 +59,11 @@ class Row:
     resource_update: dict = field(default_factory=dict)  # resourceUpdate variables (what differs)
     grant_updates: list = field(default_factory=list)  # Grants whose settings change (only the changed ones are set)
     remove_access_ids: list = field(default_factory=list)  # principals whose access is removed
+    # `tgcli restore` only (it matches by ID, so it can also put back a changed name or setting):
+    network_update: dict = field(default_factory=dict)  # remoteNetworkUpdate variables: name, location, isActive
+    group_update: dict = field(default_factory=dict)  # groupUpdate variables sent with the first call: name, isActive
+    move_to_network: Optional[str] = None  # name of a Remote Network this run creates, which an existing resource goes back into
+    backup_id: str = ""  # the ID the object has in the backup being restored
     # filled in by apply
     status: str = ""
     id: str = ""

@@ -2,6 +2,12 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`tgcli restore <backup>`**: put a tenant back the way one of its own backups had it. Remote Networks, groups and resources are matched by ID, so renames, edits, disabled objects, moved resources, removed members and removed or changed access are repaired, and deleted objects are created again with their access given back. It is a dry run unless you pass `--execute`, which first writes a safety snapshot of the tenant (restore from it to undo). It never deletes anything and never touches Synced Groups; `--prune` also removes members, access and tags the backup lacks. `--only` restricts it to named objects. Types it does not cover yet, and types the backup lacks, are named in the output.
+
 ## [3.0.0] - 2026-10-29
 
 The first tagged release. It covers everything since the 2.0.0 package rebuild in March 2026. If you cloned the repository earlier, your `tgcli -v` also says 2.0.0 but behaves differently; the **Breaking changes** below are what to check before you upgrade.

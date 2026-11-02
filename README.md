@@ -35,6 +35,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [dns-profile](#dns-profile)
   - [mappings](#mappings)
   - [backup](#backup)
+  - [restore](#restore)
   - [import](#import)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
@@ -862,7 +863,7 @@ manifest.json
 - **Privacy.** The files contain user names and emails, and device names, host names, user names and serial numbers. On macOS and Linux the directory is created readable by you only (`0700`/`0600`). **On Windows those permission bits do not apply**, so the files simply inherit the folder's access rights: save backups to a folder only you can read. Keep backups somewhere appropriate.
 - **Safe to run unattended.** It never overwrites: an existing output directory is refused. Files are written to `<dir>.partial` and renamed once complete, so an interrupted run leaves no half-finished backup.
 - **Not a transaction.** Pages are read one after another, so changes made while it runs may or may not be included. Connector `lastHeartbeatAt` changes about once a minute, so backups taken minutes apart can differ there even if nothing was edited.
-- **Not included:** the device serial number allowlist, access requests and tenant-wide settings. A backup is a full snapshot every time: there is no incremental backup, and no restore of the newer types (see the import section for what a backup can rebuild). To see what changed between two backups, use `tgcli backup diff` below.
+- **Not included:** the device serial number allowlist, access requests and tenant-wide settings. A backup is a full snapshot every time: there is no incremental backup. To see what changed between two backups, use `tgcli backup diff` below; to put a tenant back the way a backup had it, use `tgcli restore`; to copy a backup into another tenant, use `tgcli import`.
 
 
 #### backup diff
@@ -894,6 +895,31 @@ resources: 1 added, 0 removed, 1 changed
 - **Both folders must be backups of the same tenant.** It warns when a backup was not fully verified, when a file no longer matches its checksum in the manifest, or when the folders are given newest first. A type only one backup holds (an older backup has no `devices.json`, for example) is named as not compared.
 - **Exit codes.** `0` when the comparison ran. With `--exit-code`, `1` when the backups differ. `2` when the folders cannot be compared (not a backup, different tenants, unreadable files). The report goes to standard output and warnings to standard error.
 - The report contains user emails and device details, like the backups, so keep it somewhere appropriate.
+
+---
+
+### restore
+
+Put a tenant back the way one of its own backups had it: Remote Networks, groups and resources, with their settings, members and access. **A dry run by default**: nothing is changed until you add `--execute`.
+
+```bash
+tgcli -s acme restore ./twingate-backup-acme-20261001T090000Z                    # dry run: what is different, and what would be done
+tgcli -s acme restore ./twingate-backup-acme-20261001T090000Z --execute          # snapshot the tenant, then repair it
+tgcli -s acme restore ./backup --execute --only group:Engineering --only resource:Wiki   # repair just these
+tgcli -s acme restore ./backup --execute --prune                                 # also take out what the backup does not have
+```
+
+`restore` is for **repairing damage to the same tenant**. To copy one tenant into another, use `tgcli import`: IDs differ between tenants, so a restore would match nothing, and it refuses a backup of a tenant with a different name (`--force-tenant` overrides that if the tenant was renamed).
+
+- **Matched by ID.** A group that was renamed is renamed back, a resource that was edited, disabled, moved to another Remote Network or given a different address is put back, a member who was removed is added back, and access that was taken away (or changed: its Security Policy, auto-lock, approval mode, expiry) is given back. Group members are matched by email, so a user who was made again by your identity provider is still found.
+- **Deleted objects are created again.** A deleted group, resource or Remote Network gets a new ID, so the access, members and Security Policy it had are given back by name, in the right order (networks, then groups, then resources). An object that was deleted and made again by hand is taken to be the original when exactly one object fits its name (and Remote Network and address for a resource); if more than one fits, that row is blocked rather than guessed.
+- **Nothing is ever deleted.** What was created after the backup is left alone (the output counts it). `--prune` also removes group members, resource access and tags that the backup does not have, but only from objects the backup has, and it never deletes an object.
+- **What it will not do.** It never touches Synced Groups (their names and members belong to your identity provider). It never clears a setting the backup did not have, and never makes an expired grant permanent. A reference that cannot be resolved (a Security Policy or service account that no longer exists) is named in the row and left out; a deleted group whose Security Policy is gone is blocked, because creating it without the policy would give it a different one. SSH, web app and Kubernetes resources only get their access back, and a deleted one is not created again yet.
+- **A safety snapshot comes first.** With `--execute` the tenant is read in full and written as a backup (`twingate-prerestore-<tenant>-<timestamp>`, or `--snapshot-dir`) before the first change, and the command prints how to undo the restore: `tgcli restore <snapshot> --execute`. `--no-snapshot` skips the snapshot (the tenant is still read in full). Nothing is written if the snapshot or the read fails or does not add up.
+- **It says what it did not look at.** A type the backup does not hold (an older backup has no `devices.json`) and the types restore does not cover yet (users, connectors, devices, service accounts, Security Policies, DNS profiles, Gateways, Certificate Authorities) are named under "Not compared". A backup whose files no longer match their checksums is refused for `--execute`, and a backup older than 30 days is flagged.
+- **Dry run first, then re-run.** The dry run prints each change and writes a report (`restore_report_<timestamp>.csv`). Applying the same restore twice is safe: after a successful one, the dry run finds nothing. The API allows about 20 writes a minute, so a big restore pauses when it is rate limited; if it gives up part way, run the same command again to finish.
+- **Exit codes.** `1` if anything failed or is blocked (in a dry run: would be blocked), or a guard stopped it; `0` otherwise.
+- The snapshot and the report contain user emails, like any backup.
 
 ---
 

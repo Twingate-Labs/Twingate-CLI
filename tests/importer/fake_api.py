@@ -144,7 +144,8 @@ class FakeApi:
         assert set(variables) <= declared, f"{name} sent undeclared variables {set(variables) - declared}"
         field = {"importNetwork": "remoteNetworkCreate", "importGroup": "groupCreate", "importGroupUsers": "groupUpdate",
                  "importResource": "resourceCreate", "importAccess": "resourceAccessAdd", "importDeviceTrust": "deviceUpdate",
-                 "importResourceUpdate": "resourceUpdate", "importAccessRemove": "resourceAccessRemove", "importGroupSync": "groupUpdate"}[name]
+                 "importResourceUpdate": "resourceUpdate", "importAccessRemove": "resourceAccessRemove", "importGroupSync": "groupUpdate",
+                 "importNetworkUpdate": "remoteNetworkUpdate"}[name]
         problem = self.fail.get(name)
         if callable(problem):
             problem = problem(variables)
@@ -200,6 +201,8 @@ class FakeApi:
                 continue
             if key == "securityPolicyId":
                 res["securityPolicy"] = {"id": value} if value else None
+            elif key == "remoteNetworkId":
+                res["network"] = next(n["name"] for n in self.networks if n["id"] == value)
             else:
                 res[key] = value
         if "accessPolicy" in v and "approvalMode" not in v:
@@ -219,8 +222,20 @@ class FakeApi:
         assert len(v.get("removedUserIds") or []) <= 200
         if "securityPolicyId" in v:
             group["securityPolicyId"] = v["securityPolicyId"]
+        for key in ("name", "isActive"):
+            if key in v:
+                group[key] = v[key]
         group["members"].difference_update(v.get("removedUserIds") or [])
         return {"id": group["id"]}
+
+    def _do_importNetworkUpdate(self, v: dict) -> dict:
+        network = next(n for n in self.networks if n["id"] == v["id"])
+        if "name" in v:  # resources stay in their network when it is renamed
+            for res in self.resources:
+                if res["network"] == network["name"]:
+                    res["network"] = v["name"]
+        network.update({k: val for k, val in v.items() if k != "id"})
+        return {"id": network["id"]}
 
     def _do_importDeviceTrust(self, v: dict) -> dict:
         device = next(d for d in self.devices if d["id"] == v["id"])

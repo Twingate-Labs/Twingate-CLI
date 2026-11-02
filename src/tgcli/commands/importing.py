@@ -29,7 +29,7 @@ def _echo_row(row) -> None:
     typer.echo(f"  {row.status:<13}{row.kind:<15}{row.name}  ({reason}){extra}")
 
 
-def _summary(rows: list) -> None:
+def _summary(rows: list, source: str = "file") -> None:
     typer.echo("\nSummary")
     for kind in KIND_ORDER:
         mine = [r for r in rows if r.kind == kind]
@@ -41,7 +41,7 @@ def _summary(rows: list) -> None:
         typer.echo(f"  {kind + 's':<17}" + ", ".join(f"{n} {status}" for status, n in sorted(counts.items())))
     warned = sum(len(r.warnings) for r in rows)
     if warned:
-        typer.echo(f"  {warned} warning(s): something in the file was left out of a row (see the report).")
+        typer.echo(f"  {warned} warning(s): something in the {source} was left out of a row (see the report).")
 
 
 def _removals(rows: list) -> None:

@@ -36,14 +36,14 @@ def write_count(rows: list) -> int:
         elif row.kind == "group":
             total += (row.action == CREATE) + -(-len(row.member_ids) // BATCH_SIZE) + _sync_group_calls(row)
         else:
-            total += (row.action == CREATE) + bool(row.resource_update) + -(-(len(row.grants) + len(row.grant_updates)) // ACCESS_BATCH)
+            total += (row.action == CREATE) + bool(row.resource_update or row.move_to_network) + -(-(len(row.grants) + len(row.grant_updates)) // ACCESS_BATCH)
             total += -(-len(row.remove_access_ids) // ACCESS_BATCH)
     return total
 
 
 def _sync_group_calls(row: Row) -> int:
     """A group's Security Policy change rides with its first batch of removals; with none it is a call of its own."""
-    return max(-(-len(row.remove_member_ids) // BATCH_SIZE), 1 if row.group_policy_id else 0)
+    return max(-(-len(row.remove_member_ids) // BATCH_SIZE), 1 if row.group_policy_id or row.group_update else 0)
 
 
 class RowError(Exception):
@@ -93,8 +93,10 @@ def _sync_group(client: Any, row: Row, group_id: str) -> None:
     done = 0
     for index, chunk in enumerate(chunks):
         variables: dict = {"id": group_id}
-        if index == 0 and row.group_policy_id:
-            variables["securityPolicyId"] = row.group_policy_id
+        if index == 0:
+            variables.update(row.group_update)
+            if row.group_policy_id:
+                variables["securityPolicyId"] = row.group_policy_id
         if chunk:
             variables["removedUserIds"] = chunk
         try:
@@ -187,10 +189,14 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
     if row.kind == "device":
         _set_trust(client, row)
     elif row.kind == "remote network":
-        result = _call(client, q.CREATE_NETWORK, {
-            "name": spec.name, "location": spec.location, "networkType": spec.network_type, "isActive": spec.is_active,
-        }, "remoteNetworkCreate")
-        row.id = ids["network"][spec.name] = result["entity"]["id"]
+        if row.action == CREATE:
+            result = _call(client, q.CREATE_NETWORK, {
+                "name": spec.name, "location": spec.location, "networkType": spec.network_type, "isActive": spec.is_active,
+            }, "remoteNetworkCreate")
+            row.id = ids["network"][spec.name] = result["entity"]["id"]
+        else:
+            row.id = row.existing_id
+            _call(client, q.UPDATE_NETWORK, {"id": row.id, **row.network_update}, "remoteNetworkUpdate")
     elif row.kind == "group":
         if row.action == CREATE:
             variables = {"name": spec.name}
@@ -200,7 +206,7 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
         else:
             row.id = row.existing_id
         _add_members(client, row, row.id)
-        if row.group_policy_id or row.remove_member_ids:
+        if row.group_policy_id or row.remove_member_ids or row.group_update:
             _sync_group(client, row, row.id)
     else:
         if row.action == CREATE:
@@ -209,8 +215,15 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
                 raise RowError(f"Remote Network '{spec.network}' was not created")
             result = _call(client, q.CREATE_RESOURCE, _resource_variables(row, network_id), "resourceCreate")
             row.id = result["entity"]["id"]
+            if row.resource_update:  # what a create cannot say (a restore puts back a disabled resource)
+                _update_resource(client, row, row.id)
         else:
             row.id = row.existing_id
+            if row.move_to_network:
+                moved_to = ids["network"].get(row.move_to_network)
+                if moved_to is None:
+                    raise RowError(f"Remote Network '{row.move_to_network}' was not created")
+                row.resource_update["remoteNetworkId"] = moved_to
             if row.resource_update:
                 _update_resource(client, row, row.id)
         if row.grants or row.grant_updates:

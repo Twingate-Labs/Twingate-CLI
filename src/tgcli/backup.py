@@ -111,8 +111,8 @@ def _read_entity(client: Any, entity: q.Entity, problems: list[str]) -> list[dic
     return items
 
 
-def collect(client: Any, progress: Callable[[str], None] = lambda message: None) -> Collected:
-    """Read every entity in full. Nothing is written; mismatches against the API's own counts become problems.
+def collect(client: Any, progress: Callable[[str], None] = lambda message: None, keys: frozenset | None = None) -> Collected:
+    """Read every entity in full (or only those named in ``keys``). Nothing is written; mismatches against the API's own counts become problems.
 
     An optional entity the API refuses to return (a tenant without the feature, a key without the right) is
     recorded in ``unreadable`` and left out of the backup, instead of failing everything that could be read.
@@ -120,6 +120,8 @@ def collect(client: Any, progress: Callable[[str], None] = lambda message: None)
     """
     collected = Collected()
     for entity in q.ENTITIES:
+        if keys is not None and entity.key not in keys:
+            continue
         progress(f"Reading {entity.label}...")
         problems: list[str] = []
         try:

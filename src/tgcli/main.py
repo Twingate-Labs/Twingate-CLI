@@ -93,6 +93,7 @@ def _register_commands() -> None:
         policies,
         resource_types,
         resources,
+        restore,
         accounts,
         users,
     )
@@ -100,6 +101,7 @@ def _register_commands() -> None:
     app.add_typer(auth.app, name="auth")
     app.add_typer(backup.app, name="backup")
     app.command("import")(importing.import_)
+    app.command("restore")(restore.restore)
     app.add_typer(access_requests.app, name="access-request")
     app.add_typer(certificate_authorities.app, name="ca")
     app.add_typer(devices.app, name="device")
