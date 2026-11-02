@@ -106,7 +106,7 @@ pip install .
 tgcli auth login -a tgp_xxxxxxxxxxxxxxxxxxxx -t acme -s acme
 
 # Verify it worked
-tgcli -v                       # tgcli version 3.0.0
+tgcli -v                       # tgcli version 3.1.0
 tgcli -s acme resource list    # list all resources
 ```
 
