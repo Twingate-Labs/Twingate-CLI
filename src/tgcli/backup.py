@@ -169,8 +169,8 @@ def write_backup(
         files: dict[str, dict] = {}
         counts: dict[str, int] = {}
         for entity in q.ENTITIES:
-            if entity.key in collected.unreadable:
-                continue
+            if entity.key in collected.unreadable or entity.key not in collected.items:
+                continue  # not read (a partial read, such as the one `tgcli remove` snapshots), so not in the files
             items = collected.items[entity.key]
             data = (json.dumps(items, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
             _write_private(partial / entity.file, data)

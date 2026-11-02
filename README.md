@@ -37,6 +37,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
   - [backup](#backup)
   - [restore](#restore)
   - [import](#import)
+  - [remove](#remove)
 - [Rate Limiting](#rate-limiting)
 - [Development](#development)
 
@@ -999,6 +1000,36 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 **Rate limits.** The API typically allows about 20 writes a minute. A dry run tells you how many write requests a large import would make; the run pauses when rate limited, and if it gives up part way, run the same command again to finish.
 
 **Encoding:** reports are UTF-8, and input files can be UTF-8 (with or without a byte order mark) or UTF-16. Excel may show non-English characters wrongly if you double-click the report; use Data > From Text/CSV and choose UTF-8.
+
+---
+
+### remove
+
+Remove the resources, groups and Remote Networks a file names. This is the most dangerous command in the CLI, so it shows you the list first and never removes anything on its own: **a dry run by default**, and `--execute` still stops to ask you to type how many objects will go.
+
+```bash
+tgcli -s acme remove ./old-stuff.csv                              # dry run: the list, what hangs off each object, a report
+tgcli -s acme remove ./old-stuff.csv --execute                    # show the list again, ask you to type the count, snapshot, remove
+tgcli -s acme remove ./group-names.txt --kind group               # a plain list: one name or id per line
+```
+
+The file is a CSV or JSON list with a `kind` (`resource`, `group` or `network`) and an `id` and/or a `name` per line; a resource line may also give `network` and `address` to tell apart resources that share a name. A plain `.txt` list of names or ids needs `--kind`. Copy the template in [`examples/remove`](examples/remove).
+
+```csv
+kind,id,name,network,address
+group,,Contractors 2024,,
+resource,,Wiki,HQ,wiki.internal
+network,,Old Datacentre,,
+```
+
+- **Each line must match exactly one object.** A name must match exactly (capitals included). A name that matches several objects, an id whose object has a different name than the line says (the file is out of date), or a line that cannot be read **blocks the whole run**: if any line is blocked, nothing at all is removed, even with `--execute`. Name an object by its id to settle a duplicate.
+- **The list shows what depends on each object.** A resource: its network and address and how many groups or service accounts lose access. A group: how many members, how many resources it has access to, resources that would be left with nobody who can reach them, and resources it approves access requests for.
+- **Never removed:** Synced Groups and the System group (they belong to your identity provider). A Remote Network is only removed when every resource in it is in the file too, and never while it still has Connectors or Gateways (remove those first with `tgcli connector delete` / `tgcli gateway delete`). Everything else, such as users, connectors, devices, service accounts and Security Policies, is not something this command removes.
+- **Confirmation you cannot click through.** With `--execute` the list is printed and you must type the number of objects to be removed (`Type 14 to confirm`). Anything else removes nothing. There is **no `--yes`**, and with no terminal to ask on (a script, cron job or pipe) the command refuses.
+- **A safety snapshot comes first.** After you confirm and before the first removal, what was read (Remote Networks, groups, resources, users, Security Policies and service accounts) is written as a backup (`twingate-preremove-<tenant>-<timestamp>`, or `--snapshot-dir`) and the command prints how to put it back: `tgcli restore <snapshot> --execute`. Restore creates removed groups, resources and Remote Networks again, but **with new IDs** (what refers to the old IDs, such as scripts, needs updating). `--no-snapshot` skips the snapshot.
+- **A line that matches nothing is skipped** and reported as `not-found` (it is already gone, or the name has a typo: check the list). That is what lets a run that stopped part way be run again to finish. Objects are removed resources first, then groups, then Remote Networks; if a resource in a Remote Network could not be removed, that network is not attempted (`not-run`).
+- **Report and exit codes.** `remove_report_<timestamp>.csv` lists every line with its status (`removed`, `error`, `not-run`, `not-found`, `blocked`; in a dry run `to-remove`). Exit `1` if anything is blocked, failed or was not attempted, or a guard stopped it; `0` otherwise, including a dry run that is clean. The API allows about 20 writes a minute, so a big removal pauses when rate limited.
+- The snapshot and the report contain user emails, like any backup.
 
 ---
 
