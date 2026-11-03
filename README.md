@@ -937,7 +937,7 @@ tgcli -s staging import ./my-files --sync                                       
 tgcli -s staging import ./my-files --sync --prune                                # ... and remove what the file leaves out
 ```
 
-The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; the other files in it (users, connectors, service accounts, Security Policies, DNS Filtering profiles, Gateways, Certificate Authorities and the manifest) are ignored and listed as not imported. A backup's `devices.json` is an inventory, so it is ignored too: it would otherwise block on devices that have no serial number and change trust in another tenant. To set device trust, write your own `devices.csv` (or point `import` at a `devices.json` file by itself). To write the files by hand, copy the templates in [`examples/import`](examples/import) and edit them; only `resources.csv` has example rows, so a copy never creates anything you did not add.
+The input is a folder, or a single file, named `remote-networks`, `groups`, `resources` and `devices`, as `.json` or `.csv` (one or the other per name). A `tgcli backup` folder works as it is, so a backup of one tenant can be loaded into another; the other files in it (users, connectors, service accounts, Security Policies, DNS Filtering profiles, Gateways, Certificate Authorities and the manifest) are ignored and listed as not imported. A backup's `devices.json` is an inventory, so it is ignored too: it would otherwise block on devices that have no serial number and change trust in another tenant. To set device trust, write your own `devices.csv` (or point `import` at a `devices.json` file by itself). To write the files by hand, copy the templates in [`examples/import`](examples/import) and edit them; only `resources.csv` has example rows (two network resources, and one each of SSH, web app and Kubernetes), so a copy never creates anything you did not add.
 
 **How it matches things**
 
@@ -951,7 +951,7 @@ The input is a folder, or a single file, named `remote-networks`, `groups`, `res
 By default an import only adds. `--sync` also **changes** an existing group, resource or grant to match what the file says; `--prune` (which needs `--sync`) also **removes** what the file leaves out. Both are dry runs until you add `--execute`, and a dry run with `--prune` prints how many members and access grants it would remove.
 
 - **Only what the file states is compared.** A blank CSV cell, a CSV column you left out, or a JSON key that is missing says nothing about that setting, so `--sync` leaves it alone. In particular a blank `tcp_ports` is not "all ports" here (write `*` to say that), and a backup that has no Security Policy for a resource does not take the tenant's policy away. Settings are only ever **set to what the file says, never cleared**.
-- **Resources** (found by name, Remote Network and address, so those never change): alias, TCP and UDP ports, ICMP, visibility, browser shortcut, routing mode, Security Policy, access policy and approval mode. Only the settings that differ are sent. Changing the access policy also re-sends the approval mode, because the API can reset it to `MANUAL` otherwise.
+- **Resources** (found by name, Remote Network and address, so those never change): alias, TCP and UDP ports, ICMP, visibility, browser shortcut, routing mode, Security Policy, access policy and approval mode (for an SSH, web app or Kubernetes resource: its Gateway, ports, TLS modes, cluster reference and request headers instead of the ports, ICMP, routing mode and browser shortcut). Only the settings that differ are sent. Changing the access policy also re-sends the approval mode, because the API can reset it to `MANUAL` otherwise.
 - **A group's access to a resource** that already exists: its own Security Policy, access policy, approval mode and expiry, for the settings the file states (JSON file, or `Group=Policy` in a CSV). A past expiry is a warning, never applied. Service accounts' access has no settings, so there is nothing to sync.
 - **Groups**: a Manual group's Security Policy. Members are still only added. Synced Groups are never changed, with or without these flags.
 - **`--prune`** removes, for a group whose members the file lists, the members it leaves out; for a resource whose access the file lists, the group and service account access it leaves out; and for a resource whose tags the file lists, the other tags (without `--prune` tags are only added or updated). A blank members or groups cell in a CSV lists nothing, so it removes nothing; in a JSON file, `"users": []` or `"access": []` does mean "nobody", so under `--prune` it empties the group or the resource's access. An access entry or member that the file names is never removed, even when it could not be added (an expired grant, an ambiguous name). Within a row things are added or changed before anything is removed, so a run that stops part way never leaves less access than the file describes.
@@ -964,7 +964,7 @@ By default an import only adds. `--sync` also **changes** an existing group, res
 |---|---|
 | `would-create` / `would-update` (dry run), `created` / `updated` | What was, or would be, done (the detail says what: members or access to add, settings to change, access or members to remove) |
 | `exists` | Already there, nothing to add |
-| `skipped` | Deliberately not imported (Synced and System groups, SSH / web app / Kubernetes resources) |
+| `skipped` | Deliberately not imported (Synced and System groups, a resource type this tool does not know) |
 | `blocked` | Cannot be made correctly, for example its Remote Network or Security Policy does not exist, or a port list is invalid. Nothing is sent for it |
 | `error` / `not-run` | The API refused it, or the run stopped because the credentials were rejected |
 
@@ -979,12 +979,28 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 | `remote-networks.csv` | `name` (required), `location` (`AWS`, `AZURE`, `GOOGLE_CLOUD`, `ON_PREMISE`, `OTHER`), `network_type` (`REGULAR`, `EXIT`), `active` |
 | `groups.csv` | `name` (required), `members` (emails separated by `;`), `security_policy` |
 | `devices.csv` | `serial_number` (required), `trusted` (default `true`) |
-| `resources.csv` | `name`, `network`, `address` (all required), `alias`, `tcp_ports`, `udp_ports`, `allow_icmp`, `visible`, `security_policy`, `groups`, `service_accounts`, `routing_mode` |
+| `resources.csv` | `name`, `network`, `address` (all required), `alias`, `tcp_ports`, `udp_ports`, `allow_icmp`, `visible`, `security_policy`, `groups`, `service_accounts`, `routing_mode`; and, for SSH, web app and Kubernetes resources only, `type`, `gateway`, `upstream_port`, `downstream_port`, `upstream_tls`, `downstream_tls`, `cluster_ref`, `headers` |
 
 - `tcp_ports` / `udp_ports`: `*` or blank means every port, `none` means no ports, otherwise a list like `80;443;8000-8100`.
 - `groups`: group names separated by `;`, each optionally followed by `=<Security Policy>` for a per-group policy, for example `Engineering=Strict Policy;Ops`. A group name containing `;` or `=` needs the JSON format.
 - `service_accounts`: service account names separated by `;`, for example `ci;deploy`. **They must already exist** (the import never creates service accounts, and a backup does not hold them), and a service account's access takes no per-grant settings: the API refuses a Security Policy, auto-lock, approval mode or expiry on it. A row from a JSON file that does carry one of those for a service account is left out of the grant with a warning, because a plain grant would be wider than the file says.
 - True/false columns accept `true`/`false`, `yes`/`no` and `1`/`0`. Empty cells use the API's defaults.
+
+**SSH, web app and Kubernetes resources.** These are served through a **Gateway**, and are imported from the backup's JSON as they are, or from `resources.csv` with the extra columns. A blank `type` is a network resource; otherwise write `ssh`, `web app` (or `webapp`) or `kubernetes` (or `k8s`).
+
+| Column | For | Meaning |
+|---|---|---|
+| `gateway` | all three (SSH and web app need it) | The **address** of the Gateway, exactly as `tgcli gateway list` shows it |
+| `upstream_port` / `downstream_port` | all three (a web app needs both) | The port on the target host, and the port clients connect to |
+| `upstream_tls` | web app | Gateway to the web app: `VERIFY_FULL`, `VERIFY_CA`, `INSECURE` or `NONE` |
+| `downstream_tls` | web app | Client to the Gateway: `TLS13` or `NONE` |
+| `cluster_ref` | Kubernetes | The cluster reference |
+| `headers` | web app | Request header rewrites, `Key=Value` separated by `;` (a value containing `;` needs the JSON format) |
+
+- **A Gateway has no name, so it is found by its address.** It must already exist in the tenant: an import never creates Gateways (creating one needs the Certificate Authority's certificate, which a backup does not hold; create it with `tgcli gateway create` first). The Gateway's ID in a backup is not used. If the address is not found the row is `blocked` and says so; if two Gateways share an address, the resource's Remote Network decides, and if it cannot the row is blocked. When you load a backup into another tenant, make the Gateways there have the same addresses, or change the `gateway` address in the file.
+- **A resource's type cannot be changed.** If a resource with the same name, Remote Network and address already exists as a different type, the row is `blocked`.
+- A row that fills a column its type does not take (`tcp_ports` on an SSH resource, `cluster_ref` on a web app, any gateway column on a network resource) is `blocked`, so nothing is silently dropped. The ports, ICMP, routing mode and browser shortcut that the API reports for these types in a backup are ignored: the API cannot set them there.
+- Access, Security Policy, access policy, approval mode, visibility, alias and tags work as for network resources. With `--sync` the Gateway, both ports and TLS modes (a TLS mode the file does not state is kept), the cluster reference and the request headers are compared too; the headers are merged by key, and with `--prune` replaced by exactly the file's list.
 
 **Device trust by serial number.** `devices.csv` (or `devices.json` with `serialNumber` and `isTrusted`) sets `trusted` on devices that have **already registered** with the tenant; the serial number is matched ignoring case.
 
@@ -993,9 +1009,9 @@ Every row, with its status, detail, warnings, error, the new ID and where in the
 - After each change the API's reply is checked: if it says the device did not end up with the trust you asked for, the row is an `error`.
 - The API refuses to untrust a device whose serial number is **verified** ("Serial number verified Devices cannot be unverified via API"). That row is an `error` showing the API's message, and the device is left as it was.
 
-**Imported from the backup's JSON:** Remote Network location, type and active state; group name, Security Policy and members; for each network resource its address, alias, protocols and ports, visibility, browser shortcut, routing mode, tags, Security Policy, access policy and approval mode, the access of each group (with its own policy, access policy, approval mode and expiry), and the access of each service account.
+**Imported from the backup's JSON:** Remote Network location, type and active state; group name, Security Policy and members; for each network resource its address, alias, protocols and ports, visibility, browser shortcut, routing mode, tags, Security Policy, access policy and approval mode; for each SSH, web app and Kubernetes resource the same except protocols, browser shortcut and routing mode, plus its Gateway (by address), ports, TLS modes, request headers and cluster reference; and for every resource the access of each group (with its own policy, access policy, approval mode and expiry) and of each service account.
 
-**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, SSH / web app / Kubernetes resources, approver groups, device posture checks, security policies, DNS filtering profiles, gateways and certificate authorities.
+**Not imported yet** (each is reported, never silently dropped): users (they must already exist), connectors, approver groups, device posture checks, security policies, DNS filtering profiles, gateways (they must already exist: resources are matched to them by address) and certificate authorities.
 
 **Rate limits.** The API typically allows about 20 writes a minute. A dry run tells you how many write requests a large import would make; the run pauses when rate limited, and if it gives up part way, run the same command again to finish.
 

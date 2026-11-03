@@ -32,6 +32,13 @@ IGNORED_FILES = (
 LOCATIONS = ("AWS", "AZURE", "GOOGLE_CLOUD", "ON_PREMISE", "OTHER")
 NETWORK_TYPES = ("REGULAR", "EXIT")
 ROUTING_MODES = ("THROUGH_TWINGATE", "BYPASS_TWINGATE")
+NETWORK_RESOURCE, SSH, WEB_APP, KUBERNETES = "NETWORK", "SSH", "WEB_APP", "KUBERNETES"
+RESOURCE_TYPES = (NETWORK_RESOURCE, SSH, WEB_APP, KUBERNETES)
+# What each type is called in the API (a backup records the type under these names too, as __typename) and by people.
+TYPENAMES = {"NetworkResource": NETWORK_RESOURCE, "SSHResource": SSH, "WebAppResource": WEB_APP, "KubernetesResource": KUBERNETES}
+TYPE_ALIASES = {"WEBAPP": WEB_APP, "WEB": WEB_APP, "K8S": KUBERNETES, "KUBE": KUBERNETES, "STANDARD": NETWORK_RESOURCE}
+TLS_CLIENT_MODES = ("VERIFY_FULL", "VERIFY_CA", "INSECURE", "NONE")  # Gateway to the web app
+TLS_SERVER_MODES = ("TLS13", "NONE")  # client to the Gateway
 PROTOCOL_POLICIES = ("ALLOW_ALL", "RESTRICTED")
 ACCESS_MODES = ("MANUAL", "AUTO_LOCK", "ACCESS_REQUEST")
 APPROVAL_MODES = ("MANUAL", "AUTOMATIC")
@@ -42,6 +49,8 @@ CSV_COLUMNS = {
     RESOURCES: (
         "name", "network", "address", "alias", "tcp_ports", "udp_ports", "allow_icmp", "visible",
         "security_policy", "groups", "service_accounts", "routing_mode",
+        # Only for SSH, web app and Kubernetes resources (blank on a network resource, which is what a blank type means):
+        "type", "gateway", "upstream_port", "downstream_port", "upstream_tls", "downstream_tls", "cluster_ref", "headers",
     ),
     DEVICES: ("serial_number", "trusted"),
 }
@@ -108,6 +117,12 @@ class ResourceSpec(Item):
     approval_mode: Optional[str] = None
     routing_mode: Optional[str] = None
     access: list = field(default_factory=list)
+    # SSH, web app and Kubernetes resources only. They are served through a Gateway, which has no name: it is found by address.
+    gateway: str = ""
+    upstream: Optional[dict] = None  # {"port": 22, "tlsMode": ...}, as the API takes it; tlsMode only for a web app
+    downstream: Optional[dict] = None
+    cluster_ref: str = ""
+    headers: list = field(default_factory=list)  # web app request header rewrites: [{"key", "value"}]
     # What the file actually states. A blank CSV cell or a missing JSON key is not a statement, so --sync leaves that alone;
     # the fields above hold the API's defaults for such a field, which is what a create uses but a sync must not apply.
     given: set = field(default_factory=set)
@@ -323,12 +338,82 @@ def _access(entries: Any, spec: ResourceSpec) -> None:
         spec.access.append(access)
 
 
+def _resource_type(value: Any) -> str:
+    """The type a record names; blank is a network resource. A name this tool does not know is kept (uppercased) and not imported."""
+    word = re.sub(r"[\s-]+", "_", _text(value)).upper()
+    return TYPE_ALIASES.get(word, word) or NETWORK_RESOURCE
+
+
+def _port(value: Any, label: str, problems: list) -> Optional[int]:
+    try:
+        port = int(str(value).strip())
+    except ValueError:
+        problems.append(f"{label} port '{value}' is not a number")
+        return None
+    if not 1 <= port <= 65535:
+        problems.append(f"{label} port {port} is not valid (1-65535)")
+        return None
+    return port
+
+
+def _endpoint(value: Any, label: str, modes: tuple, web_app: bool, problems: list) -> Optional[dict]:
+    """``{"port", "tlsMode"}`` from an ``upstream`` / ``downstream`` object, or None when the file says nothing about it."""
+    if not isinstance(value, dict) or not (_stated(value.get("port")) or _stated(value.get("tlsMode"))):
+        return None
+    endpoint: dict = {}
+    if _stated(value.get("port")):
+        port = _port(value["port"], label, problems)
+        if port is not None:
+            endpoint["port"] = port
+    else:
+        problems.append(f"{label} TLS mode is given without a {label} port")
+    if _stated(value.get("tlsMode")):
+        if not web_app:
+            problems.append(f"the {label} TLS mode only applies to web app resources")
+        else:
+            endpoint["tlsMode"] = _choice(value["tlsMode"], modes, f"{label} TLS mode", "", problems) or None
+            if endpoint["tlsMode"] is None:
+                del endpoint["tlsMode"]
+    return endpoint or None
+
+
+def _header_rewrites(value: Any, problems: list) -> list:
+    rewrites = []
+    for item in value or []:
+        if not isinstance(item, dict) or not _text(item.get("key")):
+            problems.append(f"request header {item!r} needs a key and a value")
+            continue
+        rewrites.append({"key": _text(item["key"]), "value": str(item.get("value", ""))})
+    return rewrites
+
+
+def _gateway_resource(record: dict, spec: ResourceSpec) -> None:
+    """Read what only SSH, web app and Kubernetes resources have, and say what the API would need that the file lacks."""
+    gateway = record.get("gateway")
+    spec.gateway = _text(gateway.get("address") if isinstance(gateway, dict) else gateway)
+    web_app = spec.type == WEB_APP
+    spec.upstream = _endpoint(record.get("upstream"), "upstream", TLS_CLIENT_MODES, web_app, spec.problems)
+    spec.downstream = _endpoint(record.get("downstream"), "downstream", TLS_SERVER_MODES, web_app, spec.problems)
+    spec.cluster_ref = _text(record.get("clusterRef"))
+    if spec.cluster_ref and spec.type != KUBERNETES:
+        spec.problems.append("a cluster reference only applies to Kubernetes resources")
+    spec.headers = _header_rewrites(record.get("requestHeaderRewrites"), spec.problems)
+    if spec.headers and not web_app:
+        spec.problems.append("request headers only apply to web app resources")
+    if spec.type in (SSH, WEB_APP) and not spec.gateway:
+        spec.problems.append("has no gateway (the address of the Gateway that serves it)")
+    if web_app:
+        for label, endpoint in (("upstream", spec.upstream), ("downstream", spec.downstream)):
+            if not endpoint or "port" not in endpoint:
+                spec.problems.append(f"has no {label} port")
+
+
 def _resource(record: dict, source: str) -> ResourceSpec:
-    spec = ResourceSpec(source=source, name=_text(record.get("name")), type=_text(record.get("type")).upper() or "NETWORK")
+    spec = ResourceSpec(source=source, name=_text(record.get("name")), type=_resource_type(record.get("type")))
     spec.network = _name_of(record.get("remoteNetwork"))
     if not spec.name:
         spec.problems.append("has no name")
-    if spec.type != "NETWORK":
+    if spec.type not in RESOURCE_TYPES:
         return spec  # not imported at all; its other fields are not read
     address = record.get("address")
     spec.address = _text(address.get("value") if isinstance(address, dict) else address)
@@ -337,14 +422,19 @@ def _resource(record: dict, source: str) -> ResourceSpec:
     if not spec.network:
         spec.problems.append("has no Remote Network")
     spec.alias = _text(record.get("alias"))
-    spec.protocols = _protocols(record.get("protocols"), spec.problems)
+    network_resource = spec.type == NETWORK_RESOURCE
+    if network_resource:
+        # Ports, ICMP, routing and the browser shortcut are the network resource's own; the other types have a port per side instead.
+        spec.protocols = _protocols(record.get("protocols"), spec.problems)
+        spec.browser_shortcut = parse_bool(record.get("isBrowserShortcutEnabled"), "isBrowserShortcutEnabled", False, spec.problems)
+        routing = record.get("routingMode")
+        spec.routing_mode = _choice(routing, ROUTING_MODES, "routing mode", "THROUGH_TWINGATE", spec.problems) if routing else None
+    else:
+        _gateway_resource(record, spec)
     spec.is_visible = parse_bool(record.get("isVisible"), "isVisible", True, spec.problems)
-    spec.browser_shortcut = parse_bool(record.get("isBrowserShortcutEnabled"), "isBrowserShortcutEnabled", False, spec.problems)
     spec.security_policy = _name_of(record.get("securityPolicy")) or None
     spec.access_policy = _access_policy(record.get("accessPolicy"), "access policy", spec.problems)
     spec.approval_mode = _approval_mode(record.get("approvalMode"), "approval mode", spec.problems)
-    routing = record.get("routingMode")
-    spec.routing_mode = _choice(routing, ROUTING_MODES, "routing mode", "THROUGH_TWINGATE", spec.problems) if routing else None
     for tag in record.get("tags") or []:
         if isinstance(tag, dict) and "key" in tag:
             spec.tags.append({"key": str(tag["key"]), "value": str(tag.get("value", ""))})
@@ -353,14 +443,22 @@ def _resource(record: dict, source: str) -> ResourceSpec:
     _access(record.get("access"), spec)
     protocols = record.get("protocols") if isinstance(record.get("protocols"), dict) else {}
     stated = {
-        "alias": _stated(record.get("alias")), "icmp": _stated(protocols.get("allowIcmp")),
-        "tcp": isinstance(protocols.get("tcp"), dict), "udp": isinstance(protocols.get("udp"), dict),
-        "visible": _stated(record.get("isVisible")), "browser_shortcut": _stated(record.get("isBrowserShortcutEnabled")),
+        "alias": _stated(record.get("alias")), "visible": _stated(record.get("isVisible")),
         "tags": isinstance(record.get("tags"), list), "security_policy": bool(spec.security_policy),
         "access_policy": isinstance(record.get("accessPolicy"), dict) and bool(record["accessPolicy"].get("mode")),
-        "approval_mode": bool(spec.approval_mode), "routing_mode": bool(spec.routing_mode),
-        "access": isinstance(record.get("access"), list),
+        "approval_mode": bool(spec.approval_mode), "access": isinstance(record.get("access"), list),
     }
+    if network_resource:
+        stated.update({
+            "icmp": _stated(protocols.get("allowIcmp")), "tcp": isinstance(protocols.get("tcp"), dict),
+            "udp": isinstance(protocols.get("udp"), dict), "browser_shortcut": _stated(record.get("isBrowserShortcutEnabled")),
+            "routing_mode": bool(spec.routing_mode),
+        })
+    else:
+        stated.update({
+            "gateway": bool(spec.gateway), "upstream": spec.upstream is not None, "downstream": spec.downstream is not None,
+            "cluster_ref": bool(spec.cluster_ref), "headers": isinstance(record.get("requestHeaderRewrites"), list),
+        })
     spec.given = {name for name, yes in stated.items() if yes}
     return spec
 
@@ -400,9 +498,27 @@ def _csv_group_spec(row: dict, source: str) -> GroupSpec:
     return spec
 
 
+# What a network resource's columns say that the other types cannot take.
+_NETWORK_ONLY_COLUMNS = ("tcp_ports", "udp_ports", "allow_icmp", "routing_mode")
+_GATEWAY_ONLY_COLUMNS = ("gateway", "upstream_port", "downstream_port", "upstream_tls", "downstream_tls", "cluster_ref", "headers")
+
+
+def _csv_headers(text: str, problems: list) -> list:
+    """`Key=Value;Key2=Value2` as header rewrites. A value cannot contain `;` here (use a JSON file for that)."""
+    rewrites = []
+    for part in _split(text):
+        key, sep, value = part.partition("=")
+        if not sep or not key.strip():
+            problems.append(f"headers '{part}' should look like Key=Value (separate several with ;)")
+            continue
+        rewrites.append({"key": key.strip(), "value": value.strip()})
+    return rewrites
+
+
 def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
+    kind = _resource_type(row.get("type"))
     record: dict = {
-        "type": "NETWORK",
+        "type": kind,
         "name": row.get("name"),
         "remoteNetwork": {"name": row.get("network")},
         "address": {"value": row.get("address")},
@@ -412,6 +528,14 @@ def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
         "protocols": {"allowIcmp": row.get("allow_icmp")},
         "access": [],
     }
+    header_problems: list = []
+    if kind != NETWORK_RESOURCE:
+        record["gateway"] = _text(row.get("gateway"))
+        record["upstream"] = {"port": row.get("upstream_port"), "tlsMode": row.get("upstream_tls")}
+        record["downstream"] = {"port": row.get("downstream_port"), "tlsMode": row.get("downstream_tls")}
+        record["clusterRef"] = row.get("cluster_ref")
+        if _text(row.get("headers")):
+            record["requestHeaderRewrites"] = _csv_headers(row["headers"], header_problems)
     if _text(row.get("security_policy")):
         record["securityPolicy"] = {"name": _text(row["security_policy"])}
     for item in _split(row.get("groups", "")):
@@ -424,11 +548,20 @@ def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
     for name in _split(row.get("service_accounts", "")):
         record["access"].append({"principal": {"type": "ServiceAccount", "name": name}})
     spec = _resource(record, source)
-    # Port lists in a CSV are written as text (`80;443;8000-8100`), so they are parsed here, not from the JSON shape.
-    for proto in ("tcp", "udp"):
-        spec.protocols[proto] = parse_ports(row.get(f"{proto}_ports", ""), f"{proto}_ports", spec.problems)
-        if _text(row.get(f"{proto}_ports")):
-            spec.given.add(proto)
+    spec.problems.extend(header_problems)
+    if kind == NETWORK_RESOURCE:
+        for column in _GATEWAY_ONLY_COLUMNS:
+            if _text(row.get(column)):
+                spec.problems.append(f"{column} only applies to SSH, web app and Kubernetes resources (set type to say which)")
+        # Port lists in a CSV are written as text (`80;443;8000-8100`), so they are parsed here, not from the JSON shape.
+        for proto in ("tcp", "udp"):
+            spec.protocols[proto] = parse_ports(row.get(f"{proto}_ports", ""), f"{proto}_ports", spec.problems)
+            if _text(row.get(f"{proto}_ports")):
+                spec.given.add(proto)
+    elif kind in RESOURCE_TYPES:
+        for column in _NETWORK_ONLY_COLUMNS:
+            if _text(row.get(column)):
+                spec.problems.append(f"{column} only applies to network resources, not {kind} resources")
     if not record["access"]:
         spec.given.discard("access")  # no groups and no service accounts named: the cell is blank, not an empty list
     return spec

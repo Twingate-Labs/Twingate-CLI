@@ -19,6 +19,7 @@ class State:
     service_accounts: dict = field(default_factory=dict)  # name -> [node]
     policies: dict = field(default_factory=dict)  # name -> [node]
     resources: dict = field(default_factory=dict)  # (name, network name, address) -> [node]
+    gateways: dict = field(default_factory=dict)  # address -> [node with remoteNetwork] (read only when a resource is served through one)
     devices: dict = field(default_factory=dict)  # lowercased serial number -> [node with isTrusted, activeState, user]
     group_members: dict = field(default_factory=dict)  # group id -> set of user ids (only groups that will be topped up)
     resource_access: dict = field(default_factory=dict)  # resource id -> set of principal ids (only resources that will be topped up)
@@ -93,8 +94,13 @@ def fetch_state(client: Any, specs: Specs, progress: Callable[[str], None] = lam
         state.users = _by(lookup_nodes(client, "users", "email", asked, "id email"), lambda n: n["email"].lower())
     if names["resources"]:
         progress("Looking up resources...")
-        nodes = lookup_nodes(client, "resources", "name", names["resources"], q.RESOURCE_DETAIL if sync else "id name address { value } remoteNetwork { name }")
+        nodes = lookup_nodes(client, "resources", "name", names["resources"], q.RESOURCE_DETAIL if sync else q.RESOURCE_KEYS)
         state.resources = _by(nodes, lambda n: (n["name"], (n.get("remoteNetwork") or {}).get("name", ""), (n.get("address") or {}).get("value", "")))
+
+    if any(r.gateway for r in specs.resources):
+        progress("Reading the Gateways...")
+        edges, _, _ = fetch_connection(client, q.GATEWAYS, {}, ["gateways"])
+        state.gateways = _by([e["node"] for e in edges if e.get("node")], lambda n: n["address"])
 
     if names["serials"]:
         progress(f"Looking up {len(names['serials'])} device serial number(s)...")

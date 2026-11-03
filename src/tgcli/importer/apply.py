@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
-from tgcli.importer.load import SERVICE_ACCOUNT
+from tgcli.importer.load import NETWORK_RESOURCE, SERVICE_ACCOUNT
 from tgcli.importer.plan import BLOCKED, CREATE, EXISTS, SKIP, UPDATE, Grant, Row
 from tgcli.queries import importing as q
 
@@ -107,7 +107,11 @@ def _sync_group(client: Any, row: Row, group_id: str) -> None:
 
 
 def _update_resource(client: Any, row: Row, resource_id: str) -> None:
-    _call(client, q.UPDATE_RESOURCE, {"id": resource_id, **row.resource_update}, "resourceUpdate")
+    kind = row.spec.type
+    if kind == NETWORK_RESOURCE:
+        _call(client, q.UPDATE_RESOURCE, {"id": resource_id, **row.resource_update}, "resourceUpdate")
+    else:  # an SSH, web app or Kubernetes resource is changed by its own mutation
+        _call(client, q.UPDATE_TYPED[kind], {"id": resource_id, **row.resource_update}, q.UPDATE_TYPED_FIELD[kind])
 
 
 def _remove_access(client: Any, row: Row, resource_id: str) -> None:
@@ -169,6 +173,34 @@ def _resource_variables(row: Row, network_id: str) -> dict:
     return variables
 
 
+def _typed_variables(row: Row, network_id: str) -> dict:
+    """What creates an SSH, web app or Kubernetes resource. Like a network resource, only what the file sets away from the defaults is sent."""
+    spec = row.spec
+    variables: dict = {"name": spec.name, "address": spec.address, "remoteNetworkId": network_id}
+    if row.gateway_id:
+        variables["gatewayId"] = row.gateway_id
+    if spec.alias:
+        variables["alias"] = spec.alias
+    if row.policy_id:
+        variables["securityPolicyId"] = row.policy_id
+    if not spec.is_visible:
+        variables["isVisible"] = False
+    if spec.tags:
+        variables["tags"] = spec.tags
+    if spec.access_policy:
+        variables["accessPolicy"] = spec.access_policy
+    if spec.approval_mode:
+        variables["approvalMode"] = spec.approval_mode
+    for side in ("upstream", "downstream"):
+        if getattr(spec, side):
+            variables[side] = getattr(spec, side)
+    if spec.cluster_ref:
+        variables["clusterRef"] = spec.cluster_ref
+    if spec.headers:
+        variables["requestHeaderRewrites"] = spec.headers
+    return variables
+
+
 def _set_trust(client: Any, row: Row) -> None:
     """Change each device in turn, and check the reply says it now has the trust the file asks for."""
     wanted = row.spec.trusted
@@ -213,7 +245,10 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
             network_id = row.network_id or ids["network"].get(spec.network)
             if network_id is None:
                 raise RowError(f"Remote Network '{spec.network}' was not created")
-            result = _call(client, q.CREATE_RESOURCE, _resource_variables(row, network_id), "resourceCreate")
+            if spec.type == NETWORK_RESOURCE:
+                result = _call(client, q.CREATE_RESOURCE, _resource_variables(row, network_id), "resourceCreate")
+            else:
+                result = _call(client, q.CREATE_TYPED[spec.type], _typed_variables(row, network_id), q.CREATE_TYPED_FIELD[spec.type])
             row.id = result["entity"]["id"]
             if row.resource_update:  # what a create cannot say (a restore puts back a disabled resource)
                 _update_resource(client, row, row.id)

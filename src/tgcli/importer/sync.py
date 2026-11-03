@@ -139,3 +139,48 @@ def grant_changes(entry: Any, edge: dict, policy_id: Optional[str], expired: boo
     if "access_policy" in settings and "approval_mode" not in settings:
         settings["approval_mode"] = edge.get("approval_mode") or "MANUAL"
     return settings, words, warning
+
+
+def _endpoint_change(wanted: Optional[dict], have: Optional[dict]) -> Optional[dict]:
+    """The upstream / downstream input to send, or None when it already matches. The port is always sent (the API needs it).
+
+    A TLS mode the file does not state is kept as it is.
+    """
+    if not wanted:
+        return None
+    have = have or {}
+    port = wanted.get("port")
+    tls = wanted.get("tlsMode", have.get("tlsMode"))
+    if port is None or (port == have.get("port") and tls == have.get("tlsMode")):
+        return None  # a file that gives a TLS mode with no port is blocked when it is read, so a port is always here
+    return {"port": port, **({"tlsMode": tls} if tls else {})}
+
+
+def gateway_resource_changes(spec: Any, node: dict, gateway_id: Optional[str], prune: bool) -> tuple:
+    """(variables, words) for what an existing SSH, web app or Kubernetes resource has beyond a network resource's settings."""
+    given = spec.given
+    changes: dict = {}
+    words: list = []
+    if "gateway" in given and gateway_id != (node.get("gateway") or {}).get("id"):
+        changes["gatewayId"] = gateway_id
+        words.append("Gateway")
+    for side in ("upstream", "downstream"):
+        if side in given:
+            change = _endpoint_change(getattr(spec, side), node.get(side))
+            if change:
+                changes[side] = change
+                have = node.get(side) or {}
+                parts = (["port"] if change["port"] != have.get("port") else []) + (["TLS mode"] if change.get("tlsMode") != have.get("tlsMode") else [])
+                words.append(f"{side} {' and '.join(parts)}")
+    if "cluster_ref" in given and spec.cluster_ref != (node.get("clusterRef") or ""):
+        changes["clusterRef"] = spec.cluster_ref
+        words.append("cluster reference")
+    if "headers" in given:
+        # The API replaces the whole list, so without --prune the headers the file does not mention are sent back with it.
+        have = {h["key"]: h["value"] for h in node.get("requestHeaderRewrites") or []}
+        file = {h["key"]: h["value"] for h in spec.headers}
+        wanted = file if prune else {**have, **file}
+        if wanted != have:
+            changes["requestHeaderRewrites"] = [{"key": k, "value": v} for k, v in wanted.items()]
+            words.append("request headers")
+    return changes, words

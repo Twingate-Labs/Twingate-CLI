@@ -16,11 +16,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from tgcli.importer.load import GROUP, SERVICE_ACCOUNT, GroupSpec, ResourceSpec, Specs
+from tgcli.importer.load import GROUP, NETWORK_RESOURCE, RESOURCE_TYPES, SERVICE_ACCOUNT, SSH, TYPENAMES, GroupSpec, ResourceSpec, Specs
 from tgcli.importer.state import State
-from tgcli.importer.sync import grant_changes, resource_changes
+from tgcli.importer.sync import gateway_resource_changes, grant_changes, resource_changes
 
 CREATE, UPDATE, EXISTS, SKIP, BLOCKED = "create", "update", "exists", "skip", "blocked"
+TYPE_WORDS = {"NETWORK": "network", "SSH": "SSH", "WEB_APP": "web app", "KUBERNETES": "Kubernetes"}
+TYPE_PHRASES = {"NETWORK": "a network resource", "SSH": "an SSH resource", "WEB_APP": "a web app resource", "KUBERNETES": "a Kubernetes resource"}
 
 
 @dataclass
@@ -49,6 +51,7 @@ class Row:
     warnings: list = field(default_factory=list)
     existing_id: Optional[str] = None
     policy_id: Optional[str] = None  # a group's or resource's Security Policy
+    gateway_id: Optional[str] = None  # the Gateway an SSH, web app or Kubernetes resource is served through
     network_id: Optional[str] = None  # None when the network is created by this import
     member_ids: list = field(default_factory=list)  # users to add
     grants: list = field(default_factory=list)  # Grants to add
@@ -98,6 +101,26 @@ def _resolve_policy(state: State, name: Optional[str], what: str) -> tuple:
     if len(matches) > 1:
         return None, f"{what} Security Policy '{name}' matches {len(matches)} policies"
     return matches[0]["id"], None
+
+
+def _resolve_gateway(spec: ResourceSpec, state: State) -> tuple:
+    """(Gateway id, problem). A Gateway has no name, so the file gives its address; the resource's Remote Network settles a repeat."""
+    if not spec.gateway:
+        return None, None  # only a Kubernetes resource can have none
+    found = state.gateways.get(spec.gateway, [])
+    if len(found) > 1:
+        local = [g for g in found if (g.get("remoteNetwork") or {}).get("name") == spec.network]
+        found = local or found
+    if not found:
+        return None, (
+            f"Gateway '{spec.gateway}' does not exist in this tenant (an import does not create Gateways: create it with `tgcli gateway create`, "
+            "or put the address it has here in the file)"
+        )
+    if len(found) > 1:
+        return None, f"{len(found)} Gateways in this tenant have the address '{spec.gateway}', so which one is meant cannot be told"
+    if spec.type == SSH and not found[0].get("sshCA"):
+        return None, f"Gateway '{spec.gateway}' has no SSH Certificate Authority, and the API only serves an SSH resource through one that has"
+    return found[0]["id"], None
 
 
 def _plan_networks(specs: list, state: State, rows: list) -> dict:
@@ -287,8 +310,8 @@ def _extra_access(spec: ResourceSpec, state: State, edges: Optional[dict]) -> li
 def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: dict, rows: list, sync: bool = False, prune: bool = False) -> None:
     seen: dict = {}
     for spec in specs:
-        if spec.type != "NETWORK":
-            rows.append(Row("resource", spec.name or "(no name)", SKIP, spec, f"{spec.type} resources are not imported yet; only standard network resources are"))
+        if spec.type not in RESOURCE_TYPES:
+            rows.append(Row("resource", spec.name or "(no name)", SKIP, spec, f"{spec.type} resources are not imported"))
             continue
         if spec.problems:
             rows.append(_blocked("resource", spec, spec.problems))
@@ -311,6 +334,9 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
         policy_id, problem = _resolve_policy(state, spec.security_policy, "the resource's")
         if problem:
             problems.append(problem)
+        gateway_id, problem = _resolve_gateway(spec, state)
+        if problem:
+            problems.append(problem)
         if problems:
             rows.append(_blocked("resource", spec, problems))
             continue
@@ -319,12 +345,22 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
         if len(existing) > 1:
             rows.append(_blocked("resource", spec, [f"the tenant has {len(existing)} resources with this name, Remote Network and address, so the right one cannot be told"]))
             continue
+        have_type = TYPENAMES.get((existing[0] if existing else {}).get("__typename"))
+        if have_type and have_type != spec.type:
+            rows.append(_blocked("resource", spec, [
+                f"{TYPE_PHRASES[have_type]} with this name, Remote Network and address already exists, and the API cannot change a resource's type "
+                f"(the file says it is {TYPE_PHRASES[spec.type]})"
+            ]))
+            continue
         warnings = list(spec.notes)
         have = state.resource_access.get(existing[0]["id"], set()) if existing else set()
         edges = state.grants.get(existing[0]["id"], {}) if existing and sync else None
         grants, updates = _plan_grants(spec, state, new_groups, have, warnings, edges)
         if existing:
             variables, words = resource_changes(spec, existing[0], policy_id, prune) if sync else ({}, [])
+            if sync and spec.type != NETWORK_RESOURCE:
+                more, more_words = gateway_resource_changes(spec, existing[0], gateway_id, prune)
+                variables, words = {**variables, **more}, words + more_words
             removals = _extra_access(spec, state, edges) if sync and prune and "access" in spec.given else []
             parts = []
             if grants:
@@ -343,9 +379,11 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
                 resource_update=variables, grant_updates=updates, remove_access_ids=removals,
             ))
         else:
+            kind = "" if spec.type == NETWORK_RESOURCE else f"{TYPE_WORDS[spec.type]} resource, "
+            through = f" through Gateway {spec.gateway}" if spec.gateway else ""
             rows.append(Row(
-                "resource", spec.name, CREATE, spec, f"in '{spec.network}', access for {_grant_words(grants)}", warnings,
-                policy_id=policy_id, network_id=network_id, grants=grants,
+                "resource", spec.name, CREATE, spec, f"{kind}in '{spec.network}'{through}, access for {_grant_words(grants)}", warnings,
+                policy_id=policy_id, gateway_id=gateway_id, network_id=network_id, grants=grants,
             ))
 
 

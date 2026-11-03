@@ -58,9 +58,9 @@ def import_(
     sync: bool = typer.Option(False, "--sync", help="Also change what already exists to match what the file states (resource settings, per-group access settings, a group's Security Policy). A blank CSV cell or a missing JSON key states nothing and is left alone; settings are only set, never cleared."),
     prune: bool = typer.Option(False, "--prune", help="With --sync: also REMOVE group members, resource access and tags that the file leaves out, for the groups and resources whose members, access or tags the file lists. Never deletes a group, resource or network."),
 ) -> None:
-    """Create Remote Networks, groups with members, resources with group and service account access, and set device trust, from a file (dry run by default).
+    """Create Remote Networks, groups with members, resources (network, SSH, web app and Kubernetes) with group and service account access, and set device trust, from a file (dry run by default).
 
-    Anything that already exists is left as it is and only added to (missing members, missing access) unless --sync is given; Synced Groups are never touched, and service accounts must already exist. Group members are matched by email, groups, service accounts and Remote Networks by exact name, resources by name, Remote Network and address together, and devices by serial number (devices.csv sets trust on devices that have already registered).
+    Anything that already exists is left as it is and only added to (missing members, missing access) unless --sync is given; Synced Groups are never touched, and service accounts must already exist. Group members are matched by email, groups, service accounts and Remote Networks by exact name, resources by name, Remote Network and address together, and devices by serial number (devices.csv sets trust on devices that have already registered). An SSH, web app or Kubernetes resource is served through a Gateway, which has no name: the file gives its address and it must already exist in the tenant (an import never creates Gateways).
     """
     if prune and not sync:
         typer.echo("Error: --prune removes things, so it only works together with --sync. Nothing was changed.", err=True)

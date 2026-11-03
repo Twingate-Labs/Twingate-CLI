@@ -91,10 +91,10 @@ class TestBackupJson:
         (spec,) = load_file(dump(tmp_path / "resources.json", [record]), "resources")
         assert spec.access_policy is None
 
-    def test_other_resource_types_are_kept_but_not_read(self, tmp_path):
-        record = {"type": "SSH", "name": "bastion", "remoteNetwork": {"name": "HQ"}, "address": {"value": "10.0.0.1"}}
+    def test_a_type_this_tool_does_not_know_is_kept_but_not_read(self, tmp_path):
+        record = {"type": "FUTURE", "name": "thing", "remoteNetwork": {"name": "HQ"}, "address": {"value": "10.0.0.1"}}
         (spec,) = load_file(dump(tmp_path / "resources.json", [record]), "resources")
-        assert spec.type == "SSH" and spec.name == "bastion" and spec.problems == []
+        assert spec.type == "FUTURE" and spec.name == "thing" and spec.problems == []
 
     def test_a_group_lists_members_by_email_without_repeats_ignoring_case(self, tmp_path):
         record = {"name": "Eng", "type": "MANUAL", "securityPolicy": {"id": "P", "name": "Strict"},

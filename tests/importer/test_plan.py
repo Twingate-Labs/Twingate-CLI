@@ -208,10 +208,9 @@ class TestResources:
         rows = plan(Specs(resources=[res("Wiki"), res("Wiki")]), state(networks=[NET_HQ]))
         assert [r.action for r in rows] == [CREATE, BLOCKED]
 
-    @pytest.mark.parametrize("kind", ["SSH", "WEB_APP", "KUBERNETES"])
-    def test_other_resource_types_are_skipped_with_a_reason(self, kind):
-        row = only(plan(Specs(resources=[res("Bastion", type=kind)])))
-        assert row.action == SKIP and f"{kind} resources are not imported yet" in row.detail
+    def test_a_type_this_tool_does_not_know_is_skipped_with_a_reason(self):
+        row = only(plan(Specs(resources=[res("Bastion", type="FUTURE")])))
+        assert row.action == SKIP and "FUTURE resources are not imported" in row.detail
 
     def test_a_resource_with_problems_is_blocked(self):
         bad = res("Wiki")

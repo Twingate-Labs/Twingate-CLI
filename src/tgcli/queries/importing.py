@@ -21,9 +21,22 @@ query($id: ID!, $cursor: String) {
 """
 
 # What --sync compares an existing resource with. Looked up with the name filter, like everything else.
-RESOURCE_DETAIL = """id name address { value } remoteNetwork { name } alias isVisible isBrowserShortcutEnabled approvalMode
+RESOURCE_DETAIL = """__typename id name address { value } remoteNetwork { name } alias isVisible isBrowserShortcutEnabled approvalMode
   securityPolicy { id } accessPolicy { mode durationSeconds } protocols { allowIcmp tcp { policy ports { start end } } udp { policy ports { start end } } }
-  tags { key value } ... on NetworkResource { routingMode }"""
+  tags { key value } ... on NetworkResource { routingMode }
+  ... on SSHResource { gateway { id } upstream { port } downstream { port } }
+  ... on WebAppResource { gateway { id } upstream { port tlsMode } downstream { port tlsMode } requestHeaderRewrites { key value } }
+  ... on KubernetesResource { gateway { id } clusterRef upstream { port } downstream { port } }"""
+
+# What a lookup selects of every resource it finds: the type is needed because the API cannot change one.
+RESOURCE_KEYS = "__typename id name address { value } remoteNetwork { name }"
+
+# Gateways have no name; the file names one by its address, and its Remote Network tells two with the same address apart.
+GATEWAYS = """
+query($cursor: String) {
+  gateways(after: $cursor) { pageInfo { hasNextPage endCursor } edges { node { id address remoteNetwork { id name } sshCA { id } } } }
+}
+"""
 
 GROUP_DETAIL = "id name type securityPolicy { id }"
 
@@ -123,3 +136,44 @@ mutation importNetworkUpdate($id: ID!, $name: String, $location: RemoteNetworkLo
   remoteNetworkUpdate(id: $id, name: $name, location: $location, isActive: $isActive) { ok error entity { id } }
 }
 """
+
+
+# SSH, web app and Kubernetes resources. Like the rest of this file, every optional argument is a nullable variable.
+_TYPED_COMMON = [
+    ("name", "String"), ("address", "String"), ("alias", "String"), ("securityPolicyId", "ID"), ("isVisible", "Boolean"),
+    ("tags", "[TagInput!]"), ("accessPolicy", "AccessPolicyInput"), ("approvalMode", "AccessApprovalMode"),
+]
+_TYPED_PARTS = {
+    # type: (create mutation, update mutation, gateway type on create, [(variable, type)] only this type has)
+    "SSH": ("sshResourceCreate", "sshResourceUpdate", "ID!", [("upstream", "SSHUpstreamInput"), ("downstream", "SSHDownstreamInput")]),
+    "WEB_APP": (
+        "webAppResourceCreate", "webAppResourceUpdate", "ID!",
+        [("upstream", "WebAppUpstreamInput"), ("downstream", "WebAppDownstreamInput"), ("requestHeaderRewrites", "[KeyValueInputObject!]")],
+    ),
+    "KUBERNETES": (
+        "kubernetesResourceCreate", "kubernetesResourceUpdate", "ID",
+        [("clusterRef", "String"), ("upstream", "KubernetesUpstreamInput"), ("downstream", "KubernetesDownstreamInput")],
+    ),
+}
+
+
+def _typed(kind: str, create: bool) -> str:
+    create_field, update_field, gateway_type, own = _TYPED_PARTS[kind]
+    field = create_field if create else update_field
+    if create:
+        # name, address and the Remote Network are required to create.
+        common = [(n, "String!" if n in ("name", "address") else t) for n, t in _TYPED_COMMON]
+        # The API requires both sides of a web app, so there the variable cannot be nullable.
+        own = [(n, t + "!" if kind == "WEB_APP" and n in ("upstream", "downstream") else t) for n, t in own]
+        variables = common + [("remoteNetworkId", "ID!"), ("gatewayId", gateway_type)] + own
+    else:
+        variables = [("id", "ID!")] + _TYPED_COMMON + [("remoteNetworkId", "ID"), ("gatewayId", "ID"), ("isActive", "Boolean")] + own
+    declared = ", ".join(f"${n}: {t}" for n, t in variables)
+    passed = ", ".join(f"{n}: ${n}" for n, _ in variables)
+    return f"mutation import{field[0].upper()}{field[1:]}({declared}) {{ {field}({passed}) {{ ok error entity {{ id name }} }} }}"
+
+
+CREATE_TYPED = {kind: _typed(kind, True) for kind in _TYPED_PARTS}
+UPDATE_TYPED = {kind: _typed(kind, False) for kind in _TYPED_PARTS}
+CREATE_TYPED_FIELD = {kind: parts[0] for kind, parts in _TYPED_PARTS.items()}
+UPDATE_TYPED_FIELD = {kind: parts[1] for kind, parts in _TYPED_PARTS.items()}

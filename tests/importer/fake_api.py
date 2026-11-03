@@ -18,17 +18,23 @@ ROOTS = {"remoteNetworks": "networks", "groups": "groups", "users": "users", "se
 
 
 ALL_PORTS = {"policy": "ALLOW_ALL", "ports": []}
+TYPENAME = {"NETWORK": "NetworkResource", "SSH": "SSHResource", "WEB_APP": "WebAppResource", "KUBERNETES": "KubernetesResource"}
+TYPED_MUTATION = re.compile(r"import(Ssh|WebApp|Kubernetes)Resource(Create|Update)$")
+TYPED_KIND = {"Ssh": "SSH", "WebApp": "WEB_APP", "Kubernetes": "KUBERNETES"}
+GATEWAY_FIELDS = ("gateway", "upstream", "downstream", "clusterRef", "requestHeaderRewrites")
 
 
 def resource_detail(obj: dict) -> dict:
     """The settings of a fake resource in the shape the API returns them, with the API's defaults for what a test left out."""
-    return {
+    detail = {
         "alias": obj.get("alias"), "isVisible": obj.get("isVisible", True), "isBrowserShortcutEnabled": obj.get("isBrowserShortcutEnabled", True),
         "approvalMode": obj.get("approvalMode", "MANUAL"), "securityPolicy": obj.get("securityPolicy"),
         "accessPolicy": obj.get("accessPolicy", {"mode": "MANUAL", "durationSeconds": None}),
         "protocols": obj.get("protocols", {"allowIcmp": True, "tcp": ALL_PORTS, "udp": ALL_PORTS}),
         "tags": obj.get("tags", []), "routingMode": obj.get("routingMode", "THROUGH_TWINGATE"),
     }
+    detail.update({key: obj[key] for key in GATEWAY_FIELDS if key in obj})  # only an SSH, web app or Kubernetes resource has these
+    return detail
 
 
 def page(items: list, cursor: Any) -> tuple:
@@ -38,7 +44,8 @@ def page(items: list, cursor: Any) -> tuple:
 
 
 class FakeApi:
-    def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=(), service_accounts=()):
+    def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=(), service_accounts=(), gateways=()):
+        self.gateways = [dict(g) for g in gateways]  # {"id", "address", "remoteNetwork": {"id", "name"}}
         self.devices = [{"activeState": "ACTIVE", "user": {"email": "ann@x.com"}, **d} for d in devices]
         self.ignore_trust = False  # the API accepts a trust change but reports the device unchanged
         self.networks = [dict(n) for n in networks]
@@ -95,6 +102,8 @@ class FakeApi:
                     assert "address { value }" in query, "resources are matched by address too"
                     node = {"id": obj["id"], "name": obj["name"], "remoteNetwork": {"name": obj["network"]},
                             "address": {"value": obj.get("address", f"{obj['name'].lower()}.internal")}}
+                    if "__typename" in query:
+                        node["__typename"] = TYPENAME[obj.get("type", "NETWORK")]
                     if "alias isVisible" in query:
                         node.update(resource_detail(obj))
                 elif kind == "devices":
@@ -106,6 +115,9 @@ class FakeApi:
                 nodes.append(node)
             chunk, info = page(nodes, cursor)
             return {"data": {root: {"pageInfo": info, "edges": [{"node": n} for n in chunk]}}}
+        if "gateways(after: $cursor)" in query:
+            chunk, info = page([dict(g) for g in self.gateways], cursor)
+            return {"data": {"gateways": {"pageInfo": info, "edges": [{"node": n} for n in chunk]}}}
         if "group(id: $id)" in query:
             group = next((g for g in self.groups if g["id"] == variables["id"]), None)
             if group is None:
@@ -142,6 +154,9 @@ class FakeApi:
     def _mutate(self, name: str, query: str, variables: dict) -> dict:
         declared = set(re.findall(r"\$(\w+):", query.split(")", 1)[0]))
         assert set(variables) <= declared, f"{name} sent undeclared variables {set(variables) - declared}"
+        typed = TYPED_MUTATION.match(name)
+        if typed:
+            return self._mutate_typed(name, typed.group(1), typed.group(2) == "Create", query, variables)
         field = {"importNetwork": "remoteNetworkCreate", "importGroup": "groupCreate", "importGroupUsers": "groupUpdate",
                  "importResource": "resourceCreate", "importAccess": "resourceAccessAdd", "importDeviceTrust": "deviceUpdate",
                  "importResourceUpdate": "resourceUpdate", "importAccessRemove": "resourceAccessRemove", "importGroupSync": "groupUpdate",
@@ -242,3 +257,44 @@ class FakeApi:
         if not self.ignore_trust:
             device["isTrusted"] = v["isTrusted"]
         return {"id": device["id"], "isTrusted": device["isTrusted"]}
+
+    # ------------------------------------------------------------------ SSH, web app and Kubernetes resources
+
+    def _mutate_typed(self, name: str, flavour: str, create: bool, query: str, variables: dict) -> dict:
+        field = re.search(r"\) \{ (\w+)\(", query).group(1)
+        problem = self.fail.get(name)
+        if callable(problem):
+            problem = problem(variables)
+        if problem:
+            return {"data": {field: {"ok": False, "error": problem, "entity": None}}}
+        kind = TYPED_KIND[flavour]
+        if create:
+            network = next(n for n in self.networks if n["id"] == variables["remoteNetworkId"])
+            if kind != "KUBERNETES":
+                assert variables.get("gatewayId"), "the API requires a Gateway for this type"
+            if kind == "WEB_APP":
+                assert variables.get("upstream", {}).get("port") and variables.get("downstream", {}).get("port"), "a web app needs both ports"
+            res = {"id": self._new_id("res"), "name": variables["name"], "network": network["name"], "address": variables["address"], "access": {}, "type": kind}
+        else:
+            res = next(r for r in self.resources if r["id"] == variables["id"])
+            assert res.get("type", "NETWORK") == kind, "the API cannot update a resource with another type's mutation"
+        for key, value in variables.items():
+            if key == "id":
+                continue
+            if key == "gatewayId":
+                gateway = next((g for g in self.gateways if g["id"] == value), None)
+                assert gateway, "a Gateway that does not exist"
+                res["gateway"] = {"id": gateway["id"], "address": gateway["address"]}
+            elif key == "securityPolicyId":
+                res["securityPolicy"] = {"id": value} if value else None
+            elif key == "remoteNetworkId":
+                res["network"] = next(n["name"] for n in self.networks if n["id"] == value)
+            else:
+                res[key] = value
+        if "accessPolicy" in variables and "approvalMode" not in variables:
+            res["approvalMode"] = "MANUAL"
+        res.setdefault("updates", []).append(variables)
+        res["variables"] = variables
+        if create:
+            self.resources.append(res)
+        return {"data": {field: {"ok": True, "error": None, "entity": {"id": res["id"], "name": res["name"]}}}}

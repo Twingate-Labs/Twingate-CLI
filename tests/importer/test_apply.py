@@ -137,7 +137,7 @@ class TestCreate:
         api = FakeApi()
         blocked = res("Orphan", "Nowhere")
         synced = grp("Okta", type="SYNCED")
-        rows = run(api, Specs(groups=[synced], resources=[blocked, res("Bastion", type="SSH")]))
+        rows = run(api, Specs(groups=[synced], resources=[blocked, res("Bastion", type="FUTURE")]))
         assert api.writes == [] and [r.status for r in rows] == ["skipped", "blocked", "skipped"]
 
     def test_a_large_grant_list_goes_in_batches_of_100(self):
