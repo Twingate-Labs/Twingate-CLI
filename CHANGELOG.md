@@ -2,6 +2,15 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [3.1.2] - 2026-11-04
+
+### Added
+
+- **`tgcli restore` covers much more** (restore round 2). It now also puts back **SSH, web app and Kubernetes resources** (recreating a deleted one through its Gateway, and reverting the Gateway, ports, TLS modes, headers, cluster reference and enabled state of one that exists), **approver groups** on every resource type, **service accounts** (renamed back, made again), **Gateways** (address, Remote Network and certificate authorities; made again when their certificate authorities still exist), **Connectors** (name and status notifications; made again, empty), and **DNS filtering profiles** (all settings, groups and domain lists; made again and configured). A deleted object that others point at (a group, service account, Gateway or Remote Network) is made first, and what points at it follows it to its new ID within the same run.
+- **`restore --include devices` and `--include roles`** also restore devices' trust and blocked / archived state, and users' roles. These undo security decisions made since the backup, so without the flag restore only says how many differ. `--only` accepts the new kinds (`service-account:`, `gateway:`, `connector:`, `dns-profile:`, `device:`, `user:`).
+- What cannot come back is named: service account keys, a Gateway whose certificate authority is gone (with the command to run first), a deleted Security Policy (the API cannot make one), and devices that are gone.
+- DNS profile domain lists and groups, and a web app's request headers, are merged with what the object has now unless `--prune` is given, because the API replaces them as a whole.
+
 ## [3.1.1] - 2026-11-04
 
 ### Added

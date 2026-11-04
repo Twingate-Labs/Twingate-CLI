@@ -16,11 +16,14 @@ from tgcli.commands.importing import FAILED, MAX_LISTED, RATE_LIMIT_PER_MINUTE, 
 from tgcli.importer.apply import DRY_RUN_STATUS, apply_plan, write_count
 from tgcli.importer.plan import CREATE, SKIP, UPDATE
 from tgcli.importer.report import write_report
-from tgcli.restore import READ_KEYS, build_plan
+from tgcli.restore import OPT_IN, build_plan, read_keys
 from tgcli.textio import check_writable
 
 OLD_BACKUP_DAYS = 30
-ONLY_KINDS = {"network": "remote network", "group": "group", "resource": "resource"}
+ONLY_KINDS = {
+    "network": "remote network", "group": "group", "resource": "resource", "service-account": "service account", "gateway": "gateway",
+    "connector": "connector", "dns-profile": "dns profile", "device": "device", "user": "user",
+}
 
 
 def _age(created: str) -> Optional[int]:
@@ -54,22 +57,33 @@ def restore(
     path: Path = typer.Argument(..., help="A backup folder written by `tgcli backup` for THIS tenant."),
     execute: bool = typer.Option(False, "--execute", help="Apply the changes. Without this flag, only a dry run is performed."),
     prune: bool = typer.Option(False, "--prune", help="Also REMOVE group members, resource access and tags that the backup does not have, from the groups and resources it does have. Never deletes an object."),
-    only: Optional[List[str]] = typer.Option(None, "--only", help="Restore only this: group:<name or id>, resource:<name or id> or network:<name or id>. Repeat for several."),
+    only: Optional[List[str]] = typer.Option(None, "--only", help="Restore only this: group:<name or id>, resource:<name or id>, network:<name or id>, service-account:, gateway:<address>, connector:, dns-profile:, device: or user:<email>. Repeat for several."),
+    include: Optional[List[str]] = typer.Option(None, "--include", help="Also restore what reverses a security decision, which is otherwise only reported: `devices` (trust, blocked and archived state) and `roles` (users' roles). Repeat for both."),
     no_snapshot: bool = typer.Option(False, "--no-snapshot", help="With --execute: do not write the safety snapshot of the tenant first."),
     snapshot_dir: Optional[Path] = typer.Option(None, "--snapshot-dir", help="Where the safety snapshot goes (must not exist). Default: ./twingate-prerestore-<tenant>-<UTC timestamp>."),
     report: Optional[str] = typer.Option(None, "--report", help="Path to write the CSV report."),
     force_tenant: bool = typer.Option(False, "--force-tenant", help="Restore even though the backup is of a tenant with a different name than this session's."),
 ) -> None:
-    """Put remote networks, groups and resources back the way a backup of this tenant had them (dry run by default).
+    """Put a tenant's Remote Networks, groups, resources (network, SSH, web app and Kubernetes), service accounts, Gateways, Connectors and DNS profiles back the way a backup of it had them (dry run by default).
 
     Repairs damage to the SAME tenant (to copy one tenant into another, use `tgcli import`). Objects are matched by ID, so a
     renamed group is renamed back and a moved or edited resource is put back; an object that was deleted is created again,
-    and its access is given back to the groups. Nothing is ever deleted: what was created after the backup is left alone, and
-    --prune only takes members, access and tags that the backup does not have out of objects it does have. Synced Groups
-    are never touched. With --execute, a snapshot of the tenant as it is now is written first, so that a restore can be undone
-    by restoring from it. A type the backup does not hold, or that restore does not cover yet (users, connectors, devices,
-    service accounts, policies, DNS profiles, gateways, certificate authorities), is named in the output.
+    and its access is given back. Nothing is ever deleted: what was created after the backup is left alone, and --prune only
+    takes members, access, approver groups, tags and list entries that the backup does not have out of objects it does have.
+    Synced Groups are never touched. With --execute, a snapshot of the tenant as it is now is written first, so that a restore
+    can be undone by restoring from it.
+
+    What cannot come back is named in the output: service account keys (a backup never holds secrets), a Connector made
+    again is empty and needs new tokens and deploying, a Gateway whose certificate authority is gone needs `tgcli ca create`
+    first, and a deleted Security Policy cannot be made by the API. Devices (trust, blocked and archived state) and users'
+    roles are only restored with --include devices / --include roles, because that undoes security decisions made since the
+    backup; without it the output says how many differ.
     """
+    chosen = frozenset(include or ())
+    unknown = sorted(chosen - set(OPT_IN))
+    if unknown:
+        typer.echo(f"Error: --include {', '.join(unknown)} is not something restore can add. Choose from: {', '.join(OPT_IN)}. Nothing was changed.", err=True)
+        raise typer.Exit(1)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     report_path = Path(report) if report else Path(f"restore_report_{stamp}.csv")
     try:
@@ -109,7 +123,7 @@ def restore(
         raise typer.Exit(1)
     try:
         # A restore that is going to write reads everything, because what it reads is also the snapshot it writes first.
-        collected = collect(client, progress=lambda message: typer.echo(message, err=True), keys=None if execute else READ_KEYS)
+        collected = collect(client, progress=lambda message: typer.echo(message, err=True), keys=None if execute else read_keys(backup))
     except TwingateAuthError as exc:
         typer.echo(f"Authentication error: {exc}", err=True)
         raise typer.Exit(1)
@@ -134,7 +148,7 @@ def restore(
         typer.echo(f"Safety snapshot of the tenant as it is now: {result.path}")
         typer.echo(f"  To undo this restore: tgcli restore {result.path} --execute")
 
-    plan = build_plan(backup, collected.items, prune=prune)
+    plan = build_plan(backup, collected.items, prune=prune, include=chosen)
     rows = plan.rows
     if only:
         _select(rows, only)

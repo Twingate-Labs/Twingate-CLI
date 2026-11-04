@@ -26,6 +26,24 @@ TYPE_PHRASES = {"NETWORK": "a network resource", "SSH": "an SSH resource", "WEB_
 
 
 @dataclass
+class Ref:
+    """An object this run creates that a later row points at. It becomes the new object's ID once the row that creates it has run."""
+
+    kind: str  # "network", "group", "service account" or "gateway"
+    name: str
+
+
+@dataclass
+class Step:
+    """One write for a row that does something the standard row kinds do not (``tgcli restore`` of a service account, a device...)."""
+
+    query: str
+    variables: dict  # may hold Refs
+    field: str  # the mutation's field in the reply, which holds ok / error / entity
+    remember: Optional[tuple] = None  # (kind, name): this step creates that object, so later rows can point at it
+
+
+@dataclass
 class Grant:
     """One principal's access to a resource, with the IDs resolved. ``group_id`` is None for a group this import creates.
 
@@ -51,7 +69,7 @@ class Row:
     warnings: list = field(default_factory=list)
     existing_id: Optional[str] = None
     policy_id: Optional[str] = None  # a group's or resource's Security Policy
-    gateway_id: Optional[str] = None  # the Gateway an SSH, web app or Kubernetes resource is served through
+    gateway_id: Any = None  # the Gateway an SSH, web app or Kubernetes resource is served through (a Ref when this run creates it)
     network_id: Optional[str] = None  # None when the network is created by this import
     member_ids: list = field(default_factory=list)  # users to add
     grants: list = field(default_factory=list)  # Grants to add
@@ -67,6 +85,9 @@ class Row:
     group_update: dict = field(default_factory=dict)  # groupUpdate variables sent with the first call: name, isActive
     move_to_network: Optional[str] = None  # name of a Remote Network this run creates, which an existing resource goes back into
     backup_id: str = ""  # the ID the object has in the backup being restored
+    approvers_add: list = field(default_factory=list)  # group IDs (or Refs) to make approvers of a resource
+    approvers_remove: list = field(default_factory=list)
+    steps: list = field(default_factory=list)  # Steps, for the kinds of row that are not a network, group, resource or device
     # filled in by apply
     status: str = ""
     id: str = ""

@@ -18,7 +18,7 @@ from tgcli.importer.state import fetch_state
 from tgcli.textio import check_writable
 
 MAX_LISTED = 200  # rows echoed to the terminal; the report always has all of them
-KIND_ORDER = ("remote network", "group", "resource", "device")
+KIND_ORDER = ("remote network", "group", "service account", "gateway", "connector", "resource", "dns profile", "device", "user")
 FAILED = ("error", "blocked", "not-run")
 RATE_LIMIT_PER_MINUTE = 20  # typical write limit (see Rate Limiting in the README); only used to warn about big imports
 

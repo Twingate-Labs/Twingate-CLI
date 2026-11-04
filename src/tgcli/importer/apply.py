@@ -9,11 +9,11 @@ credentials there is no point trying the rest, so the remaining rows are marked 
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.importer.load import NETWORK_RESOURCE, SERVICE_ACCOUNT
-from tgcli.importer.plan import BLOCKED, CREATE, EXISTS, SKIP, UPDATE, Grant, Row
+from tgcli.importer.plan import BLOCKED, CREATE, EXISTS, SKIP, UPDATE, Grant, Ref, Row
 from tgcli.queries import importing as q
 
 BATCH_SIZE = 200  # users per groupUpdate
@@ -29,14 +29,17 @@ def write_count(rows: list) -> int:
     for row in rows:
         if row.action not in (CREATE, UPDATE):
             continue
-        if row.kind == "remote network":
+        if row.steps:
+            total += len(row.steps) + -(-(len(row.grants) + len(row.grant_updates)) // ACCESS_BATCH)
+        elif row.kind == "remote network":
             total += 1
         elif row.kind == "device":
             total += len(row.device_ids)
         elif row.kind == "group":
             total += (row.action == CREATE) + -(-len(row.member_ids) // BATCH_SIZE) + _sync_group_calls(row)
         else:
-            total += (row.action == CREATE) + bool(row.resource_update or row.move_to_network) + -(-(len(row.grants) + len(row.grant_updates)) // ACCESS_BATCH)
+            total += (row.action == CREATE) + bool(row.resource_update or row.move_to_network or row.approvers_add or row.approvers_remove)
+            total += -(-(len(row.grants) + len(row.grant_updates)) // ACCESS_BATCH)
             total += -(-len(row.remove_access_ids) // ACCESS_BATCH)
     return total
 
@@ -60,6 +63,44 @@ def _call(client: Any, query: str, variables: dict, field: str) -> dict:
 def _chunks(items: list, size: int):
     for start in range(0, len(items), size):
         yield items[start : start + size]
+
+
+def resolve(value: Any, ids: dict) -> Any:
+    """``value`` with every Ref in it (however deeply) replaced by the ID of the object this run created."""
+    if isinstance(value, Ref):
+        found = ids.get(value.kind, {}).get(value.name)
+        if found is None:
+            raise RowError(f"the {value.kind} '{value.name}' was not created, so this cannot be done")
+        return found
+    if isinstance(value, dict):
+        return {k: resolve(v, ids) for k, v in value.items()}
+    if isinstance(value, list):
+        return [resolve(v, ids) for v in value]
+    return value
+
+
+def _run_steps(client: Any, row: Row, ids: dict) -> None:
+    """Carry out a row's own writes in order. The first object a step creates is the row's ID."""
+    for step in row.steps:
+        result = _call(client, step.query, resolve(step.variables, ids), step.field)
+        entity_id = (result.get("entity") or {}).get("id")
+        if step.remember:
+            if not entity_id:
+                raise RowError(f"{step.field} succeeded but did not say what it created")
+            ids.setdefault(step.remember[0], {})[step.remember[1]] = entity_id
+            row.id = row.id or entity_id
+
+
+def _approver_variables(row: Row, ids: dict, create: bool) -> dict:
+    """The approver groups to set on a resource: all of them when it is created, the ones to add and to take out when it exists."""
+    if create:
+        return {"approverGroupIds": resolve(row.approvers_add, ids)} if row.approvers_add else {}
+    out: dict = {}
+    if row.approvers_add:
+        out["addedApproverGroupIds"] = resolve(row.approvers_add, ids)
+    if row.approvers_remove:
+        out["removedApproverGroupIds"] = resolve(row.approvers_remove, ids)
+    return out
 
 
 def _grant_input(grant: Grant, group_id: str) -> dict:
@@ -106,12 +147,13 @@ def _sync_group(client: Any, row: Row, group_id: str) -> None:
         done += len(chunk)
 
 
-def _update_resource(client: Any, row: Row, resource_id: str) -> None:
+def _update_resource(client: Any, row: Row, resource_id: str, ids: Optional[dict] = None, approvers: bool = True) -> None:
     kind = row.spec.type
+    variables = {"id": resource_id, **resolve(row.resource_update, ids or {}), **(_approver_variables(row, ids or {}, False) if approvers else {})}
     if kind == NETWORK_RESOURCE:
-        _call(client, q.UPDATE_RESOURCE, {"id": resource_id, **row.resource_update}, "resourceUpdate")
+        _call(client, q.UPDATE_RESOURCE, variables, "resourceUpdate")
     else:  # an SSH, web app or Kubernetes resource is changed by its own mutation
-        _call(client, q.UPDATE_TYPED[kind], {"id": resource_id, **row.resource_update}, q.UPDATE_TYPED_FIELD[kind])
+        _call(client, q.UPDATE_TYPED[kind], variables, q.UPDATE_TYPED_FIELD[kind])
 
 
 def _remove_access(client: Any, row: Row, resource_id: str) -> None:
@@ -124,12 +166,13 @@ def _remove_access(client: Any, row: Row, resource_id: str) -> None:
         done += len(chunk)
 
 
-def _add_access(client: Any, row: Row, resource_id: str, group_ids: dict) -> None:
+def _add_access(client: Any, row: Row, resource_id: str, group_ids: dict, account_ids: Optional[dict] = None) -> None:
     grants = []
     for grant in row.grants + row.grant_updates:
-        group_id = grant.group_id or group_ids.get(grant.group)
+        group_id = grant.group_id or (account_ids if grant.kind == SERVICE_ACCOUNT else group_ids or {}).get(grant.group)
         if group_id is None:
-            row.warnings.append(f"access for group '{grant.group}' not added: the group was not created")
+            what = "service account" if grant.kind == SERVICE_ACCOUNT else "group"
+            row.warnings.append(f"access for {what} '{grant.group}' not added: the {what} was not created")
         else:
             grants.append(_grant_input(grant, group_id))
     who = "groups" if all(g.kind != SERVICE_ACCOUNT for g in row.grants) else "groups and service accounts"
@@ -218,7 +261,9 @@ def _set_trust(client: Any, row: Row) -> None:
 
 def _apply_row(client: Any, row: Row, ids: dict) -> None:
     spec = row.spec
-    if row.kind == "device":
+    if row.steps:
+        _run_steps(client, row, ids)
+    elif row.kind == "device":
         _set_trust(client, row)
     elif row.kind == "remote network":
         if row.action == CREATE:
@@ -246,12 +291,13 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
             if network_id is None:
                 raise RowError(f"Remote Network '{spec.network}' was not created")
             if spec.type == NETWORK_RESOURCE:
-                result = _call(client, q.CREATE_RESOURCE, _resource_variables(row, network_id), "resourceCreate")
+                result = _call(client, q.CREATE_RESOURCE, {**_resource_variables(row, network_id), **_approver_variables(row, ids, True)}, "resourceCreate")
             else:
-                result = _call(client, q.CREATE_TYPED[spec.type], _typed_variables(row, network_id), q.CREATE_TYPED_FIELD[spec.type])
+                variables = {**_typed_variables(row, network_id), **_approver_variables(row, ids, True)}
+                result = _call(client, q.CREATE_TYPED[spec.type], resolve(variables, ids), q.CREATE_TYPED_FIELD[spec.type])
             row.id = result["entity"]["id"]
-            if row.resource_update:  # what a create cannot say (a restore puts back a disabled resource)
-                _update_resource(client, row, row.id)
+            if row.resource_update:  # what a create cannot say (a restore puts back a disabled resource); the approvers went with the create
+                _update_resource(client, row, row.id, ids, approvers=False)
         else:
             row.id = row.existing_id
             if row.move_to_network:
@@ -259,17 +305,17 @@ def _apply_row(client: Any, row: Row, ids: dict) -> None:
                 if moved_to is None:
                     raise RowError(f"Remote Network '{row.move_to_network}' was not created")
                 row.resource_update["remoteNetworkId"] = moved_to
-            if row.resource_update:
-                _update_resource(client, row, row.id)
+            if row.resource_update or row.approvers_add or row.approvers_remove:
+                _update_resource(client, row, row.id, ids)
         if row.grants or row.grant_updates:
-            _add_access(client, row, row.id, ids["group"])
+            _add_access(client, row, row.id, ids["group"], ids["service account"])
         if row.remove_access_ids:
             _remove_access(client, row, row.id)
 
 
 def apply_plan(client: Any, rows: list, progress: Callable[[Row], None] = lambda row: None) -> None:
     """Set ``status`` (and ``id`` / ``error``) on every row; rows that have nothing to do are not sent anywhere."""
-    ids: dict = {"network": {}, "group": {}}
+    ids: dict = {"network": {}, "group": {}, "service account": {}, "gateway": {}}
     stop = False
     for row in rows:
         row.status = DONE_STATUS[row.action]

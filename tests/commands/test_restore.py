@@ -99,11 +99,11 @@ class TestDryRun:
         result = Run(tmp_path, api)(make_backup(tmp_path))
         assert "Created since the backup, and left alone (restore never deletes): 1 groups." in result.output
         assert "Not compared:" in result.output and "devices (not in this backup)" in result.output
-        assert "users (restore does not cover them yet)" in result.output
+        assert "security policies (not in this backup)" in result.output
 
     def test_warnings_are_counted_and_attributed_to_the_backup(self, tmp_path):
         items = full_world()
-        items["resources"] = [{**WIKI, "approverGroups": [{"id": "G1", "name": "Eng"}]}]
+        items["resources"] = [{**WIKI, "approverGroups": [{"id": "G9", "name": "Ghost"}]}]
         api = to_api({**items, "resources": [{**WIKI, "alias": None}]})
         result = Run(tmp_path, api)(make_backup(tmp_path, items))
         assert "1 warning(s): something in the backup was left out of a row" in result.output
@@ -257,3 +257,70 @@ class TestOnly:
         api = damaged_api()
         result = Run(tmp_path, api)(make_backup(tmp_path), "--execute", "--no-snapshot", "--only", selector)
         assert result.exit_code == 1 and message in result.output and api.writes == []
+
+
+def make_full_backup(tmp_path: Path, items: dict) -> Path:
+    out = tmp_path / "bk"
+    keys = ("groups", "users", "resources", "remote_networks", "devices", "service_accounts", "gateways", "connectors", "dns_profiles", "certificate_authorities", "security_policies")
+    write_backup(collected_from({k: items[k] for k in keys}), out, SESSION, "acme")
+    return out
+
+
+class TestIncludeAndTheNewTypes:
+    def blocked_device_api(self):
+        world = full_world()
+        api = to_api(world)
+        api.devices[0].update(isTrusted=False, activeState="BLOCKED")
+        return world, api
+
+    def test_an_unknown_include_is_refused_before_anything_is_read(self, tmp_path):
+        run = Run(tmp_path, to_api(full_world()))
+        result = run(make_backup(tmp_path), "--include", "everything")
+        assert result.exit_code == 1 and "--include everything is not something restore can add" in result.output and run.reads == []
+
+    def test_a_dry_run_says_how_many_devices_differ_and_how_to_restore_them(self, tmp_path):
+        world, api = self.blocked_device_api()
+        result = Run(tmp_path, api)(make_full_backup(tmp_path, world))
+        assert result.exit_code == 0 and "1 device differ" in result.output and "--include devices" in result.output
+        assert api.writes == []
+
+    def test_a_dry_run_reads_devices_only_when_the_backup_has_them(self, tmp_path):
+        world, api = self.blocked_device_api()
+        run = Run(tmp_path, api)
+        run(make_full_backup(tmp_path, world))
+        assert "devices" in run.reads[0]
+        other = tmp_path / "other"
+        other.mkdir()
+        run2 = Run(other, to_api(full_world()))
+        run2(make_backup(other))
+        assert "devices" not in run2.reads[0]
+
+    def test_include_devices_restores_them_on_execute(self, tmp_path):
+        world, api = self.blocked_device_api()
+        result = Run(tmp_path, api)(make_full_backup(tmp_path, world), "--execute", "--include", "devices", "--snapshot-dir", str(tmp_path / "snap"))
+        assert result.exit_code == 0, result.output
+        assert api.devices[0]["isTrusted"] is True and api.devices[0]["activeState"] == "ACTIVE"
+        assert "device" in {r["kind"] for r in rows_of(tmp_path / "report.csv")}
+
+    def test_without_include_an_execute_leaves_devices_and_roles_alone(self, tmp_path):
+        world, api = self.blocked_device_api()
+        api.users[0]["role"] = "ADMIN"
+        result = Run(tmp_path, api)(make_full_backup(tmp_path, world), "--execute", "--snapshot-dir", str(tmp_path / "snap"))
+        assert result.exit_code == 0 and api.writes == []
+        assert api.devices[0]["activeState"] == "BLOCKED" and api.users[0]["role"] == "ADMIN"
+
+    def test_only_can_name_the_new_kinds(self, tmp_path):
+        world = full_world()
+        api = to_api(world)
+        api.service_accounts[0]["name"] = "Hacked"
+        api.connectors[0]["name"] = "oops"
+        result = Run(tmp_path, api)(make_full_backup(tmp_path, world), "--execute", "--only", "service-account:Bot", "--snapshot-dir", str(tmp_path / "snap"))
+        assert result.exit_code == 0, result.output
+        assert api.service_accounts[0]["name"] == "Bot" and api.connectors[0]["name"] == "oops"
+
+    def test_the_summary_lists_the_new_kinds(self, tmp_path):
+        world = full_world()
+        api = to_api(world)
+        api.connectors = []
+        result = Run(tmp_path, api)(make_full_backup(tmp_path, world))
+        assert "connectors" in result.output and "1 would-create" in result.output

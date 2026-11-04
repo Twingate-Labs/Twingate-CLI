@@ -84,12 +84,12 @@ CREATE_RESOURCE = """
 mutation importResource(
   $name: String!, $address: String!, $remoteNetworkId: ID!, $protocols: ProtocolsInput, $alias: String,
   $securityPolicyId: ID, $isVisible: Boolean, $isBrowserShortcutEnabled: Boolean, $routingMode: RoutingMode,
-  $tags: [TagInput!], $accessPolicy: AccessPolicyInput, $approvalMode: AccessApprovalMode
+  $tags: [TagInput!], $accessPolicy: AccessPolicyInput, $approvalMode: AccessApprovalMode, $approverGroupIds: [ID!]
 ) {
   resourceCreate(
     name: $name, address: $address, remoteNetworkId: $remoteNetworkId, protocols: $protocols, alias: $alias,
     securityPolicyId: $securityPolicyId, isVisible: $isVisible, isBrowserShortcutEnabled: $isBrowserShortcutEnabled,
-    routingMode: $routingMode, tags: $tags, accessPolicy: $accessPolicy, approvalMode: $approvalMode
+    routingMode: $routingMode, tags: $tags, accessPolicy: $accessPolicy, approvalMode: $approvalMode, approverGroupIds: $approverGroupIds
   ) { ok error entity { id name } }
 }
 """
@@ -109,12 +109,13 @@ mutation importDeviceTrust($id: ID!, $isTrusted: Boolean!) {
 UPDATE_RESOURCE = """
 mutation importResourceUpdate(
   $id: ID!, $name: String, $address: String, $remoteNetworkId: ID, $isActive: Boolean, $alias: String, $protocols: ProtocolsInput, $securityPolicyId: ID, $isVisible: Boolean, $isBrowserShortcutEnabled: Boolean,
-  $routingMode: RoutingMode, $tags: [TagInput!], $accessPolicy: AccessPolicyInput, $approvalMode: AccessApprovalMode
+  $routingMode: RoutingMode, $tags: [TagInput!], $accessPolicy: AccessPolicyInput, $approvalMode: AccessApprovalMode,
+  $addedApproverGroupIds: [ID!], $removedApproverGroupIds: [ID!]
 ) {
   resourceUpdate(
     id: $id, name: $name, address: $address, remoteNetworkId: $remoteNetworkId, isActive: $isActive, alias: $alias, protocols: $protocols, securityPolicyId: $securityPolicyId, isVisible: $isVisible,
     isBrowserShortcutEnabled: $isBrowserShortcutEnabled, routingMode: $routingMode, tags: $tags, accessPolicy: $accessPolicy,
-    approvalMode: $approvalMode
+    approvalMode: $approvalMode, addedApproverGroupIds: $addedApproverGroupIds, removedApproverGroupIds: $removedApproverGroupIds
   ) { ok error entity { id } }
 }
 """
@@ -165,9 +166,12 @@ def _typed(kind: str, create: bool) -> str:
         common = [(n, "String!" if n in ("name", "address") else t) for n, t in _TYPED_COMMON]
         # The API requires both sides of a web app, so there the variable cannot be nullable.
         own = [(n, t + "!" if kind == "WEB_APP" and n in ("upstream", "downstream") else t) for n, t in own]
-        variables = common + [("remoteNetworkId", "ID!"), ("gatewayId", gateway_type)] + own
+        variables = common + [("remoteNetworkId", "ID!"), ("gatewayId", gateway_type), ("approverGroupIds", "[ID!]")] + own
     else:
-        variables = [("id", "ID!")] + _TYPED_COMMON + [("remoteNetworkId", "ID"), ("gatewayId", "ID"), ("isActive", "Boolean")] + own
+        variables = [("id", "ID!")] + _TYPED_COMMON + [
+            ("remoteNetworkId", "ID"), ("gatewayId", "ID"), ("isActive", "Boolean"),
+            ("addedApproverGroupIds", "[ID!]"), ("removedApproverGroupIds", "[ID!]"),
+        ] + own
     declared = ", ".join(f"${n}: {t}" for n, t in variables)
     passed = ", ".join(f"{n}: ${n}" for n, _ in variables)
     return f"mutation import{field[0].upper()}{field[1:]}({declared}) {{ {field}({passed}) {{ ok error entity {{ id name }} }} }}"

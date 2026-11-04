@@ -45,7 +45,10 @@ def page(items: list, cursor: Any) -> tuple:
 
 class FakeApi:
     def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=(), service_accounts=(), gateways=()):
-        self.gateways = [dict(g) for g in gateways]  # {"id", "address", "remoteNetwork": {"id", "name"}}
+        self.gateways = [dict(g) for g in gateways]  # {"id", "address", "remoteNetwork": {"id", "name"}, "x509CA", "sshCA"}
+        self.cas: list = []  # certificate authorities: {"id", "name", "fingerprint", "type"}
+        self.connectors: list = []  # {"id", "name", "hasStatusNotificationsEnabled", "remoteNetwork": {"id", "name"}}
+        self.dns_profiles: list = []  # as in a backup, but "groups" is a list of group IDs
         self.devices = [{"activeState": "ACTIVE", "user": {"email": "ann@x.com"}, **d} for d in devices]
         self.ignore_trust = False  # the API accepts a trust change but reports the device unchanged
         self.networks = [dict(n) for n in networks]
@@ -154,6 +157,8 @@ class FakeApi:
     def _mutate(self, name: str, query: str, variables: dict) -> dict:
         declared = set(re.findall(r"\$(\w+):", query.split(")", 1)[0]))
         assert set(variables) <= declared, f"{name} sent undeclared variables {set(variables) - declared}"
+        if name.startswith("restore"):
+            return self._mutate_restore(name, query, variables)
         typed = TYPED_MUTATION.match(name)
         if typed:
             return self._mutate_typed(name, typed.group(1), typed.group(2) == "Create", query, variables)
@@ -187,7 +192,8 @@ class FakeApi:
 
     def _do_importResource(self, v: dict) -> dict:
         network = next(n for n in self.networks if n["id"] == v["remoteNetworkId"])
-        res = {"id": self._new_id("res"), "name": v["name"], "network": network["name"], "address": v["address"], "access": {}, "variables": v}
+        res = {"id": self._new_id("res"), "name": v["name"], "network": network["name"], "address": v["address"], "access": {}, "variables": v,
+               "approvers": set(v.get("approverGroupIds") or [])}
         for key in ("alias", "isVisible", "isBrowserShortcutEnabled", "approvalMode", "accessPolicy", "protocols", "tags", "routingMode"):
             if key in v:
                 res[key] = v[key]
@@ -218,12 +224,19 @@ class FakeApi:
                 res["securityPolicy"] = {"id": value} if value else None
             elif key == "remoteNetworkId":
                 res["network"] = next(n["name"] for n in self.networks if n["id"] == value)
+            elif key in ("addedApproverGroupIds", "removedApproverGroupIds"):
+                continue
             else:
                 res[key] = value
+        self._approvers(res, v)
         if "accessPolicy" in v and "approvalMode" not in v:
             res["approvalMode"] = "MANUAL"  # what the real API does: changing the access policy alone resets the approval mode
         res.setdefault("updates", []).append(v)
         return {"id": res["id"]}
+
+    @staticmethod
+    def _approvers(res: dict, v: dict) -> None:
+        res["approvers"] = (set(res.get("approvers") or ()) | set(v.get("addedApproverGroupIds") or ())) - set(v.get("removedApproverGroupIds") or ())
 
     def _do_importAccessRemove(self, v: dict) -> dict:
         res = next(r for r in self.resources if r["id"] == v["id"])
@@ -289,8 +302,12 @@ class FakeApi:
                 res["securityPolicy"] = {"id": value} if value else None
             elif key == "remoteNetworkId":
                 res["network"] = next(n["name"] for n in self.networks if n["id"] == value)
+            elif key in ("approverGroupIds", "addedApproverGroupIds", "removedApproverGroupIds"):
+                continue
             else:
                 res[key] = value
+        res["approvers"] = set(variables.get("approverGroupIds") or ()) if create else set(res.get("approvers") or ())
+        self._approvers(res, variables)
         if "accessPolicy" in variables and "approvalMode" not in variables:
             res["approvalMode"] = "MANUAL"
         res.setdefault("updates", []).append(variables)
@@ -298,3 +315,113 @@ class FakeApi:
         if create:
             self.resources.append(res)
         return {"data": {field: {"ok": True, "error": None, "entity": {"id": res["id"], "name": res["name"]}}}}
+
+    # ------------------------------------------------------------------ what only `tgcli restore` writes
+
+    def _mutate_restore(self, name: str, query: str, variables: dict) -> dict:
+        field = re.search(r"\) \{\s*(\w+)\(", query).group(1)
+        problem = self.fail.get(name)
+        if callable(problem):
+            problem = problem(variables)
+        if problem:
+            return {"data": {field: {"ok": False, "error": problem, "entity": None}}}
+        entity = getattr(self, "_do_" + name)(variables)
+        return {"data": {field: {"ok": True, "error": None, "entity": entity}}}
+
+    def _do_restoreServiceAccountCreate(self, v: dict) -> dict:
+        account = {"id": self._new_id("sa"), "name": v["name"]}
+        self.service_accounts.append(account)
+        return dict(account)
+
+    def _do_restoreServiceAccountUpdate(self, v: dict) -> dict:
+        account = next(a for a in self.service_accounts if a["id"] == v["id"])
+        account.update({k: val for k, val in v.items() if k != "id"})
+        return dict(account)
+
+    def _ca(self, ca_id: str) -> dict:
+        ca = next((c for c in self.cas if c["id"] == ca_id), None)
+        assert ca, "a certificate authority that does not exist"
+        return {"id": ca["id"], "name": ca["name"], "fingerprint": ca["fingerprint"]}
+
+    def _gateway_fields(self, gateway: dict, v: dict) -> None:
+        for key, value in v.items():
+            if key == "id":
+                continue
+            if key == "remoteNetworkId":
+                network = next(n for n in self.networks if n["id"] == value)
+                gateway["remoteNetwork"] = {"id": network["id"], "name": network["name"]}
+            elif key == "x509CAId":
+                gateway["x509CA"] = self._ca(value)
+            elif key == "sshCAId":
+                gateway["sshCA"] = self._ca(value)
+            else:
+                gateway[key] = value
+
+    def _do_restoreGatewayCreate(self, v: dict) -> dict:
+        assert not any(g["address"] == v["address"] and g["remoteNetwork"]["id"] == v["remoteNetworkId"] for g in self.gateways), "duplicate Gateway"
+        gateway = {"id": self._new_id("gw"), "address": v["address"], "sshCA": None}
+        self._gateway_fields(gateway, v)
+        self.gateways.append(gateway)
+        return {"id": gateway["id"], "address": gateway["address"]}
+
+    def _do_restoreGatewayUpdate(self, v: dict) -> dict:
+        gateway = next(g for g in self.gateways if g["id"] == v["id"])
+        self._gateway_fields(gateway, v)
+        return {"id": gateway["id"], "address": gateway["address"]}
+
+    def _do_restoreUserRole(self, v: dict) -> dict:
+        user = next(u for u in self.users if u["id"] == v["id"])
+        user["role"] = v["role"]
+        return {"id": user["id"], "email": user["email"], "role": user["role"]}
+
+    def _do_restoreConnectorCreate(self, v: dict) -> dict:
+        network = next(n for n in self.networks if n["id"] == v["remoteNetworkId"])
+        connector = {"id": self._new_id("con"), "name": v["name"], "hasStatusNotificationsEnabled": v.get("hasStatusNotificationsEnabled", True),
+                     "remoteNetwork": {"id": network["id"], "name": network["name"]}}
+        self.connectors.append(connector)
+        return {"id": connector["id"], "name": connector["name"]}
+
+    def _do_restoreConnectorUpdate(self, v: dict) -> dict:
+        connector = next(c for c in self.connectors if c["id"] == v["id"])
+        connector.update({k: val for k, val in v.items() if k != "id"})
+        return {"id": connector["id"], "name": connector["name"]}
+
+    def _do_restoreDeviceTrust(self, v: dict) -> dict:
+        device = next(d for d in self.devices if d["id"] == v["id"])
+        assert not device.get("verified") or v["isTrusted"], "Serial number verified Devices cannot be unverified via API"
+        device["isTrusted"] = v["isTrusted"]
+        return {"id": device["id"], "isTrusted": device["isTrusted"]}
+
+    def _device_move(self, v: dict, before: str, after: str) -> dict:
+        device = next(d for d in self.devices if d["id"] == v["id"])
+        assert device["activeState"] == before, f"the API only does this to a {before} device, this one is {device['activeState']}"
+        device["activeState"] = after
+        return {"id": device["id"], "activeState": after}
+
+    def _do_restoreDeviceBlock(self, v: dict) -> dict:
+        return self._device_move(v, "ACTIVE", "BLOCKED")
+
+    def _do_restoreDeviceUnblock(self, v: dict) -> dict:
+        return self._device_move(v, "BLOCKED", "ACTIVE")
+
+    def _do_restoreDeviceArchive(self, v: dict) -> dict:
+        return self._device_move(v, "ACTIVE", "ARCHIVED")
+
+    def _do_restoreDeviceUnarchive(self, v: dict) -> dict:
+        return self._device_move(v, "ARCHIVED", "ACTIVE")
+
+    def _do_restoreDnsProfileCreate(self, v: dict) -> dict:
+        profile = {
+            "id": self._new_id("dns"), "name": v["name"], "priority": 1.0, "fallbackMethod": "AUTO", "allowedDomains": [], "deniedDomains": [],
+            "contentCategoryConfig": {"blockGambling": False}, "securityCategoryConfig": {"blockCryptojacking": True},
+            "privacyCategoryConfig": {"blockAdsAndTrackers": False}, "groups": [],
+        }
+        self.dns_profiles.append(profile)
+        return {"id": profile["id"], "name": profile["name"]}
+
+    def _do_restoreDnsProfileUpdate(self, v: dict) -> dict:
+        profile = next(p for p in self.dns_profiles if p["id"] == v["id"])
+        for key, value in v.items():
+            if key != "id":
+                profile[key] = value
+        return {"id": profile["id"], "name": profile["name"]}
