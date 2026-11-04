@@ -2,11 +2,11 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.1.1] - 2026-11-04
 
 ### Added
 
-- **`tgcli import` now imports SSH, web app and Kubernetes resources**, from a `tgcli backup` folder or from `resources.csv` (new optional columns `type`, `gateway`, `upstream_port`, `downstream_port`, `upstream_tls`, `downstream_tls`, `cluster_ref`, `headers`; a blank `type` is a network resource, so existing CSV files work unchanged). They are served through a Gateway, which has no name, so the file gives its **address** and the Gateway must already exist in the tenant (an import never creates Gateways); two Gateways with one address are told apart by the resource's Remote Network. Access, Security Policy, access policy, approval mode, visibility, alias and tags work as for network resources, and `--sync` also compares the Gateway, ports, TLS modes, cluster reference and request headers (headers are merged by key, replaced with `--prune`). A resource's type cannot be changed, so an existing resource of another type with the same name, Remote Network and address blocks the row; a column that does not apply to a row's type blocks it too, so nothing is dropped silently. These rows used to be skipped as "not imported yet".
+- **`tgcli import` now imports SSH, web app and Kubernetes resources**, from a `tgcli backup` folder or from `resources.csv` (new optional columns `type`, `gateway`, `upstream_port`, `downstream_port`, `upstream_tls`, `downstream_tls`, `cluster_ref`, `headers`; a blank `type` is a network resource, so existing CSV files work unchanged). They are served through a Gateway, which has no name, so the file gives its **address** and the Gateway must already exist in the tenant (an import never creates Gateways); two Gateways with one address are told apart by the resource's Remote Network. Access, Security Policy, access policy, approval mode, visibility, alias and tags work as for network resources, and `--sync` also compares the Gateway, ports, TLS modes, cluster reference and request headers (headers are merged by key, replaced with `--prune`). A resource's type cannot be changed, so an existing resource of another type with the same name, Remote Network and address blocks the row; a column that does not apply to a row's type blocks it too, so nothing is dropped silently. An SSH resource on a Gateway that has no SSH Certificate Authority is blocked up front, because the API refuses it. These rows used to be skipped as "not imported yet".
 
 ## [3.1.0] - 2026-11-02
 
