@@ -103,7 +103,7 @@ pip install .
 
 ```bash
 # Log in — stores your credentials in the OS keychain under a session name you choose (-s)
-tgcli auth login -a tgp_xxxxxxxxxxxxxxxxxxxx -t acme -s acme
+tgcli auth login -a YOUR_API_KEY -t acme -s acme
 
 # Verify it worked
 tgcli -v                       # tgcli version 3.1.2
@@ -112,6 +112,8 @@ tgcli -s acme resource list    # list all resources
 
 Your Twingate **tenant name** is the subdomain of your Twingate URL.
 e.g. for `acme.twingate.com` the tenant name is `acme`.
+
+The **API key** is created in the Admin Console under Settings > API. It is a long string (about 130 characters of letters, digits, `-` and `_`) with no fixed prefix, and it is only shown once, so copy it when it is generated. Use a read-only key unless you want the CLI to change things.
 
 > **Every command that talks to Twingate needs `-s <session>`. There is no default session.**
 > Put `-s` before the command, as above. If you leave `-s` off `auth login`, `tgcli` makes up a random session name, and you then have to pass that name with `-s` every time (`tgcli auth list` shows it). Naming your session when you log in avoids that.
@@ -177,8 +179,8 @@ You can manage several Twingate tenants at once by naming your sessions:
 
 ```bash
 # Log in to two tenants
-tgcli auth login -a tgp_xxx -t acme -s prod
-tgcli auth login -a tgp_yyy -t acme-staging -s staging
+tgcli auth login -a YOUR_API_KEY_1 -t acme -s prod
+tgcli auth login -a YOUR_API_KEY_2 -t acme-staging -s staging
 
 # Use them with -s (required, even if you only have one session)
 tgcli -s prod    resource list
@@ -201,7 +203,7 @@ Manage authentication sessions.
 
 ```bash
 # Log in (saves credentials to OS keychain). Always name the session with -s:
-tgcli auth login -a tgp_xxxx -t acme -s my-session
+tgcli auth login -a YOUR_API_KEY -t acme -s my-session
 # Without -s a random session name is generated, and you must then pass that name with -s on every command.
 
 # List all saved sessions
