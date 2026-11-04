@@ -289,10 +289,10 @@ class TestServiceAccountAccess:
         row = only(plan(Specs(resources=[res("Wiki", access=["ci", sa("ci")])]), self.base(groups=[{"id": "G-CI", "name": "ci", "type": "MANUAL"}])))
         assert [(g.kind, g.group_id) for g in row.grants] == [("group", "G-CI"), ("service account", "S-CI")]
 
-    def test_a_service_account_that_does_not_exist_is_left_out_with_a_warning_and_is_never_created(self):
+    def test_a_service_account_that_is_neither_in_the_tenant_nor_in_the_file_is_left_out_with_a_warning(self):
         row = only(plan(Specs(resources=[res("Wiki", access=[sa("ghost"), "Eng"])]), self.base(groups=[G_ENG])))
         assert row.action == CREATE and [g.group for g in row.grants] == ["Eng"]
-        assert row.warnings == ["access for service account 'ghost' not added: no such service account in this tenant (the import does not create them)"]
+        assert row.warnings == ["access for service account 'ghost' not added: no such service account in this tenant or in the file"]
 
     def test_a_group_of_that_name_does_not_stand_in_for_a_missing_service_account(self):
         row = only(plan(Specs(resources=[res("Wiki", access=[sa("Eng")])]), self.base(groups=[G_ENG])))

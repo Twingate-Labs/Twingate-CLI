@@ -16,9 +16,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from tgcli.importer.cafiles import CaFiles, normalize
 from tgcli.importer.load import GROUP, NETWORK_RESOURCE, RESOURCE_TYPES, SERVICE_ACCOUNT, SSH, TYPENAMES, GroupSpec, ResourceSpec, Specs
 from tgcli.importer.state import State
 from tgcli.importer.sync import gateway_resource_changes, grant_changes, resource_changes
+from tgcli.queries import certificate_authorities as ca_queries
+from tgcli.queries import restoring as w
 
 CREATE, UPDATE, EXISTS, SKIP, BLOCKED = "create", "update", "exists", "skip", "blocked"
 TYPE_WORDS = {"NETWORK": "network", "SSH": "SSH", "WEB_APP": "web app", "KUBERNETES": "Kubernetes"}
@@ -29,7 +32,7 @@ TYPE_PHRASES = {"NETWORK": "a network resource", "SSH": "an SSH resource", "WEB_
 class Ref:
     """An object this run creates that a later row points at. It becomes the new object's ID once the row that creates it has run."""
 
-    kind: str  # "network", "group", "service account" or "gateway"
+    kind: str  # "network", "group", "service account", "ca", "gateway" or "dns profile"
     name: str
 
 
@@ -41,6 +44,7 @@ class Step:
     variables: dict  # may hold Refs
     field: str  # the mutation's field in the reply, which holds ok / error / entity
     remember: Optional[tuple] = None  # (kind, name): this step creates that object, so later rows can point at it
+    expect_fingerprint: Optional[str] = None  # a certificate authority this step makes must come back with this fingerprint, or the row fails
 
 
 @dataclass
@@ -124,24 +128,30 @@ def _resolve_policy(state: State, name: Optional[str], what: str) -> tuple:
     return matches[0]["id"], None
 
 
-def _resolve_gateway(spec: ResourceSpec, state: State) -> tuple:
-    """(Gateway id, problem). A Gateway has no name, so the file gives its address; the resource's Remote Network settles a repeat."""
+def _resolve_gateway(spec: ResourceSpec, state: State, new_gateways: Optional[dict] = None) -> tuple:
+    """(Gateway id, problem). A Gateway has no name, so the file gives its address; the resource's Remote Network settles a repeat.
+
+    A Gateway this run creates counts too, and comes back as a Ref. ``new_gateways`` maps address -> [(Remote Network, Ref, has an SSH CA)].
+    """
     if not spec.gateway:
         return None, None  # only a Kubernetes resource can have none
-    found = state.gateways.get(spec.gateway, [])
+    found = [(
+        (g.get("remoteNetwork") or {}).get("name"), g["id"], bool(g.get("sshCA")),
+    ) for g in state.gateways.get(spec.gateway, [])]
+    found += [(network, ref, has_ssh) for network, ref, has_ssh in (new_gateways or {}).get(spec.gateway, [])]
     if len(found) > 1:
-        local = [g for g in found if (g.get("remoteNetwork") or {}).get("name") == spec.network]
+        local = [g for g in found if g[0] == spec.network]
         found = local or found
     if not found:
         return None, (
-            f"Gateway '{spec.gateway}' does not exist in this tenant (an import does not create Gateways: create it with `tgcli gateway create`, "
-            "or put the address it has here in the file)"
+            f"Gateway '{spec.gateway}' does not exist in this tenant (create it with `tgcli gateway create`, "
+            "or put the address it has here in the file; an import also creates Gateways from a gateways file)"
         )
     if len(found) > 1:
         return None, f"{len(found)} Gateways in this tenant have the address '{spec.gateway}', so which one is meant cannot be told"
-    if spec.type == SSH and not found[0].get("sshCA"):
+    if spec.type == SSH and not found[0][2]:
         return None, f"Gateway '{spec.gateway}' has no SSH Certificate Authority, and the API only serves an SSH resource through one that has"
-    return found[0]["id"], None
+    return found[0][1], None
 
 
 def _plan_networks(specs: list, state: State, rows: list) -> dict:
@@ -265,7 +275,7 @@ def _service_account_refusal(entry: Any) -> Optional[str]:
     return f"the API cannot give a service account {', '.join(wanted)}, and a plain grant would be wider than the file says"
 
 
-def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, warnings: list, edges: Optional[dict] = None) -> tuple:
+def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, warnings: list, edges: Optional[dict] = None, new_accounts: Optional[dict] = None) -> tuple:
     """(grants to add, grants whose settings change). ``edges`` (what each principal has now) is only known for a sync."""
     grants = []
     updates = []
@@ -276,14 +286,16 @@ def _plan_grants(spec: ResourceSpec, state: State, new_groups: dict, have: set, 
             if len(found) > 1:
                 warnings.append(f"access for {label} not added: the tenant has {len(found)} service accounts with that name")
                 continue
-            if not found:
-                warnings.append(f"access for {label} not added: no such service account in this tenant (the import does not create them)")
+            if not found and entry.group not in (new_accounts or {}):
+                warnings.append(f"access for {label} not added: no such service account in this tenant or in the file")
                 continue
             refusal = _service_account_refusal(entry)
             if refusal:
                 warnings.append(f"access for {label} not added: {refusal}")
                 continue
-            if found[0]["id"] not in have:
+            if not found:
+                grants.append(Grant(entry.group, None, kind=SERVICE_ACCOUNT))  # made by this run; the grant follows it
+            elif found[0]["id"] not in have:
                 grants.append(Grant(entry.group, found[0]["id"], kind=SERVICE_ACCOUNT))
             continue
         found = state.groups.get(entry.group, [])
@@ -328,7 +340,31 @@ def _extra_access(spec: ResourceSpec, state: State, edges: Optional[dict]) -> li
     return sorted(i for i in (edges or {}) if i not in named)
 
 
-def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: dict, rows: list, sync: bool = False, prune: bool = False) -> None:
+def _plan_approvers(spec: ResourceSpec, state: State, new_groups: dict, existing_id: Optional[str], sync: bool, prune: bool, warnings: list) -> tuple:
+    """(approver group IDs or Refs to add, IDs to take out). An existing resource is only added to, unless ``sync`` and ``prune``."""
+    wanted: list = []
+    named: set = set()
+    for name in spec.approver_groups:
+        found = state.groups.get(name, [])
+        named |= {g["id"] for g in found}
+        if len(found) > 1:
+            warnings.append(f"approver group '{name}' not added: the tenant has {len(found)} groups with that name")
+        elif found:
+            wanted.append(found[0]["id"])
+        elif name in new_groups:
+            wanted.append(Ref("group", name))
+        else:
+            warnings.append(f"approver group '{name}' not added: no such group in this tenant or in the file")
+    have = state.resource_approvers.get(existing_id, set()) if existing_id else set()
+    add = [g for g in wanted if isinstance(g, Ref) or g not in have]
+    remove = sorted(have - named) if existing_id and sync and prune and "approvers" in spec.given else []
+    return add, remove
+
+
+def _plan_resources(
+    specs: list, state: State, new_networks: dict, new_groups: dict, rows: list, sync: bool = False, prune: bool = False,
+    new_accounts: Optional[dict] = None, new_gateways: Optional[dict] = None,
+) -> None:
     seen: dict = {}
     for spec in specs:
         if spec.type not in RESOURCE_TYPES:
@@ -355,7 +391,7 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
         policy_id, problem = _resolve_policy(state, spec.security_policy, "the resource's")
         if problem:
             problems.append(problem)
-        gateway_id, problem = _resolve_gateway(spec, state)
+        gateway_id, problem = _resolve_gateway(spec, state, new_gateways)
         if problem:
             problems.append(problem)
         if problems:
@@ -376,7 +412,8 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
         warnings = list(spec.notes)
         have = state.resource_access.get(existing[0]["id"], set()) if existing else set()
         edges = state.grants.get(existing[0]["id"], {}) if existing and sync else None
-        grants, updates = _plan_grants(spec, state, new_groups, have, warnings, edges)
+        grants, updates = _plan_grants(spec, state, new_groups, have, warnings, edges, new_accounts)
+        approvers_add, approvers_remove = _plan_approvers(spec, state, new_groups, existing[0]["id"] if existing else None, sync, prune, warnings)
         if existing:
             variables, words = resource_changes(spec, existing[0], policy_id, prune) if sync else ({}, [])
             if sync and spec.type != NETWORK_RESOURCE:
@@ -390,6 +427,10 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
                 parts.append("change " + ", ".join(words))
             if updates:
                 parts.append(f"access settings to change for {_plural(len(updates), 'group')}")
+            if approvers_add:
+                parts.append(f"{_plural(len(approvers_add), 'approver group')} to add")
+            if approvers_remove:
+                parts.append(f"{_plural(len(approvers_remove), 'approver group')} to remove")
             if removals:
                 names = [(edges.get(i) or {}).get("name") or i for i in removals]
                 parts.append(f"access to remove for {_plural(len(removals), 'principal')} ({', '.join(names)})")
@@ -398,14 +439,237 @@ def _plan_resources(specs: list, state: State, new_networks: dict, new_groups: d
             rows.append(Row(
                 "resource", spec.name, action, spec, detail, warnings, existing[0]["id"], grants=grants, network_id=network_id,
                 resource_update=variables, grant_updates=updates, remove_access_ids=removals,
+                approvers_add=approvers_add, approvers_remove=approvers_remove,
             ))
         else:
             kind = "" if spec.type == NETWORK_RESOURCE else f"{TYPE_WORDS[spec.type]} resource, "
             through = f" through Gateway {spec.gateway}" if spec.gateway else ""
             rows.append(Row(
                 "resource", spec.name, CREATE, spec, f"{kind}in '{spec.network}'{through}, access for {_grant_words(grants)}", warnings,
-                policy_id=policy_id, gateway_id=gateway_id, network_id=network_id, grants=grants,
+                policy_id=policy_id, gateway_id=gateway_id, network_id=network_id, grants=grants, approvers_add=approvers_add,
             ))
+
+
+def _plan_service_accounts(specs: list, state: State, rows: list) -> dict:
+    """Returns name -> True for service accounts this plan creates. An existing one is left as it is."""
+    seen: dict = {}
+    planned: dict = {}
+    for spec in specs:
+        if spec.problems:
+            rows.append(_blocked("service account", spec, spec.problems))
+            continue
+        if spec.name in seen:
+            rows.append(_blocked("service account", spec, [f"same name as {seen[spec.name]}"]))
+            continue
+        seen[spec.name] = spec.source
+        found = state.service_accounts.get(spec.name, [])
+        if len(found) > 1:
+            rows.append(_blocked("service account", spec, [f"the tenant has {len(found)} service accounts with this name"]))
+        elif found:
+            rows.append(Row("service account", spec.name, EXISTS, spec, "already exists", existing_id=found[0]["id"]))
+        else:
+            planned[spec.name] = True
+            rows.append(Row(
+                "service account", spec.name, CREATE, spec, "new service account (without keys)",
+                steps=[Step(w.CREATE_SERVICE_ACCOUNT, {"name": spec.name}, "serviceAccountCreate", remember=("service account", spec.name))],
+            ))
+    return planned
+
+
+CA_CREATE = {
+    "x509": (ca_queries.CREATE_X509_CA, "x509CertificateAuthorityCreate", "certificate"),
+    "ssh": (ca_queries.CREATE_SSH_CA, "sshCertificateAuthorityCreate", "publicKey"),
+}
+CA_WORDS = {"x509": "X.509", "ssh": "SSH"}
+
+
+def _plan_cas(specs: list, state: State, ca_files: Optional[CaFiles], rows: list) -> dict:
+    """Returns normalised fingerprint -> (Ref, type) for the certificate authorities this plan creates.
+
+    A backup holds a CA's name and fingerprint only, so a CA is made from a supplied file and only when the file's own
+    fingerprint is the one the backup records. Nothing else is ever sent as a CA.
+    """
+    seen: dict = {}
+    planned: dict = {}
+    for spec in specs:
+        if spec.problems:
+            rows.append(_blocked("certificate authority", spec, spec.problems))
+            continue
+        key = normalize(spec.fingerprint)
+        if not key:
+            rows.append(_blocked("certificate authority", spec, [
+                "the file has no fingerprint for it, so a certificate file cannot be checked against it"]))
+            continue
+        if key in seen:
+            rows.append(_blocked("certificate authority", spec, [f"same fingerprint as {seen[key]}"]))
+            continue
+        seen[key] = spec.source
+        if "certificate authorities" in state.unreadable:
+            rows.append(_blocked("certificate authority", spec, [
+                f"the certificate authorities already in this tenant could not be read ({state.unreadable['certificate authorities']})"]))
+            continue
+        same = [c for c in state.cas if normalize(c["fingerprint"]) == key]
+        if same:
+            word = "" if same[0]["name"] == spec.name else f" as '{same[0]['name']}'"
+            rows.append(Row("certificate authority", spec.name, EXISTS, spec, f"already exists{word}", existing_id=same[0]["id"]))
+            continue
+        named = [c for c in state.cas if c["name"] == spec.name]
+        if named:
+            rows.append(_blocked("certificate authority", spec, [
+                f"this tenant already has a certificate authority named '{spec.name}' with a different fingerprint, and two of the same name "
+                "could not be told apart (rename one, or put the right one in the file)"]))
+            continue
+        files = ca_files.match(spec.fingerprint, spec.type) if ca_files else []
+        if not files:
+            rows.append(Row(
+                "certificate authority", spec.name, SKIP, spec,
+                "not created: no supplied certificate file has this fingerprint (give --ca-files); only needed if a Gateway uses it",
+            ))
+            continue
+        query, field_name, argument = CA_CREATE[spec.type]
+        ref = Ref("ca", key)
+        planned[key] = (ref, spec.type)
+        rows.append(Row(
+            "certificate authority", spec.name, CREATE, spec, f"{CA_WORDS[spec.type]}, from {files[0].path}",
+            steps=[Step(query, {"name": spec.name, argument: files[0].content}, field_name, remember=("ca", key), expect_fingerprint=spec.fingerprint)],
+        ))
+    return planned
+
+
+def _resolve_ca(ref: dict, kind: str, state: State, planned: dict) -> tuple:
+    """(ID or Ref, problem) for the certificate authority a Gateway names, by fingerprint when it has one, otherwise by name."""
+    label = f"{CA_WORDS[kind]} certificate authority '{ref.get('name') or ref.get('fingerprint')}'"
+    if "certificate authorities" in state.unreadable:
+        return None, f"the certificate authorities in this tenant could not be read ({state.unreadable['certificate authorities']})"
+    key = normalize(ref.get("fingerprint"))
+    if key:
+        same = [c for c in state.cas if normalize(c["fingerprint"]) == key]
+        if len(same) == 1:
+            found = same[0]
+            return (found["id"], None) if found["type"] == kind else (None, f"{label} is not an {CA_WORDS[kind]} one")
+        if key in planned:
+            made, made_kind = planned[key]
+            return (made, None) if made_kind == kind else (None, f"{label} is not an {CA_WORDS[kind]} one")
+        return None, (
+            f"{label} is not in this tenant, and was not made from a supplied file (give --ca-files with its certificate or public key, "
+            "and keep certificate-authorities.json beside the other files)"
+        )
+    named = [c for c in state.cas if c["name"] == ref.get("name") and c["type"] == kind]
+    if len(named) == 1:
+        return named[0]["id"], None
+    if not named:
+        return None, f"{label} does not exist in this tenant (create it with `tgcli ca create`)"
+    return None, f"{len(named)} {CA_WORDS[kind]} certificate authorities in this tenant are named '{ref.get('name')}', so which one is meant cannot be told"
+
+
+def _plan_gateways(specs: list, state: State, new_networks: dict, planned_cas: dict, rows: list) -> dict:
+    """Returns address -> [(Remote Network, Ref, has an SSH CA)] for the Gateways this plan creates."""
+    seen: dict = {}
+    planned: dict = {}
+    for spec in specs:
+        if spec.problems:
+            rows.append(_blocked("gateway", spec, spec.problems))
+            continue
+        key = (spec.address, spec.network)
+        if key in seen:
+            rows.append(_blocked("gateway", spec, [f"same address and Remote Network as {seen[key]}"]))
+            continue
+        seen[key] = spec.source
+        problems: list = []
+        networks = state.networks.get(spec.network, [])
+        network: Any = None
+        if len(networks) > 1:
+            problems.append(f"the tenant has {len(networks)} Remote Networks named '{spec.network}'")
+        elif networks:
+            network = networks[0]["id"]
+        elif spec.network in new_networks:
+            network = Ref("network", spec.network)
+        else:
+            problems.append(f"Remote Network '{spec.network}' does not exist in this tenant or in the file")
+        here = [g for g in state.gateways.get(spec.address, []) if (g.get("remoteNetwork") or {}).get("name") == spec.network]
+        if len(here) > 1:
+            rows.append(_blocked("gateway", spec, [f"the tenant has {len(here)} Gateways with this address in '{spec.network}'"]))
+            continue
+        if here:
+            rows.append(Row("gateway", spec.address, EXISTS, spec, f"already exists in '{spec.network}'", existing_id=here[0]["id"]))
+            continue
+        x509, problem = _resolve_ca(spec.x509_ca, "x509", state, planned_cas)
+        if problem:
+            problems.append(problem)
+        ssh = None
+        if spec.ssh_ca:
+            ssh, problem = _resolve_ca(spec.ssh_ca, "ssh", state, planned_cas)
+            if problem:
+                problems.append(problem)
+        if problems:
+            rows.append(_blocked("gateway", spec, problems))
+            continue
+        variables = {"address": spec.address, "remoteNetworkId": network, "x509CAId": x509}
+        if ssh:
+            variables["sshCAId"] = ssh
+        handle = Ref("gateway", f"{spec.address} in {spec.network}")
+        planned.setdefault(spec.address, []).append((spec.network, handle, ssh is not None))
+        rows.append(Row(
+            "gateway", spec.address, CREATE, spec, f"in '{spec.network}'" + (", with an SSH certificate authority" if ssh else ""),
+            ["this registers the Gateway in the tenant; the Gateway itself still has to be deployed, with its own keys"],
+            steps=[Step(w.CREATE_GATEWAY, variables, "gatewayCreate", remember=("gateway", handle.name))],
+        ))
+    return planned
+
+
+def _plan_dns_profiles(specs: list, state: State, new_groups: dict, rows: list) -> None:
+    """Creates the DNS profiles the tenant does not have, with their settings and the groups they apply to. An existing one is left as it is."""
+    seen: dict = {}
+    for spec in specs:
+        if spec.problems:
+            rows.append(_blocked("dns profile", spec, spec.problems))
+            continue
+        if spec.name in seen:
+            rows.append(_blocked("dns profile", spec, [f"same name as {seen[spec.name]}"]))
+            continue
+        seen[spec.name] = spec.source
+        if "DNS profiles" in state.unreadable:
+            rows.append(_blocked("dns profile", spec, [f"the DNS profiles already in this tenant could not be read ({state.unreadable['DNS profiles']})"]))
+            continue
+        found = state.dns_profiles.get(spec.name, [])
+        if len(found) > 1:
+            rows.append(_blocked("dns profile", spec, [f"the tenant has {len(found)} DNS profiles with this name"]))
+            continue
+        if found:
+            rows.append(Row("dns profile", spec.name, EXISTS, spec, "already exists; its settings are left as they are", existing_id=found[0]["id"]))
+            continue
+        warnings: list = []
+        groups: list = []
+        for name in spec.groups:
+            matches = state.groups.get(name, [])
+            if len(matches) > 1:
+                warnings.append(f"group '{name}' not put on the profile: the tenant has {len(matches)} groups with that name")
+            elif matches:
+                groups.append(matches[0]["id"])
+            elif name in new_groups:
+                groups.append(Ref("group", name))
+            else:
+                warnings.append(f"group '{name}' not put on the profile: no such group in this tenant or in the file")
+        variables: dict = {}
+        words: list = []
+        for key, value, word in (
+            ("priority", spec.priority, "priority"), ("fallbackMethod", spec.fallback_method, "fallback method"),
+            ("allowedDomains", spec.allowed_domains or None, "allowed domains"), ("deniedDomains", spec.denied_domains or None, "denied domains"),
+        ):
+            if value is not None:
+                variables[key] = value
+                words.append(word)
+        for key, settings in spec.categories.items():
+            variables[key] = settings
+            words.append(key.replace("CategoryConfig", " categories"))
+        if groups:
+            variables["groups"] = groups
+            words.append(_plural(len(groups), "group"))
+        handle = Ref("dns profile", spec.name)
+        steps = [Step(w.CREATE_DNS_PROFILE, {"name": spec.name}, "dnsFilteringProfileCreate", remember=("dns profile", spec.name))]
+        if variables:
+            steps.append(Step(w.UPDATE_DNS_PROFILE, {"id": handle, **variables}, "dnsFilteringProfileUpdate"))
+        rows.append(Row("dns profile", spec.name, CREATE, spec, ", ".join(words) if words else "default settings", warnings, steps=steps))
 
 
 def _plan_devices(specs: list, state: State, rows: list) -> None:
@@ -442,15 +706,21 @@ def _plan_devices(specs: list, state: State, rows: list) -> None:
             rows.append(Row("device", spec.serial, EXISTS, spec, f"already {word} ({_plural(len(live), 'device')}){note}"))
 
 
-def build_plan(specs: Specs, state: State, sync: bool = False, prune: bool = False) -> list:
-    """Every row of the file, as a Row: networks, groups, resources, then devices (the order they are applied in).
+def build_plan(specs: Specs, state: State, sync: bool = False, prune: bool = False, ca_files: Optional[CaFiles] = None) -> list:
+    """Every row of the file, as a Row, in the order they are applied: networks, groups, service accounts, certificate authorities,
+    Gateways, resources, DNS profiles, then devices.
 
     ``sync`` also brings existing groups and resources in line with what the file states; ``prune`` (with ``sync``) also
     removes the members, access and tags the file leaves out. ``state`` must have been read with ``sync`` too.
+    ``ca_files`` are the certificate files a certificate authority is made from.
     """
     rows: list = []
     new_networks = _plan_networks(specs.networks, state, rows)
     new_groups = _plan_groups(specs.groups, state, rows, sync, prune)
-    _plan_resources(specs.resources, state, new_networks, new_groups, rows, sync, prune)
+    new_accounts = _plan_service_accounts(specs.service_accounts, state, rows)
+    planned_cas = _plan_cas(specs.certificate_authorities, state, ca_files, rows)
+    new_gateways = _plan_gateways(specs.gateways, state, new_networks, planned_cas, rows)
+    _plan_resources(specs.resources, state, new_networks, new_groups, rows, sync, prune, new_accounts, new_gateways)
+    _plan_dns_profiles(specs.dns_profiles, state, new_groups, rows)
     _plan_devices(specs.devices, state, rows)
     return rows

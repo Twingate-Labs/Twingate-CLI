@@ -8,14 +8,17 @@ from pathlib import Path
 import pytest
 
 from tests.importer.fake_api import FakeApi
-from tgcli.importer.load import CSV_COLUMNS, KINDS, load
+from tgcli.importer.load import CSV_COLUMNS, JSON_ONLY, KINDS, load
 from tgcli.importer.plan import CREATE, build_plan
 from tgcli.importer.state import fetch_state
 
 TEMPLATES = Path(__file__).resolve().parents[2] / "examples" / "import"
 
 
-@pytest.mark.parametrize("kind", KINDS)
+CSV_KINDS = [k for k in KINDS if k not in JSON_ONLY]  # dns-profiles and certificate-authorities are JSON only, so there is no CSV to copy
+
+
+@pytest.mark.parametrize("kind", CSV_KINDS)
 def test_each_template_has_exactly_the_columns_the_importer_reads(kind):
     with open(TEMPLATES / f"{kind}.csv", newline="", encoding="utf-8") as handle:
         assert next(csv.reader(handle)) == list(CSV_COLUMNS[kind])
@@ -23,7 +26,7 @@ def test_each_template_has_exactly_the_columns_the_importer_reads(kind):
 
 def test_the_whole_folder_loads_without_a_single_problem():
     specs = load(TEMPLATES)
-    assert sorted(specs.files) == sorted(f"{kind}.csv" for kind in KINDS)
+    assert sorted(specs.files) == sorted(f"{kind}.csv" for kind in CSV_KINDS)
     assert all(not item.problems for item in specs.networks + specs.groups + specs.resources + specs.devices)
 
 

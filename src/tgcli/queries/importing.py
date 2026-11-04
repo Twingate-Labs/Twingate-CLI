@@ -38,6 +38,19 @@ query($cursor: String) {
 }
 """
 
+# Certificate authorities are a union, so each kind says what it is. Matched by fingerprint, so an import can tell a CA it would make already exists.
+CERTIFICATE_AUTHORITIES = """
+query($cursor: String) {
+  certificateAuthorities(after: $cursor) {
+    pageInfo { hasNextPage endCursor }
+    edges { node { __typename ... on X509CertificateAuthority { id name fingerprint } ... on SSHCertificateAuthority { id name fingerprint } } }
+  }
+}
+"""
+
+# A plain list (not paged), so there is nothing to follow.
+DNS_PROFILES = "query importDnsProfiles { dnsFilteringProfiles { id name } }"
+
 GROUP_DETAIL = "id name type securityPolicy { id }"
 
 GROUP_USERS_DETAIL = """

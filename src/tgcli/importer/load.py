@@ -20,14 +20,14 @@ from typing import Any, Callable, Optional
 from tgcli.textio import TextFileError, read_text
 
 NETWORKS, GROUPS, RESOURCES, DEVICES = "remote-networks", "groups", "resources", "devices"
-KINDS = (NETWORKS, GROUPS, RESOURCES, DEVICES)
-# Files a backup holds that an import has no use for yet.
+SERVICE_ACCOUNTS, CERTIFICATE_AUTHORITIES, GATEWAYS, DNS_PROFILES = "service-accounts", "certificate-authorities", "gateways", "dns-profiles"
+# In the order they are applied: a Gateway needs its Remote Network and certificate authorities, a resource its Gateway, a DNS profile its groups.
+KINDS = (NETWORKS, GROUPS, SERVICE_ACCOUNTS, CERTIFICATE_AUTHORITIES, GATEWAYS, RESOURCES, DNS_PROFILES, DEVICES)
+JSON_ONLY = (CERTIFICATE_AUTHORITIES, DNS_PROFILES)  # too structured for a spreadsheet; a backup writes them, and so can anyone else
+# Files a backup holds that an import has no use for: they are counted and named in the "not carried over" section.
 MANIFEST = "manifest.json"
 BACKUP_DEVICES = "devices.json"  # in a backup (a folder with a manifest) it is an inventory, not trust to apply
-IGNORED_FILES = (
-    "users.json", "connectors.json", BACKUP_DEVICES, "service-accounts.json", "security-policies.json",
-    "dns-profiles.json", "gateways.json", "certificate-authorities.json", MANIFEST,
-)
+IGNORED_FILES = ("users.json", "connectors.json", BACKUP_DEVICES, "security-policies.json", MANIFEST)
 
 LOCATIONS = ("AWS", "AZURE", "GOOGLE_CLOUD", "ON_PREMISE", "OTHER")
 NETWORK_TYPES = ("REGULAR", "EXIT")
@@ -48,13 +48,18 @@ CSV_COLUMNS = {
     GROUPS: ("name", "members", "security_policy"),
     RESOURCES: (
         "name", "network", "address", "alias", "tcp_ports", "udp_ports", "allow_icmp", "visible",
-        "security_policy", "groups", "service_accounts", "routing_mode",
+        "security_policy", "groups", "service_accounts", "routing_mode", "approver_groups",
         # Only for SSH, web app and Kubernetes resources (blank on a network resource, which is what a blank type means):
         "type", "gateway", "upstream_port", "downstream_port", "upstream_tls", "downstream_tls", "cluster_ref", "headers",
     ),
     DEVICES: ("serial_number", "trusted"),
+    SERVICE_ACCOUNTS: ("name",),
+    GATEWAYS: ("address", "network", "x509_ca", "ssh_ca"),
 }
-CSV_REQUIRED = {NETWORKS: ("name",), GROUPS: ("name",), RESOURCES: ("name", "network", "address"), DEVICES: ("serial_number",)}
+CSV_REQUIRED = {
+    NETWORKS: ("name",), GROUPS: ("name",), RESOURCES: ("name", "network", "address"), DEVICES: ("serial_number",),
+    SERVICE_ACCOUNTS: ("name",), GATEWAYS: ("address", "network", "x509_ca"),
+}
 
 
 class LoadError(Exception):
@@ -117,6 +122,7 @@ class ResourceSpec(Item):
     approval_mode: Optional[str] = None
     routing_mode: Optional[str] = None
     access: list = field(default_factory=list)
+    approver_groups: list = field(default_factory=list)  # names of the groups that approve access requests
     # SSH, web app and Kubernetes resources only. They are served through a Gateway, which has no name: it is found by address.
     gateway: str = ""
     upstream: Optional[dict] = None  # {"port": 22, "tlsMode": ...}, as the API takes it; tlsMode only for a web app
@@ -126,6 +132,46 @@ class ResourceSpec(Item):
     # What the file actually states. A blank CSV cell or a missing JSON key is not a statement, so --sync leaves that alone;
     # the fields above hold the API's defaults for such a field, which is what a create uses but a sync must not apply.
     given: set = field(default_factory=set)
+
+
+@dataclass
+class ServiceAccountSpec(Item):
+    name: str = ""
+    keys: int = 0  # how many keys the backup lists for it; they cannot be carried over
+
+
+@dataclass
+class CaSpec(Item):
+    """A Certificate Authority as a backup lists it: its name and fingerprint. The certificate itself comes from `--ca-files`."""
+
+    name: str = ""
+    type: str = ""  # "x509" or "ssh"
+    fingerprint: str = ""
+
+
+@dataclass
+class GatewaySpec(Item):
+    """A Gateway has no name: it is its address within a Remote Network."""
+
+    address: str = ""
+    network: str = ""
+    x509_ca: dict = field(default_factory=dict)  # {"name", "fingerprint"}; a file written by hand may give only the name
+    ssh_ca: dict = field(default_factory=dict)
+
+    @property
+    def name(self) -> str:
+        return self.address or "(no address)"
+
+
+@dataclass
+class DnsProfileSpec(Item):
+    name: str = ""
+    priority: Optional[float] = None
+    fallback_method: Optional[str] = None
+    allowed_domains: Optional[list] = None
+    denied_domains: Optional[list] = None
+    categories: dict = field(default_factory=dict)  # "contentCategoryConfig" -> {setting: bool}, as the API takes them
+    groups: list = field(default_factory=list)  # names of the groups the profile applies to
 
 
 @dataclass
@@ -144,8 +190,13 @@ class Specs:
     networks: list = field(default_factory=list)
     groups: list = field(default_factory=list)
     resources: list = field(default_factory=list)
+    service_accounts: list = field(default_factory=list)
+    certificate_authorities: list = field(default_factory=list)
+    gateways: list = field(default_factory=list)
+    dns_profiles: list = field(default_factory=list)
     files: list = field(default_factory=list)  # the files read
     ignored: list = field(default_factory=list)  # backup files present but not used
+    counts: dict = field(default_factory=dict)  # backup file name -> how many things it lists (None when that cannot be told), for the ignored ones
 
 
 # ---------------------------------------------------------------- small parsers
@@ -338,6 +389,18 @@ def _access(entries: Any, spec: ResourceSpec) -> None:
         spec.access.append(access)
 
 
+def _approvers(value: Any, spec: ResourceSpec) -> list:
+    """The names of the approver groups, in file order, without repeats."""
+    names: list = []
+    for item in value or []:
+        name = _name_of(item)
+        if not name:
+            spec.problems.append("an approver group has no name")
+        elif name not in names:
+            names.append(name)
+    return names
+
+
 def _resource_type(value: Any) -> str:
     """The type a record names; blank is a network resource. A name this tool does not know is kept (uppercased) and not imported."""
     word = re.sub(r"[\s-]+", "_", _text(value)).upper()
@@ -438,8 +501,7 @@ def _resource(record: dict, source: str) -> ResourceSpec:
     for tag in record.get("tags") or []:
         if isinstance(tag, dict) and "key" in tag:
             spec.tags.append({"key": str(tag["key"]), "value": str(tag.get("value", ""))})
-    if record.get("approverGroups"):
-        spec.notes.append("approver groups are not imported")
+    spec.approver_groups = _approvers(record.get("approverGroups"), spec)
     _access(record.get("access"), spec)
     protocols = record.get("protocols") if isinstance(record.get("protocols"), dict) else {}
     stated = {
@@ -447,6 +509,7 @@ def _resource(record: dict, source: str) -> ResourceSpec:
         "tags": isinstance(record.get("tags"), list), "security_policy": bool(spec.security_policy),
         "access_policy": isinstance(record.get("accessPolicy"), dict) and bool(record["accessPolicy"].get("mode")),
         "approval_mode": bool(spec.approval_mode), "access": isinstance(record.get("access"), list),
+        "approvers": isinstance(record.get("approverGroups"), list),
     }
     if network_resource:
         stated.update({
@@ -460,6 +523,84 @@ def _resource(record: dict, source: str) -> ResourceSpec:
             "cluster_ref": bool(spec.cluster_ref), "headers": isinstance(record.get("requestHeaderRewrites"), list),
         })
     spec.given = {name for name, yes in stated.items() if yes}
+    return spec
+
+
+def _service_account(record: dict, source: str) -> ServiceAccountSpec:
+    spec = ServiceAccountSpec(source=source, name=_text(record.get("name")))
+    if not spec.name:
+        spec.problems.append("has no name")
+    keys = record.get("keys")
+    spec.keys = len(keys) if isinstance(keys, list) else 0
+    return spec
+
+
+def _ca(record: dict, source: str) -> CaSpec:
+    spec = CaSpec(source=source, name=_text(record.get("name")), type=_text(record.get("type")).lower(), fingerprint=_text(record.get("fingerprint")))
+    if not spec.name:
+        spec.problems.append("has no name")
+    if spec.type not in ("x509", "ssh"):
+        spec.problems.append(f"type '{record.get('type')}' is not x509 or ssh")
+    return spec
+
+
+def _ca_ref(value: Any) -> dict:
+    """``{"name", "fingerprint"}`` from the reference a gateway holds; a bare string is a name."""
+    if isinstance(value, dict):
+        ref = {"name": _text(value.get("name")), "fingerprint": _text(value.get("fingerprint"))}
+    else:
+        ref = {"name": _text(value), "fingerprint": ""}
+    return ref if ref["name"] or ref["fingerprint"] else {}
+
+
+def _gateway(record: dict, source: str) -> GatewaySpec:
+    spec = GatewaySpec(source=source, address=_text(record.get("address")), network=_name_of(record.get("remoteNetwork")))
+    if not spec.address:
+        spec.problems.append("has no address")
+    if not spec.network:
+        spec.problems.append("has no Remote Network")
+    spec.x509_ca = _ca_ref(record.get("x509CA"))
+    spec.ssh_ca = _ca_ref(record.get("sshCA"))
+    if not spec.x509_ca:
+        spec.problems.append("has no X.509 certificate authority (the API needs one for every Gateway)")
+    return spec
+
+
+CATEGORY_CONFIGS = ("contentCategoryConfig", "securityCategoryConfig", "privacyCategoryConfig")
+
+
+def _domains(value: Any, label: str, problems: list) -> Optional[list]:
+    if value is None:
+        return None
+    if not isinstance(value, list) or not all(isinstance(d, str) for d in value):
+        problems.append(f"{label} must be a list of domain names")
+        return None
+    return list(dict.fromkeys(d.strip() for d in value if d.strip()))
+
+
+def _dns_profile(record: dict, source: str) -> DnsProfileSpec:
+    spec = DnsProfileSpec(source=source, name=_text(record.get("name")))
+    if not spec.name:
+        spec.problems.append("has no name")
+    priority = record.get("priority")
+    if priority is not None:
+        if isinstance(priority, bool) or not isinstance(priority, (int, float)):
+            spec.problems.append(f"priority '{priority}' is not a number")
+        else:
+            spec.priority = float(priority)
+    spec.fallback_method = _text(record.get("fallbackMethod")) or None
+    spec.allowed_domains = _domains(record.get("allowedDomains"), "allowedDomains", spec.problems)
+    spec.denied_domains = _domains(record.get("deniedDomains"), "deniedDomains", spec.problems)
+    for key in CATEGORY_CONFIGS:
+        config = record.get(key)
+        if isinstance(config, dict):
+            settings = {k: v for k, v in config.items() if isinstance(v, bool)}
+            if settings:
+                spec.categories[key] = settings
+    for group in record.get("groups") or []:
+        name = _name_of(group)
+        if name and name not in spec.groups:
+            spec.groups.append(name)
     return spec
 
 
@@ -562,6 +703,10 @@ def _resource_from_csv(row: dict, source: str) -> ResourceSpec:
         for column in _NETWORK_ONLY_COLUMNS:
             if _text(row.get(column)):
                 spec.problems.append(f"{column} only applies to network resources, not {kind} resources")
+    approvers = _split(row.get("approver_groups", ""))
+    if approvers:
+        spec.approver_groups = list(dict.fromkeys(approvers))
+        spec.given.add("approvers")
     if not record["access"]:
         spec.given.discard("access")  # no groups and no service accounts named: the cell is blank, not an empty list
     return spec
@@ -572,8 +717,16 @@ _CSV_ADAPTERS: dict = {
     GROUPS: lambda row, source: _csv_group_spec(row, source),
     RESOURCES: _resource_from_csv,
     DEVICES: lambda row, source: _device({"serial_number": row.get("serial_number"), "trusted": row.get("trusted")}, source),
+    SERVICE_ACCOUNTS: lambda row, source: _service_account({"name": row.get("name")}, source),
+    GATEWAYS: lambda row, source: _gateway({
+        "address": row.get("address"), "remoteNetwork": {"name": row.get("network")},
+        "x509CA": {"name": row.get("x509_ca")}, "sshCA": {"name": row.get("ssh_ca")},
+    }, source),
 }
-_JSON_PARSERS: dict = {NETWORKS: _network, GROUPS: _group, RESOURCES: _resource, DEVICES: _device}
+_JSON_PARSERS: dict = {
+    NETWORKS: _network, GROUPS: _group, RESOURCES: _resource, DEVICES: _device, SERVICE_ACCOUNTS: _service_account,
+    CERTIFICATE_AUTHORITIES: _ca, GATEWAYS: _gateway, DNS_PROFILES: _dns_profile,
+}
 
 
 # ---------------------------------------------------------------- files
@@ -613,6 +766,8 @@ def _read_csv(path: Path, kind: str) -> list:
 def load_file(path: Path, kind: str) -> list:
     """The specs in one file, in file order."""
     is_csv = path.suffix.lower() == ".csv"
+    if is_csv and kind in JSON_ONLY:
+        raise LoadError(f"{path.name} must be a .json file, in the shape `tgcli backup` writes {kind}.json.")
     records = _read_csv(path, kind) if is_csv else _read_json(path, kind)
     parse: Callable = _CSV_ADAPTERS[kind] if is_csv else _JSON_PARSERS[kind]
     specs = []
@@ -630,13 +785,28 @@ def kind_of(path: Path) -> str:
     if stem in KINDS and path.suffix.lower() in (".json", ".csv"):
         return stem
     raise LoadError(
-        f"Cannot tell what {path.name} holds. Name it {', '.join(k + '.json or .csv' for k in KINDS)}, "
-        "or give the folder that contains them."
+        f"Cannot tell what {path.name} holds. Name it {', '.join(k + '.json or .csv' for k in KINDS if k not in JSON_ONLY)}"
+        f" ({', '.join(k + '.json' for k in JSON_ONLY)} are JSON only), or give the folder that contains them."
     )
 
 
+def _count(path: Path) -> Optional[int]:
+    """How many things a backup file lists, or None when it cannot be read as a list."""
+    try:
+        data = json.loads(read_text(path))
+    except (OSError, TextFileError, ValueError):
+        return None
+    return len(data) if isinstance(data, list) else None
+
+
+_TARGETS = {
+    NETWORKS: "networks", GROUPS: "groups", RESOURCES: "resources", DEVICES: "devices", SERVICE_ACCOUNTS: "service_accounts",
+    CERTIFICATE_AUTHORITIES: "certificate_authorities", GATEWAYS: "gateways", DNS_PROFILES: "dns_profiles",
+}
+
+
 def load(path: Path) -> Specs:
-    """Read a folder (a backup, or one holding files named remote-networks / groups / resources / devices) or a single such file."""
+    """Read a folder (a backup, or one holding files named like the KINDS) or a single such file."""
     if not path.exists():
         raise LoadError(f"{path} does not exist.")
     specs = Specs()
@@ -659,10 +829,10 @@ def load(path: Path) -> Specs:
         specs.ignored = [
             name for name in IGNORED_FILES if (path / name).is_file() and (name != BACKUP_DEVICES or is_backup)
         ]
+        specs.counts = {name: _count(path / name) for name in specs.ignored if name != MANIFEST}
     if not found:
         raise LoadError(f"{path} has none of: {', '.join(k + '.json or .csv' for k in KINDS)}.")
     for kind, file in found.items():
         specs.files.append(file.name)
-        loaded = load_file(file, kind)
-        {NETWORKS: specs.networks, GROUPS: specs.groups, RESOURCES: specs.resources, DEVICES: specs.devices}[kind].extend(loaded)
+        getattr(specs, _TARGETS[kind]).extend(load_file(file, kind))
     return specs

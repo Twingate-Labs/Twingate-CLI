@@ -2,6 +2,15 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [3.2.0] - 2026-11-04
+
+### Added
+
+- **`tgcli import` carries more of a backup into another tenant.** It now also creates **service accounts** (without keys; the API never returns a key's secret), **DNS filtering profiles** (all settings, put on their groups by name), **certificate authorities** and **Gateways**, and imports **approver groups** on every resource type. A resource in the same file follows a service account, a group, or a Gateway made earlier in the run. Existing objects are found by name (a Gateway by address and Remote Network, a CA by fingerprint) and left as they are.
+- **`--ca-files <file or folder>`**: a backup holds a certificate authority's name and fingerprint, never its certificate or public key, so a CA is made only from a file you supply. A file is used **only for the CA whose fingerprint it has** (worked out from the file's own bytes, then checked again against what the tenant reports back), a file holding a private key is refused unread, and a Gateway that needs a CA with no file is blocked with the reason.
+- **A "Not carried over" section** in the terminal and as `not carried over` rows in the report: users, Connectors, Security Policies and their rules, device registrations, service account keys, and certificate authorities with no file, each with its count and what to do instead. This replaces the old "Not imported (not supported yet)" line.
+- New input files: `service-accounts` and `gateways` (`.json` or `.csv`), `certificate-authorities` and `dns-profiles` (`.json`); a new `approver_groups` column in `resources.csv`; `--sync --prune` also removes approver groups the file leaves out. A backup's `service-accounts.json`, `dns-profiles.json`, `gateways.json` and `certificate-authorities.json` were ignored before and are now read, so importing a backup into a tenant shows these rows in the dry run.
+
 ## [3.1.2] - 2026-11-04
 
 ### Added

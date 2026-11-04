@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Callable, Optional
 
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
+from tgcli.importer.cafiles import normalize
 from tgcli.importer.load import NETWORK_RESOURCE, SERVICE_ACCOUNT
 from tgcli.importer.plan import BLOCKED, CREATE, EXISTS, SKIP, UPDATE, Grant, Ref, Row
 from tgcli.queries import importing as q
@@ -84,6 +85,13 @@ def _run_steps(client: Any, row: Row, ids: dict) -> None:
     for step in row.steps:
         result = _call(client, step.query, resolve(step.variables, ids), step.field)
         entity_id = (result.get("entity") or {}).get("id")
+        if step.expect_fingerprint is not None:
+            made = (result.get("entity") or {}).get("fingerprint")
+            if normalize(made) != normalize(step.expect_fingerprint):
+                raise RowError(
+                    f"it was created (ID {entity_id}), but its fingerprint is '{made}', not the '{step.expect_fingerprint}' the backup records, "
+                    f"so it is not the certificate authority that was backed up. Nothing was built on it; delete it with `tgcli ca delete -i {entity_id}`"
+                )
         if step.remember:
             if not entity_id:
                 raise RowError(f"{step.field} succeeded but did not say what it created")

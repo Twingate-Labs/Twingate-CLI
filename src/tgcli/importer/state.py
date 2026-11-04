@@ -5,10 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from tgcli.client.exceptions import TwingateAPIError, TwingateThrottleError
 from tgcli.importer.load import GROUP, SERVICE_ACCOUNT, Specs
 from tgcli.pagination import fetch_connection
+from tgcli.queries import backup as backup_queries
 from tgcli.queries import importing as q
 from tgcli.resolve import lookup_nodes
+
+
+CA_TYPES = {"X509CertificateAuthority": "x509", "SSHCertificateAuthority": "ssh"}
 
 
 @dataclass
@@ -20,9 +25,13 @@ class State:
     policies: dict = field(default_factory=dict)  # name -> [node]
     resources: dict = field(default_factory=dict)  # (name, network name, address) -> [node]
     gateways: dict = field(default_factory=dict)  # address -> [node with remoteNetwork] (read only when a resource is served through one)
+    cas: list = field(default_factory=list)  # every certificate authority: {"id", "name", "fingerprint", "type"} (read only when the file has a Gateway or a CA)
+    dns_profiles: dict = field(default_factory=dict)  # name -> [node] (read only when the file has DNS profiles)
+    unreadable: dict = field(default_factory=dict)  # what could not be read (a tenant without the feature): "certificate authorities" or "DNS profiles" -> the API's words
     devices: dict = field(default_factory=dict)  # lowercased serial number -> [node with isTrusted, activeState, user]
     group_members: dict = field(default_factory=dict)  # group id -> set of user ids (only groups that will be topped up)
     resource_access: dict = field(default_factory=dict)  # resource id -> set of principal ids (only resources that will be topped up)
+    resource_approvers: dict = field(default_factory=dict)  # resource id -> set of approver group ids (only resources whose file names approvers)
     # Only read for --sync, which compares an existing object with the file:
     grants: dict = field(default_factory=dict)  # resource id -> {principal id: {name, policy_id, access_policy, approval_mode, expires_at}}
     member_emails: dict = field(default_factory=dict)  # group id -> {user id: email}
@@ -36,9 +45,10 @@ def _by(nodes: list, key: Callable[[dict], Any]) -> dict:
 
 
 def _names(specs: Specs) -> dict:
-    networks = {s.name for s in specs.networks} | {r.network for r in specs.resources if r.network}
+    networks = {s.name for s in specs.networks} | {r.network for r in specs.resources if r.network} | {g.network for g in specs.gateways if g.network}
     groups = {g.name for g in specs.groups} | {a.group for r in specs.resources for a in r.access if a.kind == GROUP}
-    accounts = {a.group for r in specs.resources for a in r.access if a.kind == SERVICE_ACCOUNT}
+    groups |= {name for r in specs.resources for name in r.approver_groups} | {name for p in specs.dns_profiles for name in p.groups}
+    accounts = {a.group for r in specs.resources for a in r.access if a.kind == SERVICE_ACCOUNT} | {a.name for a in specs.service_accounts}
     policies = {g.security_policy for g in specs.groups} | {r.security_policy for r in specs.resources}
     policies |= {a.security_policy for r in specs.resources for a in r.access}
     emails = {e for g in specs.groups for e in g.members}
@@ -97,7 +107,31 @@ def fetch_state(client: Any, specs: Specs, progress: Callable[[str], None] = lam
         nodes = lookup_nodes(client, "resources", "name", names["resources"], q.RESOURCE_DETAIL if sync else q.RESOURCE_KEYS)
         state.resources = _by(nodes, lambda n: (n["name"], (n.get("remoteNetwork") or {}).get("name", ""), (n.get("address") or {}).get("value", "")))
 
-    if any(r.gateway for r in specs.resources):
+    if specs.certificate_authorities or specs.gateways:
+        progress("Reading the certificate authorities...")
+        try:
+            edges, _, _ = fetch_connection(client, q.CERTIFICATE_AUTHORITIES, {}, ["certificateAuthorities"])
+        except TwingateAPIError as exc:
+            if isinstance(exc, TwingateThrottleError):
+                raise
+            state.unreadable["certificate authorities"] = str(exc)
+        else:
+            state.cas = [
+                {"id": n["id"], "name": n["name"], "fingerprint": n.get("fingerprint") or "", "type": CA_TYPES.get(n["__typename"], n["__typename"])}
+                for n in (e["node"] for e in edges if e.get("node"))
+            ]
+    if specs.dns_profiles:
+        progress("Reading the DNS profiles...")
+        try:
+            listed = client.execute(q.DNS_PROFILES).get("data", {}).get("dnsFilteringProfiles") or []
+        except TwingateAPIError as exc:
+            if isinstance(exc, TwingateThrottleError):
+                raise
+            state.unreadable["DNS profiles"] = str(exc)
+        else:
+            state.dns_profiles = _by(listed, lambda n: n["name"])
+
+    if any(r.gateway for r in specs.resources) or specs.gateways:
         progress("Reading the Gateways...")
         edges, _, _ = fetch_connection(client, q.GATEWAYS, {}, ["gateways"])
         state.gateways = _by([e["node"] for e in edges if e.get("node")], lambda n: n["address"])
@@ -130,4 +164,9 @@ def fetch_state(client: Any, specs: Specs, progress: Callable[[str], None] = lam
                 state.resource_access[matches[0]["id"]] = set(state.grants[matches[0]["id"]])
             else:
                 state.resource_access[matches[0]["id"]] = _ids(client, q.RESOURCE_ACCESS, {"id": matches[0]["id"]}, ["resource", "access"])
+        if (resource.approver_groups or (sync and "approvers" in resource.given)) and len(matches) == 1 and matches[0]["id"] not in state.resource_approvers:
+            progress(f"Reading the approvers of '{resource.name}'...")
+            state.resource_approvers[matches[0]["id"]] = _ids(
+                client, backup_queries.CONTINUATION_QUERIES[("resources", "approverGroups")], {"id": matches[0]["id"]}, ["resource", "approverGroups"]
+            )
     return state

@@ -11,14 +11,19 @@ import typer
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.commands._common import get_client
 from tgcli.importer.apply import DRY_RUN_STATUS, apply_plan, write_count
+from tgcli.importer.cafiles import read_ca_files
 from tgcli.importer.load import LoadError, load
+from tgcli.importer.notices import not_carried_over
 from tgcli.importer.plan import BLOCKED, build_plan
 from tgcli.importer.report import write_report
 from tgcli.importer.state import fetch_state
 from tgcli.textio import check_writable
 
 MAX_LISTED = 200  # rows echoed to the terminal; the report always has all of them
-KIND_ORDER = ("remote network", "group", "service account", "gateway", "connector", "resource", "dns profile", "device", "user")
+KIND_ORDER = (
+    "remote network", "group", "service account", "certificate authority", "gateway", "connector", "resource", "dns profile", "device", "user",
+)
+PLURALS = {"certificate authority": "certificate authorities"}
 FAILED = ("error", "blocked", "not-run")
 RATE_LIMIT_PER_MINUTE = 20  # typical write limit (see Rate Limiting in the README); only used to warn about big imports
 
@@ -38,10 +43,18 @@ def _summary(rows: list, source: str = "file") -> None:
         counts: dict = {}
         for row in mine:
             counts[row.status] = counts.get(row.status, 0) + 1
-        typer.echo(f"  {kind + 's':<17}" + ", ".join(f"{n} {status}" for status, n in sorted(counts.items())))
+        typer.echo(f"  {PLURALS.get(kind, kind + 's'):<24}" + ", ".join(f"{n} {status}" for status, n in sorted(counts.items())))
     warned = sum(len(r.warnings) for r in rows)
     if warned:
         typer.echo(f"  {warned} warning(s): something in the {source} was left out of a row (see the report).")
+
+
+def _not_carried(notices: list) -> None:
+    if not notices:
+        return
+    typer.echo("\nNot carried over (see the report for the reasons)")
+    for notice in notices:
+        typer.echo(f"  {notice.what}: {notice.detail}")
 
 
 def _removals(rows: list) -> None:
@@ -52,15 +65,16 @@ def _removals(rows: list) -> None:
 
 
 def import_(
-    path: Path = typer.Argument(..., help="A folder (a `tgcli backup`, or files named remote-networks / groups / resources / devices, .json or .csv) or one such file."),
+    path: Path = typer.Argument(..., help="A folder (a `tgcli backup`, or files named remote-networks / groups / service-accounts / certificate-authorities / gateways / resources / dns-profiles / devices, .json or .csv) or one such file."),
     execute: bool = typer.Option(False, "--execute", help="Apply the changes. Without this flag, only a dry run is performed."),
     report: Optional[str] = typer.Option(None, "--report", help="Path to write the CSV report."),
     sync: bool = typer.Option(False, "--sync", help="Also change what already exists to match what the file states (resource settings, per-group access settings, a group's Security Policy). A blank CSV cell or a missing JSON key states nothing and is left alone; settings are only set, never cleared."),
-    prune: bool = typer.Option(False, "--prune", help="With --sync: also REMOVE group members, resource access and tags that the file leaves out, for the groups and resources whose members, access or tags the file lists. Never deletes a group, resource or network."),
+    prune: bool = typer.Option(False, "--prune", help="With --sync: also REMOVE group members, resource access, approver groups and tags that the file leaves out, for the groups and resources whose members, access, approvers or tags the file lists. Never deletes a group, resource or network."),
+    ca_files: Optional[Path] = typer.Option(None, "--ca-files", help="A certificate or SSH public key file, or a folder of them, to make the backup's certificate authorities from. A file is only used for the CA whose fingerprint it has; a file holding a private key is refused."),
 ) -> None:
-    """Create Remote Networks, groups with members, resources (network, SSH, web app and Kubernetes) with group and service account access, and set device trust, from a file (dry run by default).
+    """Create Remote Networks, groups with members, service accounts, certificate authorities, Gateways, resources (network, SSH, web app and Kubernetes) with group and service account access and approver groups, and DNS profiles, and set device trust, from a file (dry run by default).
 
-    Anything that already exists is left as it is and only added to (missing members, missing access) unless --sync is given; Synced Groups are never touched, and service accounts must already exist. Group members are matched by email, groups, service accounts and Remote Networks by exact name, resources by name, Remote Network and address together, and devices by serial number (devices.csv sets trust on devices that have already registered). An SSH, web app or Kubernetes resource is served through a Gateway, which has no name: the file gives its address and it must already exist in the tenant (an import never creates Gateways).
+    Anything that already exists is left as it is and only added to (missing members, missing access, missing approvers) unless --sync is given; Synced Groups are never touched. Group members are matched by email, groups, service accounts, DNS profiles and Remote Networks by exact name, resources by name, Remote Network and address together, Gateways by address and Remote Network, certificate authorities by fingerprint, and devices by serial number (devices.csv sets trust on devices that have already registered). An SSH, web app or Kubernetes resource is served through a Gateway, which has no name: the file gives its address, and the Gateway is made first when a gateways file lists it. Service accounts are made without keys. A certificate authority is made only from a file given with --ca-files whose own fingerprint is the one in the backup. What a backup holds that cannot be carried to another tenant (users, Connectors, Security Policy rules, device registrations, keys) is listed at the end and in the report.
     """
     if prune and not sync:
         typer.echo("Error: --prune removes things, so it only works together with --sync. Nothing was changed.", err=True)
@@ -79,8 +93,13 @@ def import_(
         typer.echo(f"Error: cannot write the report to {report_path}: {exc.strerror}. Nothing was changed.", err=True)
         raise typer.Exit(1)
     typer.echo(f"Read {', '.join(specs.files)}.")
-    if specs.ignored:
-        typer.echo(f"Not imported (not supported yet): {', '.join(specs.ignored)}.")
+    certificates = None
+    if ca_files is not None:
+        if not ca_files.exists():
+            typer.echo(f"Error: --ca-files {ca_files} does not exist. Nothing was changed.", err=True)
+            raise typer.Exit(1)
+        certificates = read_ca_files(ca_files)
+        typer.echo(f"Read {len(certificates.files)} certificate file(s) from {ca_files}.")
 
     client = get_client()
     try:
@@ -91,7 +110,8 @@ def import_(
     except TwingateAPIError as exc:
         typer.echo(f"API error: {exc}", err=True)
         raise typer.Exit(1)
-    rows = build_plan(specs, state, sync, prune)
+    rows = build_plan(specs, state, sync, prune, certificates)
+    notices = not_carried_over(specs, rows, certificates)
 
     if execute:
         typer.echo("\nApplying...")
@@ -115,9 +135,10 @@ def import_(
     if len(shown) > MAX_LISTED:
         typer.echo(f"  ... and {len(shown) - MAX_LISTED} more (see the report)")
     _summary(rows)
+    _not_carried(notices)
 
     try:
-        write_report(report_path, rows)
+        write_report(report_path, rows, notices)
     except OSError as exc:
         typer.echo(f"\nError: the report could not be written to {report_path}: {exc.strerror}. The summary above is all there is.", err=True)
         raise typer.Exit(1)

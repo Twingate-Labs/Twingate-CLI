@@ -60,13 +60,13 @@ class TestBackupJson:
         assert (eng.security_policy, eng.access_policy, eng.approval_mode, eng.expires_at) == ("Lax", None, None, None)
         assert (ops.security_policy, ops.access_policy, ops.approval_mode, ops.expires_at) == (
             None, {"mode": "ACCESS_REQUEST", "durationSeconds": 60}, "MANUAL", "2999-01-01T00:00:00Z")
-        assert "approver groups are not imported" in spec.notes
+        assert spec.approver_groups == ["Approvers"] and "approvers" in spec.given
 
     @pytest.mark.parametrize("type_name", ["ServiceAccount", "SERVICE_ACCOUNT", "service account", "serviceAccount"])
     def test_a_service_account_is_recognised_however_its_type_is_spelled(self, tmp_path, type_name):
         record = {**BACKUP_RESOURCE, "access": [{"principal": {"type": type_name, "name": "ci"}}]}
         (spec,) = load_file(dump(tmp_path / "resources.json", [record]), "resources")
-        assert [(a.group, a.kind) for a in spec.access] == [("ci", "service account")] and spec.notes == ["approver groups are not imported"]
+        assert [(a.group, a.kind) for a in spec.access] == [("ci", "service account")] and spec.approver_groups == ["Approvers"]
 
     def test_a_group_and_a_service_account_with_the_same_name_are_both_kept(self, tmp_path):
         access = [{"principal": {"type": "Group", "name": "ops"}}, {"principal": {"type": "ServiceAccount", "name": "ops"}},
@@ -296,7 +296,7 @@ class TestFolders:
     def test_every_file_a_backup_writes_is_known_to_the_importer(self, tmp_path):
         from tgcli.queries.backup import ENTITIES
 
-        used = {"remote-networks.json", "groups.json", "resources.json"}
+        used = {"remote-networks.json", "groups.json", "resources.json", "service-accounts.json", "gateways.json", "dns-profiles.json", "certificate-authorities.json"}
         for entity in ENTITIES:
             dump(tmp_path / entity.file, [])
         dump(tmp_path / "manifest.json", {})

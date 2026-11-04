@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
+from tests.importer.ca_material import pem, x509_fingerprint
 from tests.importer.fake_api import FakeApi
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.client.session import SessionManager
@@ -84,13 +85,17 @@ class TestDryRun:
         assert "write requests" not in result.output
 
     def test_unused_backup_files_are_named(self, tmp_path):
-        result, _ = run(backup(tmp_path, [NETWORK], extra=["users.json", "connectors.json"]), FakeApi())
-        assert "Not imported (not supported yet): users.json, connectors.json." in result.output
+        result, report = run(backup(tmp_path, [NETWORK], extra=["users.json", "connectors.json"]), FakeApi())
+        assert "Not carried over (see the report for the reasons)" in result.output
+        assert "users: Not created (0 users in the backup): users come from the identity provider" in result.output
+        assert "connectors: Not created (0 Connectors in the backup)" in result.output
+        assert [(r["kind"], r["name"], r["status"]) for r in rows_of(report) if r["kind"] == "not carried over"] == [
+            ("not carried over", "users", "not carried over"), ("not carried over", "connectors", "not carried over")]
 
     def test_rows_that_already_exist_are_not_listed_but_are_counted(self, tmp_path):
         api = FakeApi(networks=[{"id": "N1", "name": "HQ"}])
         result, report = run(backup(tmp_path, [NETWORK]), api)
-        assert "remote networks  1 exists" in result.output and "exists       remote network" not in result.output
+        assert "remote networks         1 exists" in result.output and "exists       remote network" not in result.output
         assert rows_of(report)[0]["status"] == "exists"
 
     def test_a_long_list_is_cut_in_the_terminal_but_not_in_the_report(self, tmp_path):
@@ -126,7 +131,7 @@ class TestExecute:
         assert result.exit_code == 0, result.output
         (row,) = rows_of(report)
         assert row["status"] == "created" and "access for 1 group and 1 service account" in row["detail"]
-        assert row["warnings"] == "access for service account 'ghost' not added: no such service account in this tenant (the import does not create them)"
+        assert row["warnings"] == "access for service account 'ghost' not added: no such service account in this tenant or in the file"
         assert sorted(api.resources[0]["access"]) == ["G1", "S1"]
         count = len(api.writes)
         result, report = run(tmp_path, api, "--execute")
@@ -222,7 +227,7 @@ class TestDevices:
         assert api.writes == [] and api.devices[0]["isTrusted"] is False
         assert [(r["kind"], r["name"], r["status"]) for r in rows_of(report)] == [
             ("device", "abc123", "would-update"), ("device", "OLD", "skipped"), ("device", "NEW", "skipped")]
-        assert "devices          2 skipped, 1 would-update" in result.output
+        assert "devices                 2 skipped, 1 would-update" in result.output
 
     def test_execute_changes_the_trust_and_the_report_lists_the_device_ids(self, tmp_path):
         api = FakeApi(devices=self.devices())
@@ -279,3 +284,73 @@ class TestSync:
         assert rows_of(report)[0]["status"] == "updated"
         again, _ = run(self.files(tmp_path), api, "--sync", "--prune", "--execute")
         assert again.exit_code == 0 and "REMOVE" not in again.output
+
+
+class TestCarryingABackupToAnotherTenant:
+    ROOT = pem("root")
+    CA = {"id": "C1", "name": "Root", "type": "x509", "fingerprint": x509_fingerprint("root")}
+    GATEWAY = {"id": "GW", "address": "gw.example.com", "remoteNetwork": {"id": "N", "name": "HQ"}, "x509CA": CA, "sshCA": None}
+
+    def folder(self, tmp_path):
+        backup(tmp_path, [NETWORK], extra=["users.json", "connectors.json", "security-policies.json", "devices.json"])
+        (tmp_path / "manifest.json").write_text("{}")
+        (tmp_path / "service-accounts.json").write_text(json.dumps([{"name": "ci", "keys": [{"id": "k"}]}]))
+        (tmp_path / "certificate-authorities.json").write_text(json.dumps([self.CA]))
+        (tmp_path / "gateways.json").write_text(json.dumps([self.GATEWAY]))
+        (tmp_path / "dns-profiles.json").write_text(json.dumps([{"name": "Kids", "priority": 1}]))
+        return tmp_path
+
+    def certs(self, tmp_path, **named):
+        folder = tmp_path / "certs"
+        folder.mkdir()
+        for name, text in named.items():
+            (folder / name).write_text(text)
+        return folder
+
+    def test_a_dry_run_shows_everything_that_would_be_made_and_what_cannot_be_carried(self, tmp_path):
+        (tmp_path / "backup").mkdir()
+        api = FakeApi()
+        result, report = run(self.folder(tmp_path / "backup"), api, "--ca-files", str(self.certs(tmp_path, **{"root.pem": self.ROOT})))
+        assert result.exit_code == 0, result.output
+        assert "Read 1 certificate file(s)" in result.output and "DRY RUN" in result.output and api.writes == []
+        for kind in ("service accounts  ", "certificate authorities 1 would-create", "gateways          ", "dns profiles      "):
+            assert kind in result.output
+        carried = [r["name"] for r in rows_of(report) if r["kind"] == "not carried over"]
+        assert carried == ["users", "connectors", "security policies", "device registrations", "service account keys"]
+
+    def test_executing_makes_it_all_and_a_rerun_changes_nothing(self, tmp_path):
+        (tmp_path / "backup").mkdir()
+        folder = self.folder(tmp_path / "backup")
+        api = FakeApi()
+        certs = str(self.certs(tmp_path, **{"root.pem": self.ROOT}))
+        result, report = run(folder, api, "--ca-files", certs, "--execute")
+        assert result.exit_code == 0, result.output
+        assert [r["status"] for r in rows_of(report) if r["kind"] != "not carried over"] == ["created"] * 5
+        assert [g["address"] for g in api.gateways] == ["gw.example.com"] and [a["name"] for a in api.service_accounts] == ["ci"] and api.dns_profiles
+        count = len(api.writes)
+        result, report = run(folder, api, "--ca-files", certs, "--execute")
+        assert result.exit_code == 0 and len(api.writes) == count
+
+    def test_without_certificate_files_the_gateway_is_blocked_and_the_exit_code_says_so(self, tmp_path):
+        (tmp_path / "backup").mkdir()
+        result, report = run(self.folder(tmp_path / "backup"), FakeApi(), "--execute")
+        assert result.exit_code == 1 and "blocked" in result.output
+        by = {r["kind"]: r for r in rows_of(report)}
+        assert by["certificate authority"]["status"] == "skipped" and by["gateway"]["status"] == "blocked"
+        assert "--ca-files" in by["gateway"]["detail"]
+        assert "certificate authorities" in [r["name"] for r in rows_of(report) if r["kind"] == "not carried over"]
+
+    def test_a_ca_files_path_that_does_not_exist_stops_before_anything_is_read_or_written(self, tmp_path):
+        (tmp_path / "backup").mkdir()
+        api = FakeApi()
+        result, _ = run(self.folder(tmp_path / "backup"), api, "--ca-files", str(tmp_path / "nowhere"), "--execute")
+        assert result.exit_code == 1 and "does not exist. Nothing was changed." in result.output and api.requests == []
+
+    def test_a_private_key_in_the_folder_is_refused_and_reported_and_never_sent(self, tmp_path):
+        (tmp_path / "backup").mkdir()
+        certs = self.certs(tmp_path, **{"root.pem": self.ROOT, "root.key": "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"})
+        api = FakeApi()
+        result, report = run(self.folder(tmp_path / "backup"), api, "--ca-files", str(certs), "--execute")
+        assert "holds a private key" in result.output
+        assert not any("PRIVATE" in json.dumps(v) for _, v in api.writes)
+        assert [r["name"] for r in rows_of(report) if r["kind"] == "not carried over"][-1] == "certificate files"

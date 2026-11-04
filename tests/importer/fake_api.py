@@ -47,6 +47,8 @@ class FakeApi:
     def __init__(self, networks=(), groups=(), users=(), policies=(), resources=(), devices=(), service_accounts=(), gateways=()):
         self.gateways = [dict(g) for g in gateways]  # {"id", "address", "remoteNetwork": {"id", "name"}, "x509CA", "sshCA"}
         self.cas: list = []  # certificate authorities: {"id", "name", "fingerprint", "type"}
+        self.ca_fingerprint = None  # a callable(type, content) -> the fingerprint the API reports for a CA it is given; None = what ca_material.api_fingerprint says
+        self.unreadable: dict = {}  # a query's root field -> the error the API gives when it is read (a tenant without that feature)
         self.connectors: list = []  # {"id", "name", "hasStatusNotificationsEnabled", "remoteNetwork": {"id", "name"}}
         self.dns_profiles: list = []  # as in a backup, but "groups" is a list of group IDs
         self.devices = [{"activeState": "ACTIVE", "user": {"email": "ann@x.com"}, **d} for d in devices]
@@ -118,6 +120,20 @@ class FakeApi:
                 nodes.append(node)
             chunk, info = page(nodes, cursor)
             return {"data": {root: {"pageInfo": info, "edges": [{"node": n} for n in chunk]}}}
+        for root in self.unreadable:
+            if root in query:
+                raise self.unreadable[root]
+        if "certificateAuthorities(after: $cursor)" in query:
+            chunk, info = page([dict(c) for c in self.cas], cursor)
+            typename = {"x509": "X509CertificateAuthority", "ssh": "SSHCertificateAuthority"}
+            nodes = [{"__typename": typename[c["type"]], "id": c["id"], "name": c["name"], "fingerprint": c["fingerprint"]} for c in chunk]
+            return {"data": {"certificateAuthorities": {"pageInfo": info, "edges": [{"node": n} for n in nodes]}}}
+        if "dnsFilteringProfiles {" in query:
+            return {"data": {"dnsFilteringProfiles": [{"id": p["id"], "name": p["name"]} for p in self.dns_profiles]}}
+        if "approverGroups(after: $cursor)" in query:
+            res = next((r for r in self.resources if r["id"] == variables["id"]), None)
+            chunk, info = page(sorted(res.get("approvers") or ()), cursor)
+            return {"data": {"resource": {"approverGroups": {"pageInfo": info, "edges": [{"node": {"id": g, "name": g}} for g in chunk]}}}}
         if "gateways(after: $cursor)" in query:
             chunk, info = page([dict(g) for g in self.gateways], cursor)
             return {"data": {"gateways": {"pageInfo": info, "edges": [{"node": n} for n in chunk]}}}
@@ -157,7 +173,7 @@ class FakeApi:
     def _mutate(self, name: str, query: str, variables: dict) -> dict:
         declared = set(re.findall(r"\$(\w+):", query.split(")", 1)[0]))
         assert set(variables) <= declared, f"{name} sent undeclared variables {set(variables) - declared}"
-        if name.startswith("restore"):
+        if name.startswith("restore") or name in ("createX509CA", "createSSHCA"):
             return self._mutate_restore(name, query, variables)
         typed = TYPED_MUTATION.match(name)
         if typed:
@@ -327,6 +343,20 @@ class FakeApi:
             return {"data": {field: {"ok": False, "error": problem, "entity": None}}}
         entity = getattr(self, "_do_" + name)(variables)
         return {"data": {field: {"ok": True, "error": None, "entity": entity}}}
+
+    def _make_ca(self, kind: str, name: str, content: str) -> dict:
+        from tests.importer.ca_material import api_fingerprint
+
+        fingerprint = (self.ca_fingerprint or api_fingerprint)(kind, content)
+        ca = {"id": self._new_id("ca"), "name": name, "fingerprint": fingerprint, "type": kind}
+        self.cas.append(ca)
+        return {"id": ca["id"], "name": name, "fingerprint": fingerprint}
+
+    def _do_createX509CA(self, v: dict) -> dict:
+        return self._make_ca("x509", v["name"], v["certificate"])
+
+    def _do_createSSHCA(self, v: dict) -> dict:
+        return self._make_ca("ssh", v["name"], v["publicKey"])
 
     def _do_restoreServiceAccountCreate(self, v: dict) -> dict:
         account = {"id": self._new_id("sa"), "name": v["name"]}

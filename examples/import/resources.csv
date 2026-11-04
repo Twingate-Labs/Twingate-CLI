@@ -1,6 +1,6 @@
-name,network,address,alias,tcp_ports,udp_ports,allow_icmp,visible,security_policy,groups,service_accounts,routing_mode,type,gateway,upstream_port,downstream_port,upstream_tls,downstream_tls,cluster_ref,headers
-App one,Example Network,app1.example.com,,443,none,false,true,Standard Access,Example Group,,,,,,,,,,
-App two,Example Network,10.0.0.0/24,,80;443;8000-8100,*,true,true,Standard Access,Example Group;Other Group=Strict Policy,,,,,,,,,,
-Example SSH,Example Network,ssh.example.com,,,,,true,Standard Access,Example Group,,,ssh,gateway.example.com,22,22,,,,
-Example web app,Example Network,wiki.example.com,,,,,true,Standard Access,Example Group,,,web app,gateway.example.com,8080,443,VERIFY_FULL,TLS13,,X-Forwarded-Proto=https
-Example Kubernetes,Example Network,k8s.example.com,,,,,true,Standard Access,Example Group,,,kubernetes,gateway.example.com,6443,443,,,example-cluster,
+name,network,address,alias,tcp_ports,udp_ports,allow_icmp,visible,security_policy,groups,service_accounts,routing_mode,approver_groups,type,gateway,upstream_port,downstream_port,upstream_tls,downstream_tls,cluster_ref,headers
+App one,Example Network,app1.example.com,,443,none,false,true,Standard Access,Example Group,,,,,,,,,,,
+App two,Example Network,10.0.0.0/24,,80;443;8000-8100,*,true,true,Standard Access,Example Group;Other Group=Strict Policy,,,,,,,,,,,
+Example SSH,Example Network,ssh.example.com,,,,,true,Standard Access,Example Group,,,,ssh,gateway.example.com,22,22,,,,
+Example web app,Example Network,wiki.example.com,,,,,true,Standard Access,Example Group,,,,web app,gateway.example.com,8080,443,VERIFY_FULL,TLS13,,X-Forwarded-Proto=https
+Example Kubernetes,Example Network,k8s.example.com,,,,,true,Standard Access,Example Group,,,,kubernetes,gateway.example.com,6443,443,,,example-cluster,
