@@ -2,6 +2,12 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [3.2.1] - 2026-11-06
+
+### Changed
+
+- **`tgcli resource list` now shows the access policy, approval mode, Gateway, ports, TLS modes and cluster reference by default.** Timed on a live tenant one field group at a time, none of these cost anything measurable; the approver groups alone were the whole slowdown of `--detail`. The new columns come after the existing ones (the default columns are now the start of the `--detail` columns), so scripts that read columns by position keep working, but a script that expects the default list to end at `type` will see more columns. `resource list --detail` still adds the approver groups, `accessNames` and `accessExpiresAt`, and is the only one that reads the approver groups. The JSON output of the default list gains the same fields.
+
 ## [3.2.0] - 2026-11-04
 
 ### Added

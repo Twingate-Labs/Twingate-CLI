@@ -106,7 +106,7 @@ pip install .
 tgcli auth login -a YOUR_API_KEY -t acme -s acme
 
 # Verify it worked
-tgcli -v                       # tgcli version 3.2.0
+tgcli -v                       # tgcli version 3.2.1
 tgcli -s acme resource list    # list all resources
 ```
 
@@ -271,16 +271,16 @@ tgcli -f CSV device list                          # export all devices with that
 Manage Twingate resources and their access controls.
 
 ```bash
-# List / show. Both have a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES.
-# `show` (and `list --detail`) add, after the original columns: the access policy (mode, duration), the
-# approval mode, approver groups (IDs, plus names in the same order), who has access (`accessNames`) and
-# when each grant expires (`accessExpiresAt`, `None` for access that never does; both in the same order as
-# `access.edges`) and, for Gateway-backed types, the gateway, upstream/downstream ports (plus TLS modes for
-# web apps) and the cluster ref (Kubernetes). `show` also has `access.edges`, as `list` does.
-# Columns that don't apply to a resource's type are blank. `list` leaves the extras out by default because
-# they make it slower on large tenants (about 13% at 144 resources).
+# List / show. Both have a "type" column: NETWORK, SSH, WEB_APP or KUBERNETES, and after the original columns
+# the access policy (mode, duration), the approval mode and, for Gateway-backed types, the gateway,
+# upstream/downstream ports (plus TLS modes for web apps) and the cluster ref (Kubernetes). Columns that don't
+# apply to a resource's type are blank. `list --detail` and `show` also have the approver groups (IDs, plus names in
+# the same order), who has access (`accessNames`) and when each grant expires (`accessExpiresAt`, `None` for access
+# that never does; both in the same order as `access.edges`). `list` leaves the approver groups out by default
+# because they are what makes `--detail` slower on large tenants (about 18% at 65 resources). `show` also has
+# `access.edges`, as `list` does.
 tgcli resource list
-tgcli resource list --detail              # (-d) the extra columns described above
+tgcli resource list --detail              # (-d) adds the approver groups and the names and expiry of each access grant
 tgcli resource show -i "UmVzb3VyY2U6MQ=="
 
 # List only disabled (or only enabled) resources
@@ -400,7 +400,7 @@ tgcli -s acme resource access add -i <the id it printed> -g "Ops" -e "2026-12-31
 
 If `resource create` is run without `-g`, it prints a reminder to **stderr** (so piped JSON/CSV on stdout is unaffected) with the exact `access add` command for the new resource. To find a resource's ID later, use `tgcli resource list`; `tgcli resource show -i <id>` lists who has access and when each grant expires.
 
-**Auto-lock and the access policy.** Auto-lock is set through the API's `accessPolicy` (mode `AUTO_LOCK`, duration in seconds; `resource autolock` and `access add|set -a` convert your days for you). It replaces the API's deprecated `usageBasedAutolockDurationDays`, which this CLI no longer sends or selects, so `resource list` and `resource show` JSON no longer contain that key: read `accessPolicy.mode` and `accessPolicy.durationSeconds` (`resource show` and `resource list --detail` have them; the default `list` leaves them out to stay fast). `-a` must be 1 to 365 days (the API silently stores anything longer as 365, so the CLI refuses it); `0`, negative numbers and anything over 365 are refused (`resource autolock -a -1` turns auto-lock off). **Auto-lock (`-a`) and expiry (`-e`) apply to groups only**: the API rejects both for a service account, so the CLI refuses the call instead of sending it (add the service account in its own call without them). The CLI only sets `AUTO_LOCK`; other modes the API has (`ACCESS_REQUEST`) are not yet settable here.
+**Auto-lock and the access policy.** Auto-lock is set through the API's `accessPolicy` (mode `AUTO_LOCK`, duration in seconds; `resource autolock` and `access add|set -a` convert your days for you). It replaces the API's deprecated `usageBasedAutolockDurationDays`, which this CLI no longer sends or selects, so `resource list` and `resource show` JSON no longer contain that key: read `accessPolicy.mode` and `accessPolicy.durationSeconds` (`resource list`, `resource list --detail` and `resource show` all have them). `-a` must be 1 to 365 days (the API silently stores anything longer as 365, so the CLI refuses it); `0`, negative numbers and anything over 365 are refused (`resource autolock -a -1` turns auto-lock off). **Auto-lock (`-a`) and expiry (`-e`) apply to groups only**: the API rejects both for a service account, so the CLI refuses the call instead of sending it (add the service account in its own call without them). The CLI only sets `AUTO_LOCK`; other modes the API has (`ACCESS_REQUEST`) are not yet settable here.
 
 **Expiring access.** A group's access to a resource can be given an expiry, after which the access ends by itself:
 

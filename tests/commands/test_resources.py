@@ -122,16 +122,22 @@ class TestResourceList:
         "id", "name", "isActive", "remoteNetwork.id", "address.type", "address.value", "access.edges",
         "securityPolicy.id", "alias", "isVisible", "isBrowserShortcutEnabled", "routingMode", "tags", "type",
     ]
-    DETAIL_COLUMNS = [
+    CHEAP_COLUMNS = [
         "accessPolicy.mode", "accessPolicy.durationSeconds", "gateway.id", "gateway.address", "clusterRef",
-        "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode",
-        "approvalMode", "approverGroups", "approverGroupNames", "accessNames", "accessExpiresAt",
+        "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode", "approvalMode",
     ]
+    DETAIL_COLUMNS = CHEAP_COLUMNS + ["approverGroups", "approverGroupNames", "accessNames", "accessExpiresAt"]
 
-    def test_list_default_has_only_the_original_columns_plus_type(self, mock_keyring):
+    def test_list_default_has_the_original_columns_plus_type_and_the_cheap_fields_but_not_the_approvers(self, mock_keyring):
         edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
         output, _ = self._csv_rows([edge])
-        assert output.splitlines()[0].split(",") == self.ORIGINAL_COLUMNS
+        assert output.splitlines()[0].split(",") == self.ORIGINAL_COLUMNS + self.CHEAP_COLUMNS
+
+    def test_list_default_columns_are_the_start_of_the_detail_columns(self, mock_keyring):
+        edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
+        default = self._csv_rows([edge])[0].splitlines()[0].split(",")
+        detail = self._csv_rows([edge], ["--detail"])[0].splitlines()[0].split(",")
+        assert detail[: len(default)] == default
 
     def test_list_detail_appends_the_extra_columns_after_the_original_ones(self, mock_keyring):
         edge = {"node": {**SAMPLE_RESOURCE_EDGE["node"], "__typename": "SSHResource"}}
@@ -149,18 +155,18 @@ class TestResourceList:
             runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "list", *args])
             return MockClient.return_value.paginate.call_args.args[0]
 
-    def test_list_default_query_leaves_out_the_expensive_fields(self, mock_keyring):
+    def test_list_default_query_leaves_out_only_the_approver_groups(self, mock_keyring):
         query = self._sent_query([])
-        for field in ("approverGroups", "gateway", "accessPolicy", "upstream", "clusterRef"):
-            assert field not in query, field
-        assert "__typename" in query and "routingMode" in query
+        assert "approverGroups" not in query
+        for field in ("gateway", "accessPolicy", "approvalMode", "upstream", "downstream", "clusterRef", "tlsMode", "__typename", "routingMode"):
+            assert field in query, field
 
     def test_list_detail_query_asks_for_them(self, mock_keyring):
         query = self._sent_query(["--detail"])
         for field in ("approverGroups", "gateway", "accessPolicy", "upstream", "clusterRef"):
             assert field in query, field
 
-    def test_mappings_keep_using_the_lean_list_query(self, mock_keyring):
+    def test_mappings_keep_using_the_list_query_without_the_approver_groups(self, mock_keyring):
         from tgcli.queries import resources as rq
 
         assert "approverGroups" not in rq.LIST_RESOURCES and "approverGroups" in rq.LIST_RESOURCES_DETAIL

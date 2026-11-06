@@ -99,7 +99,7 @@ def resource_list(
     ),
     detail: bool = typer.Option(
         False, "-d", "--detail",
-        help="Add access policy, approval mode, approver groups, gateway, ports and cluster ref (slower on large tenants).",
+        help="Add approver groups, and the names and expiry of each access grant (slower on large tenants).",
     ),
 ) -> None:
     """List all Resources."""

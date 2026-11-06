@@ -29,6 +29,9 @@ _TYPE_AND_EXTRA_COLUMNS = [
     "upstream.port", "upstream.tlsMode", "downstream.port", "downstream.tlsMode",
     "approvalMode", "approverGroups",
 ]
+# What the default list has of those: everything but the approver groups, which are the last of them, so the default
+# columns are the start of the --detail ones.
+_CHEAP_EXTRA_COLUMNS = [c for c in _TYPE_AND_EXTRA_COLUMNS if c != "approverGroups"]
 
 
 _INT_COLUMNS = ["accessPolicy.durationSeconds", "upstream.port", "downstream.port"]
@@ -77,12 +80,12 @@ _LIST_COLUMNS = [
 
 
 def get_list_as_csv(json_results: list) -> pd.DataFrame:
-    # "type" goes last so scripts reading the original columns by position keep working.
-    return _label_type(generic.get_list_as_csv(json_results, _LIST_COLUMNS + ["__typename"]))
+    # The type and the type-specific fields go after the original columns so scripts reading those by position keep working.
+    return _keep_ints(_label_type(generic.get_list_as_csv(json_results, _LIST_COLUMNS + _CHEAP_EXTRA_COLUMNS)))
 
 
 def get_list_detail_as_csv(json_results: list) -> pd.DataFrame:
-    """The default list columns plus everything in _TYPE_AND_EXTRA_COLUMNS, the approver group names, and for each
+    """The default list columns plus the approver groups (IDs and names), and for each
     grant (in the order of the access.edges IDs) the name of who has access and when that access expires."""
     df = _keep_ints(_label_type(generic.get_list_as_csv(json_results, _LIST_COLUMNS + _TYPE_AND_EXTRA_COLUMNS)))
     # One entry per row, in the same order generic.get_list_as_csv emits them (including null nodes).

@@ -138,11 +138,10 @@ query listGroup($cursor: String!) {
 }
 """
 
-# Default listing: only what costs next to nothing. `resource list --detail` pays for the rest.
-_LIST_TYPE_FIELDS = """    ... on NetworkResource {
-      routingMode
-    }
-"""
+# Default listing: everything except the approver groups. Timed on a live tenant (one field group at a time), the access
+# policy, approval mode, Gateway, ports, TLS modes and cluster reference cost nothing measurable, while the approver
+# groups alone account for the whole slowdown of `resource list --detail`.
+_LIST_TYPE_FIELDS = _TYPE_SPECIFIC_TEMPLATE.replace("@@APPROVERS@@", "")
 
 LIST_RESOURCES = _LIST_RESOURCES_TEMPLATE.replace("@@TYPE_FIELDS@@", _LIST_TYPE_FIELDS).replace(
     "@@ACCESS@@", connection("access", _ACCESS_EDGE)

@@ -127,7 +127,7 @@ class TestQueries:
             MockClient.return_value.paginate.return_value = [[{"node": node}]]
             result = runner.invoke(app, ["-s", SESSION, "-f", "csv", "resource", "list"])
         header = next(csv.reader(io.StringIO(result.stdout)))
-        assert "accessExpiresAt" not in header and "accessNames" not in header and header[-1] == "type"
+        assert "accessExpiresAt" not in header and "accessNames" not in header and header[13] == "type" and "approverGroups" not in header
         assert ast.literal_eval(one_row(result)["access.edges"])[0]["expiresAt"] == SOON
 
 
