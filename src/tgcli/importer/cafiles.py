@@ -78,7 +78,9 @@ def read_one(path: Path) -> tuple:
     try:
         if path.stat().st_size > MAX_BYTES:
             return None, "is too big to be a certificate or a public key"
-        text = read_text(path)
+        # A file saved on Windows carries CRLF line endings; the content sent
+        # to the API must read the same whatever platform saved the file.
+        text = read_text(path).replace("\r\n", "\n").replace("\r", "\n")
     except (OSError, TextFileError) as exc:
         return None, f"cannot be read: {exc}"
     if "PRIVATE KEY" in text:
