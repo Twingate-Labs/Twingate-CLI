@@ -254,3 +254,7 @@ class TestReadingFiles:
     def test_the_content_sent_is_the_file_text_without_surrounding_blank_space(self, tmp_path):
         (tmp_path / "ca.pem").write_text("\n\n" + pem("a") + "\n\n")
         assert read_ca_files(tmp_path).files[0].content == pem("a").strip()
+
+    def test_crlf_line_endings_are_normalized_to_lf(self, tmp_path):
+        (tmp_path / "ca.pem").write_bytes(("\n\n" + pem("a") + "\n\n").replace("\n", "\r\n").encode())
+        assert read_ca_files(tmp_path).files[0].content == pem("a").strip()
