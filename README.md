@@ -106,7 +106,7 @@ pip install .
 tgcli auth login -a YOUR_API_KEY -t acme -s acme
 
 # Verify it worked
-tgcli -v                       # tgcli version 3.2.2
+tgcli -v                       # tgcli version 3.2.3
 tgcli -s acme resource list    # list all resources
 ```
 
@@ -336,9 +336,14 @@ tgcli resource alias   -i "UmVzb3VyY2U6MQ==" -a myapp.internal
 # Update security policy
 tgcli resource policy -i "UmVzb3VyY2U6MQ==" -p "U2VjdXJpdHlQb2xpY3k6MQ=="
 
-# Update routing mode on an existing resource (the API refuses BYPASS_TWINGATE for a resource that has a Security Policy)
+# Update routing mode on an existing resource (the API refuses BYPASS_TWINGATE for a resource that has a
+# Security Policy or any port or ICMP restriction; `resource bypass` below clears those for you)
 tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m BYPASS_TWINGATE
 tgcli resource routing -i "UmVzb3VyY2U6MQ==" -m THROUGH_TWINGATE
+
+# Convert resources to bypass Twingate in one step. Without --execute it only lists what would change.
+tgcli resource bypass -i "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg=="
+tgcli resource bypass -i "UmVzb3VyY2U6MQ==,UmVzb3VyY2U6Mg==" --execute
 
 # Auto-lock access after N days of non-use (-a is days, 1 to 365; turn it off with -a -1)
 tgcli resource autolock -i "UmVzb3VyY2U6MQ==" -a 7
@@ -378,6 +383,8 @@ tgcli resource access set -i "UmVzb3VyY2U6MQ==" -g "R3JvdXA6MQ==,R3JvdXA6Mg=="
 # Remove ALL access. `access set` with nobody named is refused; --clear says you mean it
 tgcli resource access set -i "UmVzb3VyY2U6MQ==" --clear
 ```
+
+**Converting to bypass.** A bypass resource (`BYPASS_TWINGATE`) connects directly and skips Twingate, so the API will not let it keep a Security Policy or any port or ICMP restriction. `resource bypass` removes the Security Policy, opens all TCP and UDP ports, allows ICMP and switches the routing mode in one update. Who has access, per-group policies, auto-lock, expiry, approval and approver groups stay as they are. It is a dry run until you add `--execute`: the list says, for each resource, what would be removed. Each output row (JSON, or `-f csv`) also holds the Security Policy and the ports and ICMP setting the resource had before, as a record to put them back from: switch back with `resource routing -m THROUGH_TWINGATE` and restore the policy with `resource policy -p <id>`; ports are restored in the Admin Console or with `import --sync`. Only network resources have a routing mode, so SSH, web app and Kubernetes resources are reported as blocked, and a resource that already bypasses Twingate is reported and left alone. The exit code is 1 if any resource was blocked or refused.
 
 **Names or IDs.** `-r`, `-p`, `-g` and `-s` on `resource create` and the three `resource access` commands accept either an ID or the object's **exact name** (capitals matter). Several values can be comma-separated or you can repeat the flag (`-g Engineering -g Ops`).
 - An ID is used as given, with no extra request, so scripts that pass IDs behave exactly as before. A name costs one extra lookup per kind (a fraction of a second).

@@ -1,3 +1,3 @@
 """Twingate CLI - Command-line interface for Twingate Admin APIs."""
 
-VERSION = "3.2.2"
+VERSION = "3.2.3"

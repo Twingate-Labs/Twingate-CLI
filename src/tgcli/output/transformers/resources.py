@@ -169,3 +169,10 @@ def get_active_update_as_csv(json_results: dict) -> pd.DataFrame:
 def get_access_update_as_csv(json_results: dict, mutation_name: str) -> pd.DataFrame:
     columns = ["ok", "error", "id", "name"]
     return generic.get_update_as_csv_no_nesting(json_results, mutation_name, columns)
+
+
+def get_bypass_as_csv(rows: list) -> pd.DataFrame:
+    """One row per Resource the bypass command looked at (the rows are already flat)."""
+    from tgcli.bypass import COLUMNS
+
+    return pd.DataFrame(rows, columns=list(COLUMNS))

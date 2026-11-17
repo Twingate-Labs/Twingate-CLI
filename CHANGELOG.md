@@ -2,6 +2,16 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [3.2.3] - 2026-11-17
+
+### Added
+
+- **`tgcli resource bypass -i <id>[,<id>...]` converts network Resources from routing through Twingate to bypassing it, in one step.** The API refuses `BYPASS_TWINGATE` for a Resource that has a Security Policy or any port or ICMP restriction, which left `resource routing -m BYPASS_TWINGATE` failing on most Resources. The new command removes the Security Policy, opens all TCP and UDP ports, allows ICMP and switches the routing mode in a single update; who has access, per-group policies, auto-lock, expiry, approval and approver groups are kept. It changes nothing without `--execute` and lists what would be removed. Every output row also holds the Security Policy and the ports and ICMP setting the Resource had before, so a conversion can be put back. Resources that are not network Resources (they have no routing mode), unknown IDs and IDs the API cannot read are reported as blocked, a Resource that already bypasses is left alone, and the exit code is 1 if any Resource was blocked or refused.
+
+### Changed
+
+- `resource routing -m BYPASS_TWINGATE` now points at `resource bypass` when the API refuses it because of a Security Policy or a port restriction, and its help names both causes.
+
 ## [3.2.2] - 2026-11-17
 
 ### Fixed

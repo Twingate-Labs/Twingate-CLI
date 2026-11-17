@@ -6,9 +6,11 @@ from typing import Optional
 
 import typer
 
+from tgcli import bypass as bp
 from tgcli.commands._common import (
     YES_OPTION,
     confirm_delete,
+    execute_query,
     get_client,
     require_session,
     resolve_many_or_exit,
@@ -16,6 +18,7 @@ from tgcli.commands._common import (
     run_query,
     split_ids,
     split_values,
+    write_refused,
 )
 from tgcli.client.exceptions import TwingateAPIError, TwingateAuthError
 from tgcli.output.formatter import OutputFormatter
@@ -307,15 +310,97 @@ def resource_routing(
 ) -> None:
     """Update the routing mode for a Resource.
 
-    The API does not allow a bypass Resource (BYPASS_TWINGATE) to have a Security Policy, so it refuses this change for a Resource that has one. Create bypass Resources without -p (`resource create -m BYPASS_TWINGATE`).
+    The API does not allow a bypass Resource (BYPASS_TWINGATE) to have a Security Policy or any port or ICMP restriction, so it refuses this change for a Resource that has one. To convert such a Resource in one step, use `resource bypass`; to make a new one, create it without -p (`resource create -m BYPASS_TWINGATE`).
     """
     routing_mode = validate_routing_mode(routingmode)
-    run_query(
+    result = run_query(
         get_client(),
         q.UPDATE_RESOURCE_ROUTING_MODE,
         {"itemid": itemid, "routingMode": routing_mode},
         t.get_routing_mode_update_as_csv,
+        exit_on_refusal=False,
     )
+    refusal = write_refused(result)
+    if refusal is not None:
+        typer.echo(f"Error: {refusal}", err=True)
+        if routing_mode == bp.BYPASS and "Bypass Resource" in refusal:
+            typer.echo(
+                f"To clear what the API objects to and switch in one step, run: tgcli -s {require_session()} resource bypass -i {itemid}",
+                err=True,
+            )
+        raise typer.Exit(1)
+
+
+@app.command("bypass")
+def resource_bypass(
+    itemid: list[str] = typer.Option(
+        ..., "-i", "--itemid",
+        help="Resource ID to convert. Repeat the option or separate IDs with commas to convert several.",
+    ),
+    execute: bool = typer.Option(
+        False, "--execute",
+        help="Make the change. Without this flag only what would change is shown and nothing is written.",
+    ),
+) -> None:
+    """Convert network Resources from routing through Twingate to bypassing it, in one step.
+
+    The API refuses a bypass Resource (BYPASS_TWINGATE) that has a Security Policy or any port or ICMP restriction. This command
+    removes the Security Policy, opens all TCP and UDP ports and allows ICMP, and switches the routing mode in a single update.
+    Everything else stays as it is: who has access, per-group policies, auto-lock, expiry, approval and approver groups.
+
+    Nothing is changed without --execute; the dry run lists, for each Resource, what would be removed. Each row of the output also
+    holds the Security Policy and protocol settings the Resource had before, as a record to put them back from: a Security Policy
+    with `resource policy` (after `resource routing -m THROUGH_TWINGATE`); ports are restored through the Admin Console, or by
+    `import --sync`. Only network Resources have a routing mode; SSH, web app and Kubernetes Resources are reported as blocked, and
+    a Resource that already bypasses Twingate is reported and left alone. Exit code 1 if any Resource is blocked or refused.
+    """
+    ids = list(dict.fromkeys(i for value in itemid for i in split_ids(value)))
+    if not ids:
+        typer.echo("Error: give at least one Resource ID with -i.", err=True)
+        raise typer.Exit(1)
+    client = get_client()
+
+    rows = []
+    for rid in ids:
+        try:
+            node = execute_query(client, q.BYPASS_READ, {"id": rid}).get("data", {}).get("resource")
+        except typer.Exit:
+            node = None  # execute_query already printed the API's reason; the row says the Resource could not be read
+            rows.append(bp.Row(rid, status=bp.BLOCKED, detail="the API could not read this ID (see the message above)"))
+            continue
+        rows.append(bp.plan_resource(node, rid))
+
+    pending = [row for row in rows if row.status == bp.WOULD_CONVERT]
+    failed = False
+    if execute:
+        for row in pending:
+            result = execute_query(client, q.BYPASS_RESOURCE, row.variables)
+            outcome = (result.get("data") or {}).get("resourceUpdate") or {}
+            entity = outcome.get("entity") or {}
+            if outcome.get("ok") and entity.get("routingMode") == bp.BYPASS and not entity.get("securityPolicy"):
+                row.status = bp.CONVERTED
+            else:
+                row.status, row.error = bp.ERROR, outcome.get("error") or "the API did not report the Resource as bypassing Twingate"
+                failed = True
+
+    OutputFormatter.print_output([row.as_dict() for row in rows], state.output_format, t.get_bypass_as_csv)
+
+    for row in rows:
+        text = row.error or row.detail
+        typer.echo(f"  {row.status:<15}{row.name or row.id}  ({text})", err=True)
+    done = bp.counts(rows)
+    blocked = done.get(bp.BLOCKED, 0)
+    if execute:
+        typer.echo(f"Converted {done.get(bp.CONVERTED, 0)} of {len(rows)} Resource(s).", err=True)
+    elif pending:
+        typer.echo(
+            f"Dry run: nothing was changed. Run again with --execute to convert {len(pending)} Resource(s).",
+            err=True,
+        )
+    else:
+        typer.echo("Nothing to convert.", err=True)
+    if failed or blocked:
+        raise typer.Exit(1)
 
 
 @app.command("autolock")

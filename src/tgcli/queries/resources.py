@@ -482,3 +482,60 @@ mutation ObjUpdate($itemid: ID!) {
 # Aliases used by commands/resources.py
 UPDATE_RESOURCE_VISIBILITY = TOGGLE_RESOURCE_VISIBILITY
 UPDATE_RESOURCE_NETWORK = ASSIGN_NETWORK_TO_RESOURCE
+
+# `resource bypass`: what a Resource has that a bypass Resource may not have (a Security Policy, any port or ICMP restriction).
+# routingMode exists only on network Resources, so the other types answer without it.
+BYPASS_READ = """
+query bypassRead($id: ID!) {
+  resource(id: $id) {
+    __typename
+    id
+    name
+    securityPolicy {
+      id
+      name
+    }
+    protocols {
+      allowIcmp
+      tcp {
+        policy
+        ports {
+          start
+          end
+        }
+      }
+      udp {
+        policy
+        ports {
+          start
+          end
+        }
+      }
+    }
+    ... on NetworkResource {
+      routingMode
+    }
+  }
+}
+"""
+
+# One call does all of it: the API refuses routingMode BYPASS_TWINGATE while a Security Policy or a restriction is still there,
+# and accepts a null securityPolicyId as "clear it". A variable that is left out is left alone.
+BYPASS_RESOURCE = """
+mutation bypassResource($id: ID!, $securityPolicyId: ID, $protocols: ProtocolsInput) {
+  resourceUpdate(id: $id, routingMode: BYPASS_TWINGATE, securityPolicyId: $securityPolicyId, protocols: $protocols) {
+    ok
+    error
+    entity {
+      id
+      name
+      securityPolicy {
+        id
+      }
+      ... on NetworkResource {
+        routingMode
+      }
+    }
+  }
+}
+"""
