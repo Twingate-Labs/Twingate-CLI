@@ -2,6 +2,12 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [3.2.2] - 2026-11-17
+
+### Fixed
+
+- **`tgcli import --ca-files` sends the same certificate text whatever platform saved the file.** A certificate or public key saved on Windows has CRLF line endings, and those were sent to the tenant as they were. Line endings are now turned into plain newlines when the file is read. The fingerprint (worked out from the decoded bytes) and the private-key check are not affected.
+
 ## [3.2.1] - 2026-11-06
 
 ### Changed

@@ -254,3 +254,18 @@ class TestReadingFiles:
     def test_the_content_sent_is_the_file_text_without_surrounding_blank_space(self, tmp_path):
         (tmp_path / "ca.pem").write_text("\n\n" + pem("a") + "\n\n")
         assert read_ca_files(tmp_path).files[0].content == pem("a").strip()
+
+    def test_windows_line_endings_are_sent_as_plain_newlines(self, tmp_path):
+        (tmp_path / "ca.pem").write_bytes(("\n" + pem("a") + "\n").replace("\n", "\r\n").encode())
+        ca = read_ca_files(tmp_path).files[0]
+        assert ca.content == pem("a").strip() and "\r" not in ca.content
+
+    def test_windows_line_endings_do_not_change_the_fingerprint_or_hide_a_private_key(self, tmp_path):
+        crlf = lambda text: text.replace("\n", "\r\n").encode()
+        (tmp_path / "plain.pem").write_text(pem("a"))
+        (tmp_path / "crlf.pem").write_bytes(crlf(pem("a")))
+        (tmp_path / "key.pem").write_bytes(crlf("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))
+        found = read_ca_files(tmp_path)
+        plain, crlf_file = sorted(found.files, key=lambda f: f.path)[1], sorted(found.files, key=lambda f: f.path)[0]
+        assert plain.fingerprints == crlf_file.fingerprints
+        assert len(found.files) == 2 and any("key.pem" in p for p in found.problems)
