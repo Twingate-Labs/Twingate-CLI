@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+from pathlib import Path
 
 import pytest
 
@@ -249,7 +250,7 @@ class TestReadingFiles:
     def test_a_folder_is_read_in_name_order(self, tmp_path):
         (tmp_path / "b.pem").write_text(pem("b"))
         (tmp_path / "a.pem").write_text(pem("a"))
-        assert [f.path.rsplit("/", 1)[1] for f in read_ca_files(tmp_path).files] == ["a.pem", "b.pem"]
+        assert [Path(f.path).name for f in read_ca_files(tmp_path).files] == ["a.pem", "b.pem"]
 
     def test_the_content_sent_is_the_file_text_without_surrounding_blank_space(self, tmp_path):
         (tmp_path / "ca.pem").write_text("\n\n" + pem("a") + "\n\n")

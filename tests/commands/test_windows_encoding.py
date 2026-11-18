@@ -44,9 +44,18 @@ PRELUDE = textwrap.dedent("""
 """)
 
 
+def _squash(name: str) -> str:
+    """'ANSI_X3.4-1968' (Linux), 'US-ASCII' (macOS) and 'cp1252' (Windows) compared without case, '-' or '_'."""
+    return name.lower().replace("-", "").replace("_", "")
+
+
 def run_legacy(script: str, cwd: Path = REPO) -> subprocess.CompletedProcess:
     env = {**os.environ, **LEGACY_ENV}
-    return subprocess.run([sys.executable, "-c", PRELUDE + textwrap.dedent(script)], cwd=cwd, env=env, capture_output=True)
+    # The script goes in on stdin, not as a -c argument: under the ASCII locale an argument holding non-ASCII
+    # text is decoded with surrogate escapes on Linux, and Python then cannot compile it. Source read from stdin
+    # is UTF-8 whatever the locale, and sys.path still starts with the working directory.
+    source = PRELUDE + textwrap.dedent(script)
+    return subprocess.run([sys.executable, "-"], input=source.encode("utf-8"), cwd=cwd, env=env, capture_output=True)
 
 
 @pytest.fixture(autouse=True)
@@ -58,7 +67,7 @@ class TestLegacyEncodings:
     def test_the_legacy_setup_really_is_narrow(self):
         done = run_legacy('print(sys.stdout.encoding); import locale; print(locale.getpreferredencoding(False))')
         stdout_encoding, default_encoding = done.stdout.decode().split()
-        assert done.returncode == 0 and stdout_encoding == "cp1252" and default_encoding.lower().replace("-", "") in ("ascii", "usascii", "ansix3.41968")
+        assert done.returncode == 0 and stdout_encoding == "cp1252" and _squash(default_encoding) in ("ascii", "usascii", "ansix3.41968", "cp1252")
         with pytest.raises(UnicodeEncodeError):
             NAME.encode(stdout_encoding)
 

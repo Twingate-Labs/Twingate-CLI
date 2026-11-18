@@ -20,6 +20,22 @@ def runner() -> CliRunner:
 
 
 # ---------------------------------------------------------------------------
+# Plain help output
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def plain_help(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep --help output free of colour codes whatever environment runs it.
+
+    typer forces colour on when GITHUB_ACTIONS, FORCE_COLOR or PY_COLORS is set
+    (it reads them once, when it is imported), so on CI every help text came
+    back full of escape sequences and tests that look for a phrase in it failed.
+    """
+    monkeypatch.setattr("typer.rich_utils.FORCE_TERMINAL", False, raising=False)
+
+
+# ---------------------------------------------------------------------------
 # Keyring mock — prevents touching the real OS keychain during tests
 # ---------------------------------------------------------------------------
 

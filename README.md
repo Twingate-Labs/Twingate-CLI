@@ -2,7 +2,7 @@
 
 A command-line interface for the [Twingate](https://www.twingate.com) Admin API. Manage your resources, devices, users, groups, connectors, networks, service accounts, and more — directly from your terminal.
 
-![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -45,7 +45,7 @@ A command-line interface for the [Twingate](https://www.twingate.com) Admin API.
 
 ## Requirements
 
-- Python **3.9** or later
+- Python **3.10** or later
 - A Twingate account with an [Admin API token](https://docs.twingate.com/docs/api-overview)
 
 ---
