@@ -116,7 +116,7 @@ e.g. for `acme.twingate.com` the tenant name is `acme`.
 The **API key** is created in the Admin Console under Settings > API. It is a long string (about 130 characters of letters, digits, `-` and `_`) with no fixed prefix, and it is only shown once, so copy it when it is generated. Use a read-only key unless you want the CLI to change things.
 
 > **Every command that talks to Twingate needs `-s <session>`. There is no default session.**
-> Put `-s` before the command, as above. If you leave `-s` off `auth login`, `tgcli` makes up a random session name, and you then have to pass that name with `-s` every time (`tgcli auth list` shows it). Naming your session when you log in avoids that.
+> Put `-s` before the command, as above. If you leave `-s` off `auth login`, `tgcli` makes up a random session name, and you then have to pass that name with `-s` every time (`tgcli auth list` shows it). Naming your session when you log in avoids that. After a login, `tgcli` prints the exact form to use (for example `tgcli -s acme resource list`) on stderr.
 >
 > To keep the examples in this README short, most of them leave `-s <session>` out. Add it: `tgcli resource list` is really `tgcli -s acme resource list`.
 

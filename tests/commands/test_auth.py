@@ -54,6 +54,39 @@ class TestAuthLogin:
         assert "MySess" in result.output or "logged in" in result.output.lower() or "stored" in result.output.lower()
 
 
+class TestAuthLoginHint:
+    """tgcli has no default session, so login says how to use the new one."""
+
+    def test_hint_names_the_session_and_goes_to_stderr(self, mock_keyring):
+        result = runner.invoke(
+            app, ["auth", "login", "-a", "tok-xyz", "-t", "acme", "-s", "MySess"]
+        )
+        assert result.exit_code == 0
+        assert "tgcli -s MySess resource list" in result.stderr
+        # stdout is only the confirmation, so scripts reading it are unaffected
+        assert result.stdout.strip() == "Session created: MySess"
+
+    def test_hint_uses_the_generated_name_when_none_was_given(self, mock_keyring):
+        result = runner.invoke(app, ["auth", "login", "-a", "tok-xyz", "-t", "acme"])
+        assert result.exit_code == 0
+        (name,) = SessionManager.list_sessions()
+        assert f"tgcli -s {name} resource list" in result.stderr
+        assert f"Session created: {name}" in result.stdout
+
+    def test_a_name_with_a_space_is_quoted_so_the_command_can_be_pasted(self, mock_keyring):
+        result = runner.invoke(
+            app, ["auth", "login", "-a", "tok-xyz", "-t", "acme", "-s", "My Sess"]
+        )
+        assert result.exit_code == 0
+        assert 'tgcli -s "My Sess" resource list' in result.stderr
+        assert result.stdout.strip() == "Session created: My Sess"
+
+    def test_no_hint_when_login_fails_to_store(self, mock_keyring):
+        result = runner.invoke(app, ["auth", "login", "-t", "acme", "-s", "MySess"])
+        assert result.exit_code != 0
+        assert "resource list" not in result.stderr
+
+
 class TestAuthLogout:
     def test_logout_removes_session(self, mock_keyring):
         SessionManager.store("MySess", "acme", "tok-123")

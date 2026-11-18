@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import typer
 
 from tgcli.client.exceptions import TwingateAuthError
@@ -26,7 +28,15 @@ def login(
     """Authenticate with the Twingate API and store credentials."""
     session_name = _session_name(session)
     SessionManager.store(session_name, tenant, apikey, staging=staging)
-    typer.echo(f"✓ Session created: [bold]{session_name}[/bold]" if False else f"Session created: {session_name}")
+    typer.echo(f"Session created: {session_name}")
+    # tgcli has no default session: every command needs -s. Say so now, on
+    # stderr so that anything reading stdout is unaffected.
+    shown = f'"{session_name}"' if re.search(r"[^\w.-]", session_name) else session_name
+    typer.echo(
+        f"Use it by putting -s {shown} before the command, for example:\n"
+        f"  tgcli -s {shown} resource list",
+        err=True,
+    )
 
 
 @app.command("logout")

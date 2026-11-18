@@ -2,6 +2,17 @@
 
 All notable changes to `tgcli` are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- `tgcli auth login` now says how to use the new session: after "Session created: NAME" it prints `tgcli -s NAME resource list` as an example, because `tgcli` has no default session and every command needs `-s`. The example goes to stderr, so output read from stdout is unchanged, and a name containing a space is quoted so the line can be pasted.
+- The `typer` requirement is now `typer>=0.12.0` instead of `typer[all]>=0.12.0`. Newer `typer` releases no longer have an `all` extra, so every `pip install` printed "typer does not provide the extra 'all'". Since 0.12.0 plain `typer` already installs `rich` and `shellingham`, so nothing that was installed before is missing.
+
+### Added
+
+- GitHub Actions runs the test suite on every pull request and push to `main`, on Linux, macOS and Windows with the oldest (3.9) and a current (3.13) Python. Windows is reported but does not block a merge until it has run clean.
+
 ## [3.2.3] - 2026-11-17
 
 ### Added

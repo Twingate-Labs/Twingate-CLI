@@ -134,5 +134,9 @@ class TestQueries:
 class TestExpiryHelp:
     @pytest.mark.parametrize("sub", [["access", "add"], ["access", "set"]])
     def test_the_expiry_option_states_the_apis_rules(self, sub):
-        text = " ".join(runner.invoke(app, ["resource", *sub, "--help"]).stdout.split())
+        out = runner.invoke(app, ["resource", *sub, "--help"]).stdout
+        # Help is drawn in a box, and a phrase that wraps picks up border
+        # characters between its words (newer typer releases do this at 80
+        # columns): drop them before looking for the phrase.
+        text = " ".join(out.translate(str.maketrans("", "", "│╭╮╰╯─")).split())
         assert "less than a year away" in text and "service account" in text
